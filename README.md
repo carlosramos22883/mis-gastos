@@ -64,6 +64,6 @@ docker-compose ps
 Una vez que los contenedores estén corriendo, puedes acceder a:
 | Servicio      | URL          | Credenciales |
 |---------------|--------------|--------------|
-| Aplicación      | http://localhost:5050       |    |
-| PgAdmin       | Behringer    | Email: admin@misgastos.com / Password: admin |
+| Aplicación      | http://localhost:8081       |    |
+| PgAdmin       | http://localhost:5050    | Email: admin@misgastos.com / Password: admin |
 | PostgreSQL      | localhost:5433    | Usuario: misgastos_user / Password: misgastos_secret |
