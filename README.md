@@ -62,7 +62,7 @@ docker-compose ps
 
 ## 🌐 Accesos
 Una vez que los contenedores estén corriendo, puedes acceder a:
-| Servicio      | URL          | Credenciales |
+| **Servicio**      | **URL**          | **Credenciales** |
 |---------------|--------------|--------------|
 | Aplicación      | http://localhost:8081       |    |
 | PgAdmin       | http://localhost:5050    | Email: admin@misgastos.com / Password: admin |
