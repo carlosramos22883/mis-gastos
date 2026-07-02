@@ -1,0 +1,50 @@
+1 - Crear docker-compose.yml
+2 - Crear docker/php/Dockerfile
+3 - Crear docker/nginx/default.conf
+4 - Crear  docker/php/local.ini
+5 - Crear .env.docker
+6 - Crear README.md
+7 - Crear proyecto laravel ejecutando:
+docker run --rm -v $(pwd):/app -w /app composer:latest create-project laravel/laravel src
+
+¿Qué hace este comando?
+--rm: Elimina el contenedor después de ejecutar
+-v $(pwd):/app: Monta tu directorio actual en /app dentro del contenedor
+-w /app: Establece el directorio de trabajo
+composer:latest: Usa la imagen oficial de Composer
+create-project laravel/laravel src: Crea el proyecto Laravel en la carpeta src
+
+8 - Copiar el archivo .env
+cp .env.docker src/.env
+
+9 - Levantar los contenedores
+docker-compose up -d --build
+
+10 - Ejecutar
+docker-compose exec app composer install
+
+11 - Generar la clave de la aplicación
+docker-compose exec app php artisan key:generate
+
+12 - Dar permisos correctos
+docker-compose exec app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+docker-compose exec app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+13 - Verificar que todo funcione
+docker-compose ps
+
+14 - Ejecutar migraciones
+docker-compose exec app php artisan migrate
+
+15 - Ejecutar seeders (si existen)
+docker-compose exec app php artisan db:seed
+
+Accesos
+Aplicación: http://localhost:8081
+PgAdmin: http://localhost:5050
+Email: admin@misgastos.com
+Password: admin
+Base de Datos: localhost:5433
+Usuario: misgastos_user
+Password: misgastos_secret
+BD: misgastos_db

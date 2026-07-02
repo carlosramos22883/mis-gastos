@@ -1,0 +1,367 @@
+# ============================================================================
+# DOCKER-COMPOSE.YML - Orquesta todos los servicios del proyecto
+# ============================================================================
+# Este archivo define todos los contenedores que necesita tu aplicación
+# y cómo se comunican entre sí. Es como el "director de orquesta".
+
+services:
+  # ==========================================================================
+  # SERVICIO 1: Aplicación Laravel/PHP
+  # ==========================================================================
+  app:
+    # ------------------------------------------------------------------------
+    # Construcción de la imagen
+    # ------------------------------------------------------------------------
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    
+    # ¿Qué hace?
+    # - build: Le dice a Docker que construya una imagen personalizada
+    # - context: . (punto) = directorio actual (mis-gastos/)
+    # - dockerfile: Ruta al Dockerfile que usaremos
+    #
+    # Cuando ejecutas "docker-compose up --build", Docker lee este Dockerfile
+    # y crea la imagen según las instrucciones que contiene
+
+    # ------------------------------------------------------------------------
+    # Nombre del contenedor
+    # ------------------------------------------------------------------------
+    container_name: misgastos-app
+    
+    # ¿Qué hace?
+    # - Le da un nombre fácil de recordar al contenedor
+    # - Sin esto, Docker genera nombres aleatorios como "happy_panda_123"
+    # - Útil para comandos como: docker exec -it misgastos-app bash
+
+    # ------------------------------------------------------------------------
+    # Política de reinicio
+    # ------------------------------------------------------------------------
+    restart: unless-stopped
+    
+    # ¿Qué hace?
+    # - Controla cuándo se reinicia el contenedor automáticamente
+    # - unless-stopped: Se reinicia siempre, excepto si lo detuviste manualmente
+    # - Otras opciones:
+    #   * no: Nunca reinicia
+    #   * always: Siempre reinicia (incluso si lo detuviste)
+    #   * on-failure: Solo reinicia si falla (código de salida != 0)
+
+    # ------------------------------------------------------------------------
+    # Directorio de trabajo
+    # ------------------------------------------------------------------------
+    working_dir: /var/www
+    
+    # ¿Qué hace?
+    # - Establece el directorio donde se ejecutarán los comandos
+    # - Es equivalente a WORKDIR en el Dockerfile
+    # - Cuando ejecutas "docker-compose exec app bash", empezarás en /var/www
+
+    # ------------------------------------------------------------------------
+    # Volúmenes (carpetas compartidas)
+    # ------------------------------------------------------------------------
+    volumes:
+      - ./src:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    
+    # ¿Qué hace?
+    # - volumes: Monta carpetas de tu Mac dentro del contenedor
+    # - Formato: ruta_en_tu_mac:ruta_en_el_contenedor
+    #
+    # Primer volumen:
+    # - ./src: Carpeta src en tu Mac (donde está Laravel)
+    # - /var/www: Ruta dentro del contenedor
+    # - Efecto: Cualquier cambio en src/ se refleja instantáneamente en el contenedor
+    # - Ventaja: No necesitas reconstruir la imagen cada vez que editas código
+    #
+    # Segundo volumen:
+    # - ./docker/php/local.ini: Tu configuración personalizada de PHP
+    # - /usr/local/etc/php/conf.d/local.ini: Ruta donde PHP busca configuración
+    # - Efecto: Sobrescribe la configuración por defecto de PHP
+
+    # ------------------------------------------------------------------------
+    # Red
+    # ------------------------------------------------------------------------
+    networks:
+      - misgastos-network
+    
+    # ¿Qué hace?
+    # - Conecta este contenedor a la red "misgastos-network"
+    # - Permite que se comunique con otros contenedores en la misma red
+    # - Los contenedores pueden referirse entre sí por su nombre de servicio
+    #   (ejemplo: desde app puedes usar "db" como hostname para PostgreSQL)
+
+    # ------------------------------------------------------------------------
+    # Dependencias
+    # ------------------------------------------------------------------------
+    depends_on:
+      - db
+    
+    # ¿Qué hace?
+    # - Indica que este servicio depende de "db" (PostgreSQL)
+    # - Docker Compose iniciará "db" antes que "app"
+    # - IMPORTANTE: No espera a que PostgreSQL esté "listo", solo que haya iniciado
+    # - Si Laravel intenta conectarse antes de que PostgreSQL esté listo, fallará
+
+    # ------------------------------------------------------------------------
+    # Variables de entorno
+    # ------------------------------------------------------------------------
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=misgastos_db
+      - DB_USERNAME=misgastos_user
+      - DB_PASSWORD=misgastos_secret
+    
+    # ¿Qué hace?
+    # - environment: Define variables de entorno dentro del contenedor
+    # - Estas variables sobrescriben las del archivo .env de Laravel
+    # - Útil para configuración específica de Docker
+    #
+    # Variables definidas:
+    # - DB_CONNECTION=pgsql: Usar PostgreSQL
+    # - DB_HOST=db: Hostname del contenedor de base de datos
+    #   (Docker resuelve "db" a la IP del contenedor automáticamente)
+    # - DB_PORT=5432: Puerto estándar de PostgreSQL
+    # - DB_DATABASE, DB_USERNAME, DB_PASSWORD: Credenciales de la BD
+
+  # ==========================================================================
+  # SERVICIO 2: Servidor Web Nginx
+  # ==========================================================================
+  webserver:
+    # ------------------------------------------------------------------------
+    # Imagen base
+    # ------------------------------------------------------------------------
+    image: nginx:alpine
+    
+    # ¿Qué hace?
+    # - image: Usa una imagen pre-construida (no necesita Dockerfile)
+    # - nginx:alpine: Servidor web Nginx en versión Alpine (ligera)
+    # - Nginx recibe las peticiones HTTP y las pasa a PHP-FPM
+
+    # ------------------------------------------------------------------------
+    # Nombre del contenedor
+    # ------------------------------------------------------------------------
+    container_name: misgastos-nginx
+
+    # ------------------------------------------------------------------------
+    # Política de reinicio
+    # ------------------------------------------------------------------------
+    restart: unless-stopped
+
+    # ------------------------------------------------------------------------
+    # Mapeo de puertos
+    # ------------------------------------------------------------------------
+    ports:
+      - "8081:80"
+    
+    # ¿Qué hace?
+    # - ports: Publica puertos del contenedor a tu Mac
+    # - Formato: puerto_en_tu_mac:puerto_en_el_contenedor
+    # - 8081: Puerto en tu Mac (http://localhost:8081)
+    # - 80: Puerto dentro del contenedor (Nginx escucha aquí)
+    #
+    # Analogía: Es como poner un número de extensión telefónica
+    # "Para hablar con Nginx, marca 8081 y te conectaremos con el puerto 80"
+
+    # ------------------------------------------------------------------------
+    # Volúmenes
+    # ------------------------------------------------------------------------
+    volumes:
+      - ./src:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    
+    # ¿Qué hace?
+    # - Primer volumen: Mismo que en app (código de Laravel)
+    # - Segundo volumen: Tu configuración personalizada de Nginx
+    #   * ./docker/nginx/default.conf: Tu archivo de configuración
+    #   * /etc/nginx/conf.d/default.conf: Ruta donde Nginx busca configuración
+
+    # ------------------------------------------------------------------------
+    # Red
+    # ------------------------------------------------------------------------
+    networks:
+      - misgastos-network
+
+    # ------------------------------------------------------------------------
+    # Dependencias
+    # ------------------------------------------------------------------------
+    depends_on:
+      - app
+    
+    # ¿Qué hace?
+    # - Nginx depende de app (PHP-FPM)
+    # - Nginx necesita que PHP esté corriendo para pasarle peticiones
+
+  # ==========================================================================
+  # SERVICIO 3: Base de datos PostgreSQL
+  # ==========================================================================
+  db:
+    # ------------------------------------------------------------------------
+    # Imagen base
+    # ------------------------------------------------------------------------
+    image: postgres:16-alpine
+    
+    # ¿Qué hace?
+    # - postgres:16-alpine: PostgreSQL versión 16 en Alpine
+    # - Versión 16 es la más reciente y estable
+
+    # ------------------------------------------------------------------------
+    # Nombre del contenedor
+    # ------------------------------------------------------------------------
+    container_name: misgastos-db
+
+    # ------------------------------------------------------------------------
+    # Política de reinicio
+    # ------------------------------------------------------------------------
+    restart: unless-stopped
+
+    # ------------------------------------------------------------------------
+    # Variables de entorno
+    # ------------------------------------------------------------------------
+    environment:
+      POSTGRES_DB: misgastos_db
+      POSTGRES_USER: misgastos_user
+      POSTGRES_PASSWORD: misgastos_secret
+      POSTGRES_ROOT_PASSWORD: misgastos_root_secret
+    
+    # ¿Qué hace?
+    # - Variables que la imagen oficial de PostgreSQL usa para inicializar
+    # - POSTGRES_DB: Nombre de la base de datos que se creará automáticamente
+    # - POSTGRES_USER: Usuario que se creará con privilegios en esa BD
+    # - POSTGRES_PASSWORD: Contraseña del usuario
+    # - POSTGRES_ROOT_PASSWORD: Contraseña del usuario postgres (admin)
+
+    # ------------------------------------------------------------------------
+    # Mapeo de puertos
+    # ------------------------------------------------------------------------
+    ports:
+      - "5433:5432"
+    
+    # ¿Qué hace?
+    # - 5433: Puerto en tu Mac
+    # - 5432: Puerto estándar de PostgreSQL
+    # - Permite conectarte desde tu Mac con herramientas como pgAdmin, DBeaver, etc.
+    # - Ejemplo: psql -h localhost -p 5433 -U misgastos_user -d misgastos_db
+
+    # ------------------------------------------------------------------------
+    # Volúmenes
+    # ------------------------------------------------------------------------
+    volumes:
+      - misgastos-dbdata:/var/lib/postgresql/data
+    
+    # ¿Qué hace?
+    # - misgastos-dbdata: Volumen nombrado (definido al final del archivo)
+    # - /var/lib/postgresql/data: Donde PostgreSQL guarda los datos
+    # - Efecto: Los datos persisten aunque borres el contenedor
+    # - Si no usaras volumen, perderías todos los datos al hacer "docker-compose down"
+
+    # ------------------------------------------------------------------------
+    # Red
+    # ------------------------------------------------------------------------
+    networks:
+      - misgastos-network
+
+  # ==========================================================================
+  # SERVICIO 4: PgAdmin (interfaz web para administrar PostgreSQL)
+  # ==========================================================================
+  pgadmin:
+    # ------------------------------------------------------------------------
+    # Imagen base
+    # ------------------------------------------------------------------------
+    image: dpage/pgadmin4:latest
+    
+    # ¿Qué hace?
+    # - dpage/pgadmin4: Imagen oficial de PgAdmin 4
+    # - latest: Última versión disponible
+    # - PgAdmin es una interfaz web para administrar PostgreSQL
+
+    # ------------------------------------------------------------------------
+    # Nombre del contenedor
+    # ------------------------------------------------------------------------
+    container_name: misgastos-pgadmin
+
+    # ------------------------------------------------------------------------
+    # Política de reinicio
+    # ------------------------------------------------------------------------
+    restart: unless-stopped
+
+    # ------------------------------------------------------------------------
+    # Variables de entorno
+    # ------------------------------------------------------------------------
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@misgastos.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    
+    # ¿Qué hace?
+    # - Credenciales para acceder a la interfaz web de PgAdmin
+    # - PGADMIN_DEFAULT_EMAIL: Email de login
+    # - PGADMIN_DEFAULT_PASSWORD: Contraseña de login
+    # - NO confundir con las credenciales de PostgreSQL
+
+    # ------------------------------------------------------------------------
+    # Mapeo de puertos
+    # ------------------------------------------------------------------------
+    ports:
+      - "5050:80"
+    
+    # ¿Qué hace?
+    # - 5050: Puerto en tu Mac (http://localhost:5050)
+    # - 80: Puerto dentro del contenedor (PgAdmin escucha aquí)
+
+    # ------------------------------------------------------------------------
+    # Volúmenes
+    # ------------------------------------------------------------------------
+    volumes:
+      - misgastos-pgadmin-data:/var/lib/pgadmin
+    
+    # ¿Qué hace?
+    # - Persiste la configuración de PgAdmin (servidores guardados, preferencias)
+
+    # ------------------------------------------------------------------------
+    # Red
+    # ------------------------------------------------------------------------
+    networks:
+      - misgastos-network
+
+    # ------------------------------------------------------------------------
+    # Dependencias
+    # ------------------------------------------------------------------------
+    depends_on:
+      - db
+    
+    # ¿Qué hace?
+    # - PgAdmin depende de db
+    # - PgAdmin necesita que PostgreSQL esté corriendo
+
+# ============================================================================
+# REDES
+# ============================================================================
+networks:
+  misgastos-network:
+    driver: bridge
+
+# ¿Qué hace?
+# - networks: Define redes personalizadas
+# - misgastos-network: Nombre de la red
+# - driver: bridge: Tipo de red (puente entre contenedores)
+# - Efecto: Todos los contenedores en esta red pueden comunicarse entre sí
+# - Pueden referirse entre sí por nombre de servicio (app, db, webserver, pgadmin)
+
+# ============================================================================
+# VOLÚMENES
+# ============================================================================
+volumes:
+  misgastos-dbdata:
+    driver: local
+  misgastos-pgadmin-data:
+    driver: local
+
+# ¿Qué hace?
+# - volumes: Define volúmenes nombrados
+# - misgastos-dbdata: Volumen para datos de PostgreSQL
+# - misgastos-pgadmin-data: Volumen para datos de PgAdmin
+# - driver: local: Se guardan en tu Mac (en /var/lib/docker/volumes/)
+# - Ventaja: Los datos persisten aunque borres los contenedores
+# - Para ver dónde se guardan: docker volume inspect misgastos_misgastos-dbdata
