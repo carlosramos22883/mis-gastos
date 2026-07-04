@@ -50,7 +50,7 @@ docker-compose exec app chown -R www-data:www-data /var/www/storage /var/www/boo
 docker-compose exec app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 ```
 
-### 7. Ejecutar migraciones
+### 7. Ejecutar migraciones y seeders
 ```bash
 docker-compose exec app php artisan migrate:fresh --seed
 ```
