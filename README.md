@@ -60,10 +60,18 @@ docker-compose exec app php artisan migrate:fresh --seed
 docker-compose ps
 ```
 
+### 9. Correos en ambiente de pruebas
+Usa la imagen oficial de Mailpit, el cual es un servidor de correo para desarrollo. Captura todos los emails enviados por la aplicación y los muestra en una interfaz web para testing.
+Perfecto para probar:
+- Reset de contraseñas
+- Verificación de emails
+- Notificaciones del sistema
+
 ## 🌐 Accesos
 Una vez que los contenedores estén corriendo, puedes acceder a:
 | **Servicio**      | **URL**          | **Credenciales** |
 |---------------|--------------|--------------|
 | Aplicación      | http://localhost:8081       |    |
 | PgAdmin       | http://localhost:5050    | Email: admin@misgastos.com / Password: admin |
-| PostgreSQL      | localhost:5433    | Usuario: misgastos_user / Password: misgastos_secret |
+| PostgreSQL      | http://localhost:5433    | Usuario: misgastos_user / Password: misgastos_secret |
+| Dashboard de emails | http://localhost:8025 |  |
