@@ -336,13 +336,31 @@ services:
     # - PgAdmin necesita que PostgreSQL esté corriendo
 
 
+    # =====================================================
+  # MAILPIT - Servidor de correo para desarrollo
+  # =====================================================
+  # Captura todos los emails enviados por la aplicación
+  # y los muestra en una interfaz web para testing.
+  # Perfecto para probar:
+  # - Reset de contraseñas
+  # - Verificación de emails
+  # - Notificaciones del sistema
+  # =====================================================
   mailpit:
+    # Imagen oficial de Mailpit (ligero y rápido)
     image: 'axllent/mailpit:latest'
+    
+    # Mapeo de puertos:
+    # - Puerto 1025: SMTP (para que Laravel envíe emails)
+    # - Puerto 8025: Dashboard web (para ver los emails)
     ports:
       - '${FORWARD_MAILPIT_PORT:-1025}:1025'
       - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+    
+    # Red compartida con la app y la base de datos
     networks:
       - misgastos-network
+      
 # ============================================================================
 # REDES
 # ============================================================================
