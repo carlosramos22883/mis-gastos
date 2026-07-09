@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 #[OA\Info(title: "Mis Gastos API", version: "1.0.0")]
 #[OA\Server(url: "http://localhost:8081")]
@@ -175,5 +177,108 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Sesión cerrada exitosamente'
         ]);
+    }
+
+        #[OA\Post(
+        path: "/api/auth/google",
+        summary: "Login con Google (Android)",
+        description: "Autenticación mediante ID token de Google. El cliente Android obtiene el token desde Credential Manager y lo envía aquí. Laravel valida con Google y devuelve un token de Sanctum.",
+        tags: ["Autenticación"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["id_token"],
+                properties: [
+                    new OA\Property(
+                        property: "id_token", 
+                        type: "string", 
+                        description: "ID token JWT obtenido de Google Credential Manager",
+                        example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFh..."
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Login con Google exitoso",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "user", type: "object"),
+                        new OA\Property(property: "token", type: "string")
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 401, 
+                description: "Token de Google inválido o no emitido para esta aplicación"
+            ),
+            new OA\Response(
+                response: 422, 
+                description: "Error de validación (falta id_token)"
+            ),
+            new OA\Response(
+                response: 500, 
+                description: "Error interno del servidor al autenticar con Google"
+            )
+        ]
+    )]
+    public function googleLogin(Request $request)
+    {
+        $request->validate([
+            'id_token' => 'required|string',
+        ]);
+
+        try {
+            // 1. Le preguntamos directamente a Google si el token es válido
+            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $request->id_token
+            ]);
+
+            // Si Google dice que el token es inválido o expiró
+            if ($response->failed()) {
+                return response()->json(['error' => 'Token de Google inválido o expirado'], 401);
+            }
+
+            $googleUser = $response->json();
+
+            // 2. SEGURIDAD: Verificamos que el token fue emitido para TU aplicación
+            // 'aud' (audiencia) debe coincidir con tu GOOGLE_CLIENT_ID (el de tipo Web) en el .env
+            if ($googleUser['aud'] !== env('GOOGLE_CLIENT_ID')) {
+                return response()->json(['error' => 'Token no emitido para esta aplicación'], 401);
+            }
+
+            // 3. Buscamos al usuario por su google_id (en Google se llama 'sub') o lo creamos
+            $user = User::firstOrCreate(
+                ['google_id' => $googleUser['sub']],
+                [
+                    'name' => $googleUser['name'] ?? 'Usuario Google',
+                    'email' => $googleUser['email'],
+                    'avatar' => $googleUser['picture'] ?? null,
+                    'password' => Hash::make(Str::random(24)),
+                ]
+            );
+
+            // 4. Si el usuario ya existía por email pero no tenía google_id o avatar, lo actualizamos
+            if (!$user->google_id || !$user->avatar) {
+                $user->update([
+                    'google_id' => $googleUser['sub'],
+                    'avatar' => $googleUser['picture'] ?? $user->avatar,
+                ]);
+            }
+
+            // 5. Generamos el token de Sanctum para que Android lo guarde
+            $token = $user->createToken('android-app-token')->plainTextToken;
+
+            return response()->json([
+                'user' => $user,
+                'token' => $token,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al autenticar con Google',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

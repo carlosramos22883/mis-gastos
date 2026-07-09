@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 // Rutas públicas
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/google', [AuthController::class, 'googleLogin']);
 
 // Rutas protegidas (requieren token)
 Route::middleware('auth:sanctum')->group(function () {

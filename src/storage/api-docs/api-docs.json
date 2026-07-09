@@ -216,6 +216,65 @@
                     }
                 ]
             }
+        },
+        "/api/auth/google": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Login con Google (Android)",
+                "description": "Autenticación mediante ID token de Google. El cliente Android obtiene el token desde Credential Manager y lo envía aquí. Laravel valida con Google y devuelve un token de Sanctum.",
+                "operationId": "b4100edbd2cb3a3e92b4d231c5df59cc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_token"
+                                ],
+                                "properties": {
+                                    "id_token": {
+                                        "description": "ID token JWT obtenido de Google Credential Manager",
+                                        "type": "string",
+                                        "example": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFh..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login con Google exitoso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "type": "object"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token de Google inválido o no emitido para esta aplicación"
+                    },
+                    "422": {
+                        "description": "Error de validación (falta id_token)"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor al autenticar con Google"
+                    }
+                }
+            }
         }
     },
     "components": {
