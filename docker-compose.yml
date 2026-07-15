@@ -96,10 +96,11 @@ services:
     # ------------------------------------------------------------------------
     depends_on:
       - db
+      - mailpit
     
     # ¿Qué hace?
-    # - Indica que este servicio depende de "db" (PostgreSQL)
-    # - Docker Compose iniciará "db" antes que "app"
+    # - Indica que este servicio depende de "db" (PostgreSQL) y "mailpit" (Servidor de correo)
+    # - Docker Compose iniciará "db" y "mailpit" antes que "app"
     # - IMPORTANTE: No espera a que PostgreSQL esté "listo", solo que haya iniciado
     # - Si Laravel intenta conectarse antes de que PostgreSQL esté listo, fallará
 

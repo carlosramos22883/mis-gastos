@@ -12,6 +12,12 @@ use OpenApi\Attributes as OA;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+use Illuminate\Support\Facades\DB;
+
+use Illuminate\Auth\Events\PasswordReset;
+
 #[OA\Info(title: "Mis Gastos API", version: "1.0.0")]
 #[OA\Server(url: "http://localhost:8081")]
 #[OA\SecurityScheme(
@@ -179,7 +185,7 @@ class AuthController extends Controller
         ]);
     }
 
-        #[OA\Post(
+    #[OA\Post(
         path: "/api/auth/google",
         summary: "Login con Google (Android)",
         description: "Autenticación mediante ID token de Google. El cliente Android obtiene el token desde Credential Manager y lo envía aquí. Laravel valida con Google y devuelve un token de Sanctum.",
@@ -190,8 +196,8 @@ class AuthController extends Controller
                 required: ["id_token"],
                 properties: [
                     new OA\Property(
-                        property: "id_token", 
-                        type: "string", 
+                        property: "id_token",
+                        type: "string",
                         description: "ID token JWT obtenido de Google Credential Manager",
                         example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFh..."
                     )
@@ -210,15 +216,15 @@ class AuthController extends Controller
                 )
             ),
             new OA\Response(
-                response: 401, 
+                response: 401,
                 description: "Token de Google inválido o no emitido para esta aplicación"
             ),
             new OA\Response(
-                response: 422, 
+                response: 422,
                 description: "Error de validación (falta id_token)"
             ),
             new OA\Response(
-                response: 500, 
+                response: 500,
                 description: "Error interno del servidor al autenticar con Google"
             )
         ]
@@ -243,8 +249,13 @@ class AuthController extends Controller
             $googleUser = $response->json();
 
             // 2. SEGURIDAD: Verificamos que el token fue emitido para TU aplicación
-            // 'aud' (audiencia) debe coincidir con tu GOOGLE_CLIENT_ID (el de tipo Web) en el .env
-            if ($googleUser['aud'] !== env('GOOGLE_CLIENT_ID')) {
+            // Ahora aceptamos tanto el Client ID de Web como el de iOS
+            $validClientIds = [
+                env('GOOGLE_CLIENT_ID'),           // Client ID de la aplicación web (Android)
+                env('GOOGLE_CLIENT_ID_IOS'),       // Client ID de iOS (nuevo)
+            ];
+
+            if (!in_array($googleUser['aud'], $validClientIds)) {
                 return response()->json(['error' => 'Token no emitido para esta aplicación'], 401);
             }
 
@@ -267,8 +278,8 @@ class AuthController extends Controller
                 ]);
             }
 
-            // 5. Generamos el token de Sanctum para que Android lo guarde
-            $token = $user->createToken('android-app-token')->plainTextToken;
+            // 5. Generamos el token de Sanctum
+            $token = $user->createToken('auth-token')->plainTextToken;
 
             return response()->json([
                 'user' => $user,
@@ -280,5 +291,115 @@ class AuthController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+
+    #[OA\Post(
+        path: "/api/forgot-password",
+        summary: "Enviar código de recuperación a correo electrónico",
+        tags: ["Autenticación"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["email"],
+                properties: [
+                    new OA\Property(property: "email", type: "string", format: "email")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Código de recuperación enviado exitosamente",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "message", type: "string", example: "Código de recuperación enviado a tu correo.")
+                    ]
+                )
+            ),
+            new OA\Response(response: 400, description: "Error al enviar el código")
+        ]
+    )]
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        // Laravel genera automáticamente un token/código y lo envía por email
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'message' => 'Código de recuperación enviado a tu correo.'
+            ]);
+        }
+
+        return response()->json([
+            'error' => 'No se pudo enviar el código. Verifica el email.'
+        ], 400);
+    }
+
+
+    #[OA\Post(
+        path: "/api/reset-password",
+        summary: "Resetear contraseña mediante código de recuperación",
+        tags: ["Autenticación"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["email", "token", "password"],
+                properties: [
+                    new OA\Property(property: "email", type: "string", format: "email"),
+                    new OA\Property(property: "token", type: "string"),
+                    new OA\Property(property: "password", type: "string")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Contraseña actualizada correctamente",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "message", type: "string", example: "Contraseña actualizada correctamente.")
+                    ]
+                )
+            ),
+            new OA\Response(response: 400, description: "Error al resetear la contraseña")
+        ]
+    )]
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string', // El código recibido por email
+            'password' => ['required', 'confirmed', PasswordRule::min(8)],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            /*function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->save();
+            }*/
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => bcrypt($password)
+                ])->setRememberToken(Str::random(60));
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => 'Contraseña actualizada correctamente.'
+            ]);
+        }
+
+        return response()->json([
+            'error' => 'El código es inválido o ha expirado.'
+        ], 400);
     }
 }
