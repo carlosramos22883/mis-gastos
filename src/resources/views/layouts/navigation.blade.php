@@ -7,7 +7,11 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <img src="{{ asset('images/logo.png') }}" alt="Mis Gastos" class="h-10 w-auto">
+                        <!-- Logo modo claro -->
+                        <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-20 w-auto dark:hidden">
+                        <!-- Logo modo oscuro -->
+                        <img src="{{ asset('images/logo-dark.png') }}" alt="Mis Gastos"
+                            class="h-20 w-auto hidden dark:block">
                     </a>
                 </div>
 

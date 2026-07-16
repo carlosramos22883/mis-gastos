@@ -25,11 +25,15 @@
     <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100 dark:bg-gray-900">
         <div>
             <a href="/">
-                <img src="{{ asset('images/logo.png') }}" alt="Mis Gastos" class="h-20 w-auto">
+                <!-- Logo modo claro -->
+                <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-20 w-auto dark:hidden">
+                <!-- Logo modo oscuro -->
+                <img src="{{ asset('images/logo-dark.png') }}" alt="Mis Gastos" class="h-20 w-auto hidden dark:block">
             </a>
         </div>
 
-        <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white dark:bg-gray-800 shadow-md overflow-hidden sm:rounded-lg">
+        <div
+            class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white dark:bg-gray-800 shadow-md overflow-hidden sm:rounded-lg">
             {{ $slot }}
         </div>
     </div>
