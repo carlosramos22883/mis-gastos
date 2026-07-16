@@ -1,8 +1,21 @@
 <x-guest-layout>
-    <!-- Título y subtítulo -->
-    <div class="text-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Mis Gastos</h2>
-        <p class="text-gray-600 mt-1">Inicia sesión</p>
+    <!-- Título y botón de modo oscuro -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">Inicia Sesión</h1>
+        
+        <!-- Botón de Modo Oscuro / Claro -->
+        <button onclick="toggleDarkMode()" 
+            class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+            aria-label="Alternar modo oscuro">
+            <!-- Icono de Sol (se muestra en modo oscuro) -->
+            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <!-- Icono de Luna (se muestra en modo claro) -->
+            <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+        </button>
     </div>
 
     <!-- Session Status -->
@@ -13,7 +26,7 @@
 
         <!-- Email Address -->
         <div class="mb-4">
-            <x-text-input id="email" class="block w-full" type="email" name="email" 
+            <x-text-input id="email" class="block w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400" type="email" name="email" 
                 :value="old('email')" required autofocus autocomplete="username" 
                 placeholder="Email" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
@@ -21,7 +34,7 @@
 
         <!-- Password -->
         <div class="mb-4">
-            <x-text-input id="password" class="block w-full" type="password" name="password" 
+            <x-text-input id="password" class="block w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400" type="password" name="password" 
                 required autocomplete="current-password" 
                 placeholder="Contraseña" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
@@ -30,7 +43,7 @@
         <!-- Forgot Password (alineado a la derecha) -->
         <div class="flex justify-end mb-4">
             @if (Route::has('password.request'))
-                <a class="text-sm text-blue-600 hover:text-blue-800" 
+                <a class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" 
                    href="{{ route('password.request') }}">
                     {{ __('¿Olvidaste tu contraseña?') }}
                 </a>
@@ -39,22 +52,22 @@
 
         <!-- Submit Button -->
         <div class="mb-4">
-            <x-primary-button class="w-full justify-center py-3 rounded-full">
+            <x-primary-button class="w-full justify-center py-3 rounded-full dark:bg-primary-700 dark:hover:bg-primary-800 dark:text-white">
                 {{ __('Iniciar Sesión') }}
             </x-primary-button>
         </div>
 
         <!-- Separador O -->
         <div class="flex items-center justify-center my-4">
-            <div class="flex-1 border-t border-gray-300"></div>
-            <div class="px-4 text-gray-500 text-sm">O</div>
-            <div class="flex-1 border-t border-gray-300"></div>
+            <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+            <div class="px-4 text-gray-500 dark:text-gray-400 text-sm">O</div>
+            <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
         </div>
 
         <!-- Google Login -->
         <div class="mb-4">
             <a href="{{ route('auth.google') }}"
-                class="w-full flex justify-center items-center gap-2 bg-white border border-gray-300 rounded-full py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                class="w-full flex justify-center items-center gap-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                 <svg class="w-5 h-5" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -67,9 +80,9 @@
 
         <!-- Register Link (al final) -->
         <div class="text-center mt-6">
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
                 ¿No tienes cuenta? 
-                <a href="{{ route('register') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                <a href="{{ route('register') }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
                     Regístrate
                 </a>
             </p>
