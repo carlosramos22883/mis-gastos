@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+
 
 class ProfileController extends Controller
 {
@@ -56,5 +59,35 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function updateAvatar(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            // Eliminar avatar anterior
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            // La imagen ya viene recortada de Croppie
+            $image = $request->file('avatar');
+
+            // Generar nombre único
+            $filename = 'avatars/' . uniqid() . '.webp';
+
+            // Guardar imagen
+            Storage::disk('public')->put($filename, file_get_contents($image->getRealPath()));
+
+            $user->avatar = $filename;
+            $user->save();
+        }
+
+        return back()->with('status', 'avatar-updated');
     }
 }

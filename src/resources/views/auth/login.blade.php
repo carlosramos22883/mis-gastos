@@ -27,27 +27,20 @@
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
-        <!-- Email Address -->
+        <!-- Email -->
         <div class="mb-4">
-            <x-text-input id="email"
-                class="block w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                type="email" name="email" :value="old('email')" required autofocus autocomplete="username"
-                placeholder="Email" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <x-floating-input id="email" label="Correo electrónico" type="email" :error="$errors->first('email')" />
         </div>
 
         <!-- Password -->
         <div class="mb-4">
-            <x-text-input id="password"
-                class="block w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                type="password" name="password" required autocomplete="current-password" placeholder="Contraseña" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+            <x-floating-input id="password" label="Contraseña" type="password" :error="$errors->first('password')" />
         </div>
 
         <!-- Forgot Password (alineado a la derecha) -->
-        <div class="flex justify-end mb-4">
+        <div class="flex justify-end mb-4 text-sm">
             @if (Route::has('password.request'))
-                <a class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                <a class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                     href="{{ route('password.request') }}">
                     {{ __('¿Olvidaste tu contraseña?') }}
                 </a>
@@ -97,8 +90,8 @@
         <div class="text-center mt-6">
             <p class="text-sm text-gray-600 dark:text-gray-400">
                 ¿No tienes cuenta?
-                <a href="{{ route('register') }}"
-                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                <a class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                    href="{{ route('register') }}">
                     Regístrate
                 </a>
             </p>

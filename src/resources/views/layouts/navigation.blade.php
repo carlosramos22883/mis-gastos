@@ -7,11 +7,11 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <!-- Logo modo claro -->
-                        <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-20 w-auto dark:hidden">
-                        <!-- Logo modo oscuro -->
+                        <!-- Logo para modo claro -->
+                        <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-10 w-auto dark:hidden">
+                        <!-- Logo para modo oscuro -->
                         <img src="{{ asset('images/logo-dark.png') }}" alt="Mis Gastos"
-                            class="h-20 w-auto hidden dark:block">
+                            class="h-10 w-auto hidden dark:block">
                     </a>
                 </div>
 
@@ -45,40 +45,51 @@
                 </button>
 
                 <!-- Dropdown de Usuario -->
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
+                <div class="relative ms-3">
+                    <x-dropdown align="top-end" width="48">
+                        <x-slot name="trigger">
+                            <button
+                                class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
+                                <!-- Avatar -->
+                                <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                                    alt="{{ Auth::user()->name }}"
+                                    class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
 
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')"
-                            class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                            {{ __('Perfil') }}
-                        </x-dropdown-link>
+                                <!-- Nombre truncado -->
+                                <div class="max-w-[150px] truncate">
+                                    ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 15) }}!
+                                </div>
 
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                onclick="event.preventDefault();
-                            this.closest('form').submit();"
+                                <div class="ms-1">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            </button>
+                        </x-slot>
+
+                        <x-slot name="content">
+                            <x-dropdown-link :href="route('profile.edit')"
                                 class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                                {{ __('Cerrar Sesión') }}
+                                {{ __('Perfil') }}
                             </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
+
+                            <!-- Authentication -->
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <x-dropdown-link :href="route('logout')"
+                                    onclick="event.preventDefault();
+                                this.closest('form').submit();"
+                                    class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                                    {{ __('Cerrar Sesión') }}
+                                </x-dropdown-link>
+                            </form>
+                        </x-slot>
+                    </x-dropdown>
+                </div>
             </div>
 
             <!-- Hamburger -->
@@ -99,21 +110,55 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
+        <!-- Toggle de Modo Oscuro en móvil -->
+        <div class="flex justify-end px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+            <button onclick="toggleDarkMode()"
+                class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                aria-label="Alternar modo oscuro">
+                <!-- Icono de Sol (se muestra en modo oscuro) -->
+                <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                    </path>
+                </svg>
+                <!-- Icono de Luna (se muestra en modo claro) -->
+                <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')"
-                class="dark:text-gray-300 dark:hover:bg-gray-700">
+                class="text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white dark:bg-gray-800 dark:active:bg-gray-700">
                 {{ __('Página de inicio') }}
             </x-responsive-nav-link>
         </div>
 
+        <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-700">
             <div class="px-4">
-                <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500 dark:text-gray-400">{{ Auth::user()->email }}</div>
+                <div class="flex items-center gap-3 mb-2">
+                    <!-- Avatar -->
+                    <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                        alt="{{ Auth::user()->name }}"
+                        class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                    <div>
+                        <div class="font-medium text-base text-gray-800 dark:text-gray-200">
+                            ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 20) }}!
+                        </div>
+                        <div class="font-medium text-sm text-gray-500 dark:text-gray-400">
+                            {{ Auth::user()->email }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')" class="dark:text-gray-300 dark:hover:bg-gray-700">
+                <x-responsive-nav-link :href="route('profile.edit')"
+                    class="text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white">
                     {{ __('Perfil') }}
                 </x-responsive-nav-link>
 
@@ -121,7 +166,7 @@
                     @csrf
                     <x-responsive-nav-link :href="route('logout')"
                         onclick="event.preventDefault(); this.closest('form').submit();"
-                        class="dark:text-gray-300 dark:hover:bg-gray-700">
+                        class="text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white">
                         {{ __('Cerrar Sesión') }}
                     </x-responsive-nav-link>
                 </form>

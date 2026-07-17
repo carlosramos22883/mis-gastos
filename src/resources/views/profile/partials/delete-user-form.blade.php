@@ -12,11 +12,12 @@
     <x-danger-button
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-        class="dark:bg-red-700 dark:hover:bg-red-800"
-    >{{ __('Eliminar Cuenta') }}</x-danger-button>
+    >
+        {{ __('Eliminar Cuenta') }}
+    </x-danger-button>
 
     <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
-        <form method="post" action="{{ route('profile.destroy') }}" class="p-6 dark:bg-gray-800">
+        <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
             @csrf
             @method('delete')
 
@@ -28,26 +29,22 @@
                 {{ __('Una vez que tu cuenta sea eliminada, todos sus recursos y datos serán eliminados permanentemente. Por favor ingresa tu contraseña para confirmar que deseas eliminar tu cuenta permanentemente.') }}
             </p>
 
-            <div class="mt-6">
-                <x-input-label for="password" value="{{ __('Contraseña') }}" class="sr-only dark:text-gray-300" />
-
-                <x-text-input
-                    id="password"
+            <div class="mb-6 mt-4">
+                <x-floating-input 
+                    id="password" 
                     name="password"
-                    type="password"
-                    class="mt-1 block w-3/4 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:focus:border-primary-500 dark:focus:ring-primary-500"
-                    placeholder="{{ __('Contraseña') }}"
+                    label="Contraseña" 
+                    type="password" 
+                    :error="$errors->userDeletion->first('password')" 
                 />
-
-                <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
             </div>
 
-            <div class="mt-6 flex justify-end">
-                <x-secondary-button x-on:click="$dispatch('close')" class="dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-gray-200">
+            <div class="flex justify-end gap-4 mt-6">
+                <x-secondary-button x-on:click="$dispatch('close')">
                     {{ __('Cancelar') }}
                 </x-secondary-button>
 
-                <x-danger-button class="ms-3 dark:bg-red-700 dark:hover:bg-red-800">
+                <x-danger-button type="submit">
                     {{ __('Eliminar Cuenta') }}
                 </x-danger-button>
             </div>

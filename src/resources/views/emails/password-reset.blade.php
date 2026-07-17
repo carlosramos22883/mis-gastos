@@ -10,7 +10,7 @@
     <div class="email-container">
         <!-- Logo -->
         <div class="logo-section">
-            <img src="{{ asset('images/logo.png') }}" alt="Mis Gastos">
+            <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos">
         </div>
 
         <!-- Contenido -->
