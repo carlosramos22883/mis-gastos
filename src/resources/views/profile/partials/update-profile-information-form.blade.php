@@ -1,8 +1,8 @@
 <section>
-    <header>
-        <h1 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+    <header class="mb-6 text-center mt-4">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
             {{ __('Información del Perfil') }}
-        </h1>
+        </h2>
 
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             {{ __('Actualiza la información de perfil y correo electrónico de tu cuenta.') }}

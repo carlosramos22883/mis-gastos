@@ -7,50 +7,50 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-8">
+            <div class="flex justify-center">
+                <!-- 1. SECCIÓN DE FOTO DE PERFIL -->
+                <div class="w-full max-w-md bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
+                    <header class="mb-6 text-center">
+                        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">                        
+                            {{ __('Foto de Perfil') }}
+                        </h2>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            {{ __('Haz clic en el icono de la cámara para cambiar tu foto.') }}
+                        </p>
+                    </header>
 
-            <!-- 1. SECCIÓN DE FOTO DE PERFIL -->
-            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
-                <header class="mb-6 text-center">
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {{ __('Foto de Perfil') }}
-                    </h2>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        {{ __('Haz clic en el icono de la cámara para cambiar tu foto.') }}
-                    </p>
-                </header>
+                    <form id="avatar-form" method="POST" action="{{ route('profile.avatar.update') }}" enctype="multipart/form-data" class="space-y-6">
+                        @csrf
+                        @method('patch')
 
-                <form id="avatar-form" method="POST" action="{{ route('profile.avatar.update') }}" enctype="multipart/form-data" class="space-y-6">
-                    @csrf
-                    @method('patch')
+                        <div class="flex justify-center">
+                            <div class="relative group">
+                                <img id="avatar-preview"
+                                    src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff&size=256' }}"
+                                    alt="Avatar"
+                                    class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600 shadow-lg">
 
-                    <div class="flex justify-center">
-                        <div class="relative group">
-                            <img id="avatar-preview"
-                                src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff&size=256' }}"
-                                alt="Avatar"
-                                class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600 shadow-lg">
-
-                            <!-- Icono de cámara -->
-                            <label for="avatar-upload"
-                                title="Haga clic para cambiar foto de perfil"
-                                class="absolute bottom-0 right-0 bg-primary-600 dark:bg-primary-500 hover:bg-primary-700 dark:hover:bg-primary-400 text-white rounded-full p-2 cursor-pointer shadow-md transition-all transform group-hover:scale-110 border-2 border-white dark:border-gray-800">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <input id="avatar-upload" name="avatar" type="file" accept="image/*" class="hidden">
-                            </label>
+                                <!-- Icono de cámara -->
+                                <label for="avatar-upload"
+                                    title="Haga clic para cambiar foto de perfil"
+                                    class="absolute bottom-0 right-0 bg-primary-600 dark:bg-primary-500 hover:bg-primary-700 dark:hover:bg-primary-400 text-white rounded-full p-2 cursor-pointer shadow-md transition-all transform group-hover:scale-110 border-2 border-white dark:border-gray-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <input id="avatar-upload" name="avatar" type="file" accept="image/*" class="hidden">
+                                </label>
+                            </div>
                         </div>
-                    </div>
 
-                    <x-input-error :messages="$errors->get('avatar')" class="mt-2 text-center" />
-                    
-                </form>
-            </div>
+                        <x-input-error :messages="$errors->get('avatar')" class="mt-2 text-center" />
+                        
+                    </form>
+                
 
             <!-- 2. INFORMACIÓN DEL PERFIL -->
-            <div class="flex justify-center">
-                <div class="w-full max-w-md bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
+            
+                
                     @include('profile.partials.update-profile-information-form')
                 </div>
             </div>
@@ -142,12 +142,16 @@
             <div id="crop-image-container" class="mb-4"></div>
 
             <div class="flex justify-end gap-3">
-                <button id="cancel-crop" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                <!--<button id="cancel-crop" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">-->
+                <x-secondary-button id="cancel-crop">
                     Cancelar
-                </button>
-                <button id="save-crop" class="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-400 transition">
+                </x-secondary-button>
+                <!--</button>
+                <button id="save-crop" class="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-400 transition">-->
+                <x-primary-button id="save-crop">
                     Guardar y Recortar
-                </button>
+                </x-primary-button>
+                <!--</button>-->
             </div>
         </div>
     </div>

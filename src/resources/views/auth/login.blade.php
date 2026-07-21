@@ -24,7 +24,7 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login') }}" novalidate id="login-form">
         @csrf
 
         <!-- Email -->
@@ -98,3 +98,38 @@
         </div>
     </form>
 </x-guest-layout>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('login-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        const email = form.querySelector('#email');
+        const password = form.querySelector('#password');
+        let hasError = false;
+        let errorMessage = '';
+
+        // Validar email
+        if (!email.value.trim()) {
+            hasError = true;
+            errorMessage = 'El correo electrónico es obligatorio.';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+            hasError = true;
+            errorMessage = 'Por favor, ingresa un correo electrónico válido.';
+        }
+
+        // Validar contraseña
+        if (!password.value) {
+            hasError = true;
+            errorMessage = errorMessage ? errorMessage + '\nLa contraseña es obligatoria.' : 'La contraseña es obligatoria.';
+        }
+
+        // Si hay errores, mostrar SweetAlert y detener envío
+        if (hasError) {
+            e.preventDefault();
+            showAlert('warning', 'Campos incompletos', errorMessage);
+            return false;
+        }
+    });
+});
+</script>

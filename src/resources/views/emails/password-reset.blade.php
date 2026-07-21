@@ -8,12 +8,10 @@
 </head>
 <body>
     <div class="email-container">
-        <!-- Logo -->
         <div class="logo-section">
             <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos">
         </div>
 
-        <!-- Contenido -->
         <div class="content-section">
             <h2 class="greeting">¡Hola!</h2>
             
@@ -25,7 +23,6 @@
                 Si fuiste tú, usa el siguiente token para restablecer tu contraseña desde la aplicación móvil:
             </p>
 
-            <!-- Token destacado - Al hacer clic se selecciona SOLO el token -->
             <div class="token-box">
                 <div class="label">🔑 Tu token de recuperación:</div>
                 <div class="token-text" title="Haz clic para seleccionar el token">{{ $token }}</div>
@@ -40,9 +37,8 @@
                 O si lo prefieres, puedes realizar esta misma acción desde el sitio web:
             </p>
 
-            <!-- Botón para web -->
             <div class="center-text">
-                <a href="{{ $actionUrl }}" class="button">
+                <a href="{{ $actionUrl }}" class="button-primary">
                     Restablecer Contraseña
                 </a>
             </div>
@@ -53,7 +49,6 @@
             </p>
         </div>
 
-        <!-- Footer -->
         <div class="footer">
             Saludos, El equipo de Mis Gastos
         </div>

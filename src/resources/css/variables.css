@@ -1,0 +1,40 @@
+/* ============================================
+   SISTEMA DE DISEÑO - VARIABLES GLOBALES
+   Cambia los colores aquí y se aplicarán en:
+   - Web (Tailwind)
+   - Emails
+   - SweetAlert2
+   - Componentes
+   ============================================ */
+
+:root {
+    /* Colores Primarios */
+    --color-primary: #0a0a5e;
+    --color-primary-hover: #2B66CC;
+    --color-primary-light: #6366f1;
+    
+    /* Colores Secundarios */
+    --color-secondary: #6b7280;
+    --color-secondary-hover: #4b5563;
+    
+    /* Colores de Estado */
+    --color-success: #0B6E4F;
+    --color-success-hover: #2E8B57;
+    --color-warning: #f59e0b;
+    --color-warning-hover: #d97706;
+    --color-danger: #660000;
+    --color-danger-hover: #800000;
+    --color-info: #3b82f6;
+    --color-info-hover: #2563eb;
+    
+    /* Colores Neutros */
+    --color-bg-light: #f3f4f6;
+    --color-bg-dark: #1f2937;
+    --color-text-light: #1f2937;
+    --color-text-dark: #f9fafb;
+    --color-border: #e5e7eb;
+    
+    /* Configuración de Alertas */
+    --alert-timer: 3000;
+    --alert-border-radius: 9999px; /* Redondeado completo como los botones */
+}

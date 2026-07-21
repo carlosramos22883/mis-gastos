@@ -24,7 +24,7 @@
         {{ __('Digita tus datos para registrarte en el sistema.') }}
     </div>
 
-    <form method="POST" action="{{ route('register') }}" class="space-y-2">
+    <form method="POST" action="{{ route('register') }}" class="space-y-2" novalidate id="register-form">
         @csrf
 
         <!-- Nombre -->
@@ -68,3 +68,38 @@
         </div>
     </form>
 </x-guest-layout>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('register-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        const name = form.querySelector('#name');
+        const email = form.querySelector('#email');
+        const password = form.querySelector('#password');
+        const passwordConfirmation = form.querySelector('#password_confirmation');
+        let errors = [];
+
+        if (!name.value.trim()) errors.push('El nombre es obligatorio.');
+        if (!email.value.trim()) {
+            errors.push('El correo electrónico es obligatorio.');
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+            errors.push('El correo electrónico no es válido.');
+        }
+        if (!password.value) {
+            errors.push('La contraseña es obligatoria.');
+        } else if (password.value.length < 8) {
+            errors.push('La contraseña debe tener al menos 8 caracteres.');
+        }
+        if (password.value !== passwordConfirmation.value) {
+            errors.push('Las contraseñas no coinciden.');
+        }
+
+        if (errors.length > 0) {
+            e.preventDefault();
+            showAlert('warning', 'Revisa los siguientes errores', errors.join('\n'));
+            return false;
+        }
+    });
+});
+</script>

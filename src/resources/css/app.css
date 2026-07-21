@@ -1,3 +1,5 @@
+@import './variables.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +10,6 @@
         @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100;
     }
 
-    /* Transición suave al cambiar de modo */
     * {
         @apply transition-colors duration-200;
     }
@@ -38,4 +39,137 @@
 /* Card estilo elegante */
 .card-elegant {
     @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow duration-300;
+}
+
+/* ============================================
+   BOTONES DE SWEETALERT2
+   Idénticos a los componentes Blade
+   ============================================ */
+
+.swal-btn-primary {
+    @apply inline-flex items-center px-6 py-3 bg-primary-600 border border-transparent 
+           rounded-full font-semibold text-xs text-white tracking-widest 
+           hover:bg-primary-500 focus:bg-primary-500 active:bg-primary-700 
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 
+           transition ease-in-out duration-150;
+}
+
+.swal-btn-secondary {
+    @apply inline-flex items-center px-6 py-3 bg-gray-200 border border-transparent 
+           rounded-full font-semibold text-xs text-gray-700 tracking-widest 
+           hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 
+           focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 
+           transition ease-in-out duration-150;
+}
+
+.swal-btn-danger {
+    @apply inline-flex items-center px-6 py-3 bg-red-600 border border-transparent 
+           rounded-full font-semibold text-xs text-white tracking-widest 
+           hover:bg-red-500 focus:bg-red-500 active:bg-red-700 
+           focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 
+           transition ease-in-out duration-150;
+}
+
+.swal-btn-success {
+    @apply inline-flex items-center px-6 py-3 bg-success border border-transparent 
+           rounded-full font-semibold text-xs text-white tracking-widest 
+           hover:bg-success-hover focus:bg-success-hover active:bg-success 
+           focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2 
+           transition ease-in-out duration-150;
+}
+
+.swal-btn-warning {
+    @apply inline-flex items-center px-6 py-3 bg-yellow-600 border border-transparent 
+           rounded-full font-semibold text-xs text-white tracking-widest 
+           hover:bg-yellow-500 focus:bg-yellow-500 active:bg-yellow-700 
+           focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 
+           transition ease-in-out duration-150;
+}
+
+.swal-actions {
+    @apply gap-4 mt-4;
+}
+
+.swal-actions button {
+    @apply m-0;
+}
+
+.swal2-popup {
+    @apply rounded-2xl;
+}
+
+/* ============================================
+   SWEETALERT2 - MODO OSCURO
+   ============================================ */
+
+/* Popup en modo oscuro */
+.dark .swal2-popup {
+    background-color: #1f2937; /* gray-800 */
+    color: #f9fafb; /* gray-50 */
+    border: 1px solid #374151; /* gray-700 */
+}
+
+/* Título y texto en modo oscuro */
+.dark .swal2-title {
+    color: #f9fafb !important; /* gray-50 */
+}
+
+.dark .swal2-html-container {
+    color: #d1d5db !important; /* gray-300 */
+}
+
+.dark .swal2-content {
+    color: #d1d5db; /* gray-300 */
+}
+
+/* Iconos en modo oscuro */
+.dark .swal2-icon {
+    color: #f9fafb;
+}
+
+.dark .swal2-icon-text {
+    color: #f9fafb;
+}
+
+/* Línea de tiempo (timer progress bar) */
+.dark .swal2-timer-progress-bar {
+    background-color: #6b7280; /* gray-500 */
+}
+
+/* Input fields dentro de SweetAlert */
+.dark .swal2-input,
+.dark .swal2-textarea {
+    background-color: #374151 !important; /* gray-700 */
+    color: #f9fafb !important; /* gray-50 */
+    border-color: #4b5563 !important; /* gray-600 */
+}
+
+.dark .swal2-input:focus,
+.dark .swal2-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Botones en modo oscuro - Ajustes sutiles */
+.dark .swal-btn-primary {
+    @apply bg-primary-500 hover:bg-primary-400 active:bg-primary-600;
+}
+
+.dark .swal-btn-success {
+    background-color: #3CB371 !important; /* hover color más brillante */
+}
+
+.dark .swal-btn-success:hover {
+    background-color: #2E8B57 !important; /* original color */
+}
+
+.dark .swal-btn-danger {
+    @apply bg-red-500 hover:bg-red-400 active:bg-red-600;
+}
+
+.dark .swal-btn-warning {
+    @apply bg-yellow-500 hover:bg-yellow-400 active:bg-yellow-600;
+}
+
+.dark .swal-btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-500 active:bg-gray-700 text-gray-100;
 }
