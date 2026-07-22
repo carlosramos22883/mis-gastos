@@ -1,43 +1,23 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('crop-modal');
     const uploadInput = document.getElementById('avatar-upload');
     const closeModal = document.getElementById('close-modal');
     const cancelCrop = document.getElementById('cancel-crop');
     const saveCrop = document.getElementById('save-crop');
     const avatarForm = document.getElementById('avatar-form');
+    const modalElement = document.getElementById('crop-image-modal');
 
     let croppie;
 
-    if (!modal || !uploadInput) return;
+    // Función para abrir el modal
+    function openCropModal() {
+        // Dispatch event para abrir el modal de Alpine
+        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'crop-image-modal' }));
+    }
 
-    uploadInput.addEventListener('change', function(e) {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-
-            if (file.size > 5 * 1024 * 1024) {
-                showAlert('warning', 'Imagen muy grande', 'La imagen no debe superar los 5MB');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                croppie = new Croppie(document.getElementById('crop-image-container'), {
-                    viewport: { width: 300, height: 300, type: 'circle' },
-                    boundary: { width: 400, height: 400 },
-                    enableZoom: true,
-                    showZoomer: true,
-                    mouseWheelZoom: true,
-                });
-
-                croppie.bind({ url: event.target.result });
-                modal.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
+    // Función para cerrar el modal
     function closeCropModal() {
-        modal.classList.add('hidden');
+        window.dispatchEvent(new CustomEvent('close-modal', { detail: 'crop-image-modal' }));
+        
         if (croppie) {
             croppie.destroy();
             croppie = null;
@@ -45,9 +25,49 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadInput.value = '';
     }
 
+    // Cuando se selecciona una imagen
+    if (uploadInput) {
+        uploadInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                
+                // Validar tipo de archivo
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                if (!validTypes.includes(file.type)) {
+                    showAlert('warning', 'Formato no soportado', 
+                        'Por favor, selecciona una imagen en formato JPG, PNG, WebP o GIF.');
+                    uploadInput.value = '';
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    showAlert('warning', 'Imagen muy grande', 'La imagen no debe superar los 5MB');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    croppie = new Croppie(document.getElementById('crop-image-container'), {
+                        viewport: { width: 300, height: 300, type: 'circle' },
+                        boundary: { width: 400, height: 400 },
+                        enableZoom: true,
+                        showZoomer: true,
+                        mouseWheelZoom: true,
+                    });
+
+                    croppie.bind({ url: event.target.result });
+                    openCropModal();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Event listeners
     if (closeModal) closeModal.addEventListener('click', closeCropModal);
     if (cancelCrop) cancelCrop.addEventListener('click', closeCropModal);
 
+    // Guardar imagen
     if (saveCrop) {
         saveCrop.addEventListener('click', function() {
             if (!croppie) return;
@@ -73,13 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         formData.append('avatar', file);
 
                         closeCropModal();
+
                         const avatarPreview = document.getElementById('avatar-preview');
                         if (avatarPreview) avatarPreview.src = base64;
 
                         const navbarAvatars = document.querySelectorAll('.navbar-avatar-img');
-                        navbarAvatars.forEach(img =>{
-                            img.src = base64;
-                        })
+                        navbarAvatars.forEach(img => { img.src = base64; });
 
                         if (avatarForm) {
                             fetch(avatarForm.action, {
@@ -91,12 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (response.ok) {
                                     showAlert('success', '¡Éxito!', 'Foto de perfil actualizada correctamente');
                                 } else {
-                                    showAlert('error', 'Error', 'Error al guardar la imagen en el servidor');
+                                    showAlert('error', 'Error', 'Error al guardar la imagen');
                                 }
                             })
                             .catch(error => {
                                 console.error('Error:', error);
-                                showAlert('error', 'Error de red', 'No se pudo conectar con el servidor');
+                                showAlert('error', 'Error de red', 'No se pudo conectar');
                             });
                         }
                     });

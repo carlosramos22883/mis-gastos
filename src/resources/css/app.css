@@ -260,7 +260,7 @@
 
 .btn-secondary-custom {
     @apply inline-flex items-center px-6 py-3 border border-transparent 
-           rounded-full font-semibold text-xs tracking-widest 
+           rounded-full font-semibold text-sm text-white tracking-widest 
            focus:outline-none focus:ring-2 focus:ring-offset-2 
            dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
     background-color: var(--color-secondary);

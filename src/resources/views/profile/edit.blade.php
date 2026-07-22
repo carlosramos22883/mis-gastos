@@ -75,22 +75,25 @@
             @csrf
             @method('put')
 
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {{ __('Actualizar Contraseña') }}
-            </h2>
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    {{ __('Actualizar Contraseña') }}
+                </h2>
+                <button type="button" x-on:click="$dispatch('close')" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-            <div class="mt-4">
+            <div class="space-y-4">
                 <x-floating-input id="update_password_current_password" name="current_password" label="Contraseña Actual" type="password" :error="$errors->updatePassword->first('current_password')" required />
-            </div>
-            <div class="mt-4">
                 <x-floating-input id="update_password_password" name="password" label="Nueva Contraseña" type="password" :error="$errors->updatePassword->first('password')" required />
-            </div>
-            <div class="mt-4">
                 <x-floating-input id="update_password_password_confirmation" name="password_confirmation" label="Confirmar Contraseña" type="password" :error="$errors->updatePassword->first('password_confirmation')" required />
             </div>
 
             <div class="mt-6 flex justify-end gap-3">
-                <x-secondary-button x-on:click="$dispatch('close')">
+                <x-secondary-button type="button" x-on:click="$dispatch('close')">
                     {{ __('Cancelar') }}
                 </x-secondary-button>
                 <x-primary-button>
@@ -106,16 +109,23 @@
             @csrf
             @method('delete')
 
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {{ __('¿Estás seguro de eliminar tu cuenta?') }}
-            </h2>
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    {{ __('¿Estás seguro de eliminar tu cuenta?') }}
+                </h2>
+                <button type="button" x-on:click="$dispatch('close')" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-            <div class="mt-4">
+            <div class="mb-4">
                 <x-floating-input id="password" name="password" label="Contraseña" type="password" :error="$errors->userDeletion->first('password')" required />
             </div>
 
             <div class="mt-6 flex justify-end gap-3">
-                <x-secondary-button x-on:click="$dispatch('close')">
+                <x-secondary-button type="button" x-on:click="$dispatch('close')">
                     {{ __('Cancelar') }}
                 </x-secondary-button>
                 <x-danger-button type="submit">
@@ -125,36 +135,31 @@
         </form>
     </x-modal>
 
-    <!-- MODAL: Croppie (Recortar imagen) -->
-    <div id="crop-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6">
-            <div class="flex justify-between items-center mb-4">
+    <!-- MODAL: Croppie (Recortar imagen) - USANDO EL MISMO COMPONENTE GENÉRICO -->
+    <x-modal name="crop-image-modal" :show="false">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     Recortar Imagen de Perfil
                 </h3>
-                <button id="close-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <button type="button" id="close-modal" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <div id="crop-image-container" class="mb-4"></div>
+            <div id="crop-image-container" class="mb-6"></div>
 
             <div class="flex justify-end gap-3">
-                <!--<button id="cancel-crop" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">-->
-                <x-secondary-button id="cancel-crop">
+                <x-secondary-button id="cancel-crop" type="button">
                     Cancelar
                 </x-secondary-button>
-                <!--</button>
-                <button id="save-crop" class="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-400 transition">-->
-                <x-primary-button id="save-crop">
+                <x-primary-button id="save-crop" type="button">
                     Guardar y Recortar
                 </x-primary-button>
-                <!--</button>-->
             </div>
         </div>
-    </div>
+    </x-modal>
 
-   
 </x-app-layout>
