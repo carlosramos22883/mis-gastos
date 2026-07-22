@@ -27,22 +27,7 @@
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
 
                 <!-- Botón de Modo Oscuro / Claro -->
-                <button onclick="toggleDarkMode()"
-                    class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                    aria-label="Alternar modo oscuro">
-                    <!-- Icono de Sol (se muestra en modo oscuro) -->
-                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                        </path>
-                    </svg>
-                    <!-- Icono de Luna (se muestra en modo claro) -->
-                    <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
-                        </path>
-                    </svg>
-                </button>
+                <x-dark-mode-toggle size="md" alignment="center" />
 
                 <!-- Dropdown de Usuario -->
                 <div class="relative ms-3">
@@ -51,13 +36,14 @@
                             <button
                                 class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
                                 <!-- Avatar -->
-                                <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                                <img id="navbar-avatar-desktop"
+                                    src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
                                     alt="{{ Auth::user()->name }}"
-                                    class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                    class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600 navbar-avatar-img">
 
                                 <!-- Nombre truncado -->
                                 <div class="max-w-[150px] truncate">
-                                    ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 15) }}!
+                                    ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 25) }}!
                                 </div>
 
                                 <div class="ms-1">
@@ -112,22 +98,7 @@
     <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
         <!-- Toggle de Modo Oscuro en móvil -->
         <div class="flex justify-end px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-            <button onclick="toggleDarkMode()"
-                class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                aria-label="Alternar modo oscuro">
-                <!-- Icono de Sol (se muestra en modo oscuro) -->
-                <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                    </path>
-                </svg>
-                <!-- Icono de Luna (se muestra en modo claro) -->
-                <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
-                    </path>
-                </svg>
-            </button>
+            <x-dark-mode-toggle size="md" alignment="right" />
         </div>
 
         <div class="pt-2 pb-3 space-y-1">
@@ -142,12 +113,13 @@
             <div class="px-4">
                 <div class="flex items-center gap-3 mb-2">
                     <!-- Avatar -->
-                    <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                    <img id="navbar-avatar-mobile"
+                        src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
                         alt="{{ Auth::user()->name }}"
-                        class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                        class="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600 navbar-avatar-img">
                     <div>
                         <div class="font-medium text-base text-gray-800 dark:text-gray-200">
-                            ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 20) }}!
+                            ¡Bienvenid@ {{ Str::limit(Auth::user()->name, 25) }}!
                         </div>
                         <div class="font-medium text-sm text-gray-500 dark:text-gray-400">
                             {{ Auth::user()->email }}

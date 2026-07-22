@@ -13,8 +13,8 @@ export default {
                     50: '#f0f4ff',
                     100: '#e0e7ff',
                     200: '#c7d2fe',
-                    300: '#a5b4fc',
-                    400: '#818cf8',
+                    300: '#7BB3F0',
+                    400: '#4A90E2',
                     500: '#2B66CC',
                     600: '#0a0a5e',
                     700: '#08084a',
@@ -57,8 +57,8 @@ export default {
                     hover: '#d97706',
                 },
                 danger: {
-                    DEFAULT: '#660000',
-                    hover: '#800000',
+                    DEFAULT: '#DC3545',
+                    hover: '#b21f2d',
                 },
                 info: {
                     DEFAULT: '#3b82f6',

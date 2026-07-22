@@ -19,9 +19,9 @@ Swal.mixin({
     backdrop: 'rgba(0, 0, 0, 0.5)', // Fondo semi-transparente
     customClass: {
         popup: 'swal2-custom-popup',
-        confirmButton: 'swal-btn-primary',
-        cancelButton: 'swal-btn-secondary',
-        denyButton: 'swal-btn-danger',
+        confirmButton: 'btn-primary-custom',
+        cancelButton: 'btn-secondary-custom',
+        denyButton: 'btn-danger-custom',
         actions: 'swal-actions',
     },
     // Forzar actualización de clases al cambiar de tema

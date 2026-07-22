@@ -1,52 +1,38 @@
 <x-guest-layout>
     <!-- Título y botón de modo oscuro -->
     <div class="flex items-center justify-between mb-6">
-        <h1 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">Registrarse</h1>
-
-        <button onclick="toggleDarkMode()"
-            class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-            aria-label="Alternar modo oscuro">
-            <!-- Icono de Sol (se muestra en modo oscuro) -->
-            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                </path>
-            </svg>
-            <!-- Icono de Luna (se muestra en modo claro) -->
-            <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
-        </button>
+        <h1>Registrarse</h1>
+        <!-- Botón de Modo Oscuro / Claro -->
+        <x-dark-mode-toggle />
     </div>
 
-    <div class="mb-6 text-sm text-gray-600 dark:text-gray-400">
-        {{ __('Digita tus datos para registrarte en el sistema.') }}
+    <div>
+        <p>{{ __('Digita tus datos para registrarte en el sistema.') }}</p>
     </div>
 
-    <form method="POST" action="{{ route('register') }}" class="space-y-2" novalidate id="register-form">
+    <form method="POST" action="{{ route('register') }}" class="space-y-2" novalidate>
         @csrf
 
         <!-- Nombre -->
-        <div class="mb-6">
+        <div class="mb-4">
             <x-floating-input id="name" name="name" label="Nombre" type="text" :value="old('name')"
                 :error="$errors->first('name')" required autofocus autocomplete="name" />
         </div>
 
         <!-- Correo electrónico -->
-        <div class="mb-6">
+        <div class="mb-4">
             <x-floating-input id="email" name="email" label="Correo electrónico" type="email" :value="old('email')"
                 :error="$errors->first('email')" required autocomplete="username" />
         </div>
 
         <!-- Contraseña -->
-        <div class="mb-6">
+        <div class="mb-4">
             <x-floating-input id="password" name="password" label="Contraseña" type="password" :error="$errors->first('password')"
                 required autocomplete="new-password" />
         </div>
 
         <!-- Confirmar Contraseña -->
-        <div class="mb-8">
+        <div class="mb-4">
             <x-floating-input id="password_confirmation" name="password_confirmation" label="Confirmar Contraseña"
                 type="password" :error="$errors->first('password_confirmation')" required autocomplete="new-password" />
         </div>
@@ -68,38 +54,3 @@
         </div>
     </form>
 </x-guest-layout>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('register-form');
-    if (!form) return;
-
-    form.addEventListener('submit', function(e) {
-        const name = form.querySelector('#name');
-        const email = form.querySelector('#email');
-        const password = form.querySelector('#password');
-        const passwordConfirmation = form.querySelector('#password_confirmation');
-        let errors = [];
-
-        if (!name.value.trim()) errors.push('El nombre es obligatorio.');
-        if (!email.value.trim()) {
-            errors.push('El correo electrónico es obligatorio.');
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-            errors.push('El correo electrónico no es válido.');
-        }
-        if (!password.value) {
-            errors.push('La contraseña es obligatoria.');
-        } else if (password.value.length < 8) {
-            errors.push('La contraseña debe tener al menos 8 caracteres.');
-        }
-        if (password.value !== passwordConfirmation.value) {
-            errors.push('Las contraseñas no coinciden.');
-        }
-
-        if (errors.length > 0) {
-            e.preventDefault();
-            showAlert('warning', 'Revisa los siguientes errores', errors.join('\n'));
-            return false;
-        }
-    });
-});
-</script>

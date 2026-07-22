@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+        <h1>
             {{ __('Perfil de ') . Auth::user()->name }}
         </h1>
     </x-slot>
@@ -11,10 +11,10 @@
                 <!-- 1. SECCIÓN DE FOTO DE PERFIL -->
                 <div class="w-full max-w-md bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
                     <header class="mb-6 text-center">
-                        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">                        
+                        <h2>                        
                             {{ __('Foto de Perfil') }}
                         </h2>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        <p>
                             {{ __('Haz clic en el icono de la cámara para cambiar tu foto.') }}
                         </p>
                     </header>
@@ -38,7 +38,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    <input id="avatar-upload" name="avatar" type="file" accept="image/*" class="hidden">
+                                    <input id="avatar-upload" name="avatar" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/webp" class="hidden">
                                 </label>
                             </div>
                         </div>

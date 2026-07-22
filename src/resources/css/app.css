@@ -1,8 +1,21 @@
 @import './variables.css';
 
+/* Importar fuente Poppins desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   ESTILOS GLOBALES DEL SISTEMA
+   Se aplican automáticamente a todas las páginas
+   ============================================ */
+
+/* Fuente global - Poppins */
+* {
+    font-family: 'Poppins', sans-serif;
+}
 
 /* Estilos base para modo claro/oscuro */
 @layer base {
@@ -10,12 +23,58 @@
         @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100;
     }
 
+    /* Transición suave al cambiar de modo */
     * {
         @apply transition-colors duration-200;
     }
+
+    /* ============================================
+       ENLACES (<a>) - Globales
+       ============================================ */
+    a {
+        @apply text-primary-600 hover:text-primary-700 
+               dark:text-primary-400 dark:hover:text-primary-300
+               font-medium 
+               transition-colors duration-200;
+    }
+
+    /* ============================================
+       PÁRRAFOS (<p>) - Globales
+       ============================================ */
+    p {
+        @apply text-sm text-gray-600 dark:text-gray-400;
+    }
+
+    /* ============================================
+       ENCABEZADOS - Globales
+       ============================================ */
+    h1 {
+        @apply text-2xl font-semibold text-gray-800 dark:text-gray-100 leading-tight;
+    }
+
+    h2 {
+        @apply text-xl font-semibold text-gray-800 dark:text-gray-100 leading-tight;
+    }
+
+    h3 {
+        @apply text-lg font-medium text-gray-800 dark:text-gray-100;
+    }
+
+    h4 {
+        @apply text-base font-medium text-gray-800 dark:text-gray-100;
+    }
+
+    /* ============================================
+       TEXTOS PEQUEÑOS - Globales
+       ============================================ */
+    small, .text-small {
+        @apply text-xs text-gray-500 dark:text-gray-400;
+    }
 }
 
-/* Estilos personalizados */
+/* ============================================
+   ESTILOS PERSONALIZADOS
+   ============================================ */
 @layer components {
     .card {
         @apply bg-white dark:bg-neutral-800 rounded-lg shadow-md p-6;
@@ -26,7 +85,9 @@
     }
 
     .input-field {
-        @apply w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+        @apply w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
+               bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 
+               focus:ring-2 focus:ring-primary-500 focus:border-transparent;
     }
 }
 
@@ -38,7 +99,8 @@
 
 /* Card estilo elegante */
 .card-elegant {
-    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow duration-300;
+    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 
+           shadow-md hover:shadow-lg transition-shadow duration-300;
 }
 
 /* ============================================
@@ -172,4 +234,61 @@
 
 .dark .swal-btn-secondary {
     @apply bg-gray-600 hover:bg-gray-500 active:bg-gray-700 text-gray-100;
+}
+
+/* ============================================
+   BOTONES DEL SISTEMA
+   Usan variables CSS globales
+   ============================================ */
+
+.btn-primary-custom {
+    @apply inline-flex items-center px-6 py-3 border border-transparent 
+           rounded-full font-semibold text-sm text-white tracking-widest 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 
+           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    background-color: var(--color-primary);
+}
+
+.btn-primary-custom:hover,
+.btn-primary-custom:focus {
+    background-color: var(--color-primary-hover);
+}
+
+.btn-primary-custom:active {
+    background-color: var(--color-primary);
+}
+
+.btn-secondary-custom {
+    @apply inline-flex items-center px-6 py-3 border border-transparent 
+           rounded-full font-semibold text-xs tracking-widest 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 
+           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    background-color: var(--color-secondary);
+    color: var(--color-text-dark);
+}
+
+.btn-secondary-custom:hover,
+.btn-secondary-custom:focus {
+    background-color: var(--color-secondary-hover);
+}
+
+.btn-secondary-custom:active {
+    background-color: var(--color-secondary);
+}
+
+.btn-danger-custom {
+    @apply inline-flex items-center px-6 py-3 border border-transparent 
+           rounded-full font-semibold text-sm text-white tracking-widest 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 
+           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    background-color: var(--color-danger);
+}
+
+.btn-danger-custom:hover,
+.btn-danger-custom:focus {
+    background-color: var(--color-danger-hover);
+}
+
+.btn-danger-custom:active {
+    background-color: var(--color-danger);
 }

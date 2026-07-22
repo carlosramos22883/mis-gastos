@@ -1,73 +1,43 @@
 <x-guest-layout>
     <!-- Título y botón de modo oscuro -->
     <div class="flex items-center justify-between mb-6">
-        <h1 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">Inicia Sesión</h1>
-
+        <h1>Inicia Sesión</h1>
         <!-- Botón de Modo Oscuro / Claro -->
-        <button onclick="toggleDarkMode()"
-            class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-            aria-label="Alternar modo oscuro">
-            <!-- Icono de Sol (se muestra en modo oscuro) -->
-            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                </path>
-            </svg>
-            <!-- Icono de Luna (se muestra en modo claro) -->
-            <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
-        </button>
+        <x-dark-mode-toggle />
     </div>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
-
-    <form method="POST" action="{{ route('login') }}" novalidate id="login-form">
+    <form method="POST" action="{{ route('login') }}" novalidate>
         @csrf
 
-        <!-- Email -->
         <div class="mb-4">
             <x-floating-input id="email" label="Correo electrónico" type="email" :error="$errors->first('email')" />
         </div>
 
-        <!-- Password -->
         <div class="mb-4">
             <x-floating-input id="password" label="Contraseña" type="password" :error="$errors->first('password')" />
         </div>
 
-        <!-- Forgot Password (alineado a la derecha) -->
-        <div class="flex justify-end mb-4 text-sm">
-            @if (Route::has('password.request'))
-                <a class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                    href="{{ route('password.request') }}">
-                    {{ __('¿Olvidaste tu contraseña?') }}
-                </a>
-            @endif
+        <div class="flex justify-end mb-4">
+            <a href="{{ route('password.request') }}">
+                ¿Olvidaste tu contraseña?
+            </a>
         </div>
 
-        <!-- Submit Button -->
         <div class="mb-4">
-            <!-- Submit Button -->
-            <div class="mb-4">
-                <x-primary-button class="w-full justify-center py-3 rounded-full">
-                    {{ __('Iniciar Sesión') }}
-                </x-primary-button>
-            </div>
+            <x-primary-button class="w-full justify-center">
+                Iniciar Sesión
+            </x-primary-button>
         </div>
 
-        <!-- Separador O -->
         <div class="flex items-center justify-center my-4">
             <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-            <div class="px-4 text-gray-500 dark:text-gray-400 text-sm">O</div>
+            <div class="px-4 text-sm">O</div>
             <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
         </div>
 
-        <!-- Google Login -->
         <div class="mb-4">
             <a href="{{ route('auth.google') }}"
-                class="w-full flex justify-center items-center gap-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                class="w-full flex justify-center items-center gap-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full py-3 font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
                 <svg class="w-5 h-5" viewBox="0 0 24 24">
                     <path
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -86,12 +56,10 @@
             </a>
         </div>
 
-        <!-- Register Link (al final) -->
         <div class="text-center mt-6">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
+            <p>
                 ¿No tienes cuenta?
-                <a class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                    href="{{ route('register') }}">
+                <a href="{{ route('register') }}">
                     Regístrate
                 </a>
             </p>
@@ -99,37 +67,10 @@
     </form>
 </x-guest-layout>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('login-form');
-    if (!form) return;
-
-    form.addEventListener('submit', function(e) {
-        const email = form.querySelector('#email');
-        const password = form.querySelector('#password');
-        let hasError = false;
-        let errorMessage = '';
-
-        // Validar email
-        if (!email.value.trim()) {
-            hasError = true;
-            errorMessage = 'El correo electrónico es obligatorio.';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-            hasError = true;
-            errorMessage = 'Por favor, ingresa un correo electrónico válido.';
-        }
-
-        // Validar contraseña
-        if (!password.value) {
-            hasError = true;
-            errorMessage = errorMessage ? errorMessage + '\nLa contraseña es obligatoria.' : 'La contraseña es obligatoria.';
-        }
-
-        // Si hay errores, mostrar SweetAlert y detener envío
-        if (hasError) {
-            e.preventDefault();
-            showAlert('warning', 'Campos incompletos', errorMessage);
-            return false;
-        }
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mostrar SweetAlert de éxito si viene de restablecer contraseña
+        @if (session('status'))
+            showAlert('success', '¡Contraseña restablecida!', '{{ session('status') }}');
+        @endif
     });
-});
 </script>

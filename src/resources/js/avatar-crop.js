@@ -76,6 +76,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         const avatarPreview = document.getElementById('avatar-preview');
                         if (avatarPreview) avatarPreview.src = base64;
 
+                        const navbarAvatars = document.querySelectorAll('.navbar-avatar-img');
+                        navbarAvatars.forEach(img =>{
+                            img.src = base64;
+                        })
+
                         if (avatarForm) {
                             fetch(avatarForm.action, {
                                 method: 'POST',

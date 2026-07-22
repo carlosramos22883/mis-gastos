@@ -15,3 +15,15 @@
         </div>
     </div>
 </x-app-layout>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mostrar SweetAlert de éxito si viene del registro
+    @if (session('success'))
+        showAlert('success', '¡Registro exitoso!', '{{ session('success') }}')
+            .then(() => {
+                // Opcional: Puedes redirigir a otra página si quieres
+                // window.location.href = "{{ route('profile.edit') }}";
+            });
+    @endif
+});
+</script>
