@@ -28,6 +28,9 @@
         <div class="mb-4">
             <x-floating-input id="password" name="password" label="Nueva contraseña" type="password" :error="$errors->first('password')"
                 required autofocus autocomplete="new-password" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Debe tener al menos 8 caracteres, una mayúscula, un número y un símbolo.
+            </p>
         </div>
 
         <!-- Confirmar Contraseña -->

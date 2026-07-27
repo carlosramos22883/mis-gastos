@@ -69,8 +69,12 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Mostrar SweetAlert de éxito si viene de restablecer contraseña
-        @if (session('status'))
-            showAlert('success', '¡Contraseña restablecida!', '{{ session('status') }}');
+        @if (session('status') === 'password-reset')
+            showAlert('success', '¡Contraseña restablecida!', 'Tu contraseña ha sido restablecida correctamente.');
+        @endif
+
+        @if (session('status') === 'account-deleted')
+            showAlert('info', 'Cuenta Eliminada', 'Tu cuenta ha sido eliminada correctamente. Esperamos verte de nuevo pronto.');
         @endif
     });
 </script>

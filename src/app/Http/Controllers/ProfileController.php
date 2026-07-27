@@ -47,6 +47,8 @@ class ProfileController extends Controller
     {
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
+        ],[],[
+            'password' => 'Contraseña',
         ]);
 
         $user = $request->user();
@@ -58,7 +60,8 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return Redirect::to('/');
+        // Redirigir al login enviando la variable de estado 'account-deleted'
+        return redirect()->route('login')->with('status', 'account-deleted');
     }
 
     public function updateAvatar(Request $request)

@@ -37,7 +37,11 @@
                                 class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
                                 <!-- Avatar -->
                                 <img id="navbar-avatar-desktop"
-                                    src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                                    src="{{ Auth::user()->avatar
+                                        ? (filter_var(Auth::user()->avatar, FILTER_VALIDATE_URL)
+                                            ? Auth::user()->avatar
+                                            : asset('storage/' . Auth::user()->avatar))
+                                        : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
                                     alt="{{ Auth::user()->name }}"
                                     class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600 navbar-avatar-img">
 
@@ -114,7 +118,11 @@
                 <div class="flex items-center gap-3 mb-2">
                     <!-- Avatar -->
                     <img id="navbar-avatar-mobile"
-                        src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
+                        src="{{ Auth::user()->avatar
+                            ? (filter_var(Auth::user()->avatar, FILTER_VALIDATE_URL)
+                                ? Auth::user()->avatar
+                                : asset('storage/' . Auth::user()->avatar))
+                            : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
                         alt="{{ Auth::user()->name }}"
                         class="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600 navbar-avatar-img">
                     <div>

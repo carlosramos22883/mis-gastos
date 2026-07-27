@@ -14,39 +14,21 @@
         @method('put')
 
         <div class="mb-4">
-            <x-floating-input 
-                id="update_password_current_password" 
-                name="current_password"
-                label="Contraseña Actual" 
-                type="password"
-                :error="$errors->updatePassword->first('current_password')"
-                required 
-                autocomplete="current-password" 
-            />
+            <x-floating-input id="update_password_current_password" name="current_password" label="Contraseña Actual"
+                type="password" :error="$errors->updatePassword->first('current_password')" required autocomplete="current-password" />
         </div>
-        
+
         <div class="mb-4">
-            <x-floating-input 
-                id="update_password_password" 
-                name="password"
-                label="Nueva Contraseña" 
-                type="password" 
-                :error="$errors->updatePassword->first('password')"
-                required 
-                autocomplete="new-password" 
-            />
+            <x-floating-input id="update_password_password" name="password" label="Nueva Contraseña" type="password"
+                :error="$errors->updatePassword->first('password')" required autocomplete="new-password" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Debe tener al menos 8 caracteres, una mayúscula, un número y un símbolo.
+            </p>
         </div>
-        
+
         <div class="mb-4">
-            <x-floating-input 
-                id="update_password_password_confirmation" 
-                name="password_confirmation"
-                label="Confirmar Contraseña" 
-                type="password"
-                :error="$errors->updatePassword->first('password_confirmation')"
-                required 
-                autocomplete="new-password" 
-            />
+            <x-floating-input id="update_password_password_confirmation" name="password_confirmation"
+                label="Confirmar Contraseña" type="password" :error="$errors->updatePassword->first('password_confirmation')" required autocomplete="new-password" />
         </div>
 
         <div class="flex items-center gap-4">

@@ -64,5 +64,10 @@
         @if (session('status') === 'verification-link-sent')
             showAlert('success', '¡Enlace enviado!', 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.');
         @endif
+
+        //3. Mensaje de contraseña actualizada exitosamente
+        @if (session('status') === 'password-updated')
+            showAlert('success', '¡Éxito!', 'Contraseña actualizada correctamente.');
+        @endif
     });
 </script>
