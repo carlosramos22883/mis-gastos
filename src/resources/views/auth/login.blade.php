@@ -68,11 +68,22 @@
 </x-guest-layout>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Mostrar SweetAlert de éxito si viene de restablecer contraseña
+        // 1. Si viene del registro exitoso
+        @if (session('status') === 'verification-link-sent')
+            showAlert('success', '¡Registro exitoso!', 'Te hemos enviado un enlace de verificación a tu correo. Por favor, revísalo (incluyendo spam) para activar tu cuenta.');
+        @endif
+
+        // 2. Si intenta hacer algo que requiere verificación y no la tiene
+        @if (session('status') === 'verification-required')
+            showAlert('warning', 'Verificación requerida', 'Debes verificar tu correo electrónico antes de acceder a esta sección.');
+        @endif
+
+        // 3. Restablecimiento de contraseña
         @if (session('status') === 'password-reset')
             showAlert('success', '¡Contraseña restablecida!', 'Tu contraseña ha sido restablecida correctamente.');
         @endif
 
+        // 4. Cuenta eliminada
         @if (session('status') === 'account-deleted')
             showAlert('info', 'Cuenta Eliminada', 'Tu cuenta ha sido eliminada correctamente. Esperamos verte de nuevo pronto.');
         @endif

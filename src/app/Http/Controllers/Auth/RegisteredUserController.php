@@ -57,12 +57,8 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        //return redirect(route('dashboard', absolute: false));
-
-        return redirect('/dashboard')
-            ->with('success', '¡Te has registrado exitosamente!'); // ← Asegúrate de tener esto
+        // REDIRIGIR AL LOGIN CON MENSAJE DE VERIFICACIÓN
+        return redirect()->route('login')->with('status', 'verification-link-sent');
 
     }
 }

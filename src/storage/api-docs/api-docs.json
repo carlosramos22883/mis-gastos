@@ -10,6 +10,256 @@
         }
     ],
     "paths": {
+        "/api/admin/roles": {
+            "get": {
+                "tags": [
+                    "Admin - Roles"
+                ],
+                "summary": "Listar roles",
+                "operationId": "2af0a74e89a916dd65550cb1ff927c18",
+                "responses": {
+                    "200": {
+                        "description": "Lista de roles"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Roles"
+                ],
+                "summary": "Crear nuevo rol",
+                "operationId": "811df9a4fd01b110d9ae33803b064cd3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "permissions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "users.view",
+                                            "users.edit"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Rol creado"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
+        },
+        "/api/admin/roles/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin - Roles"
+                ],
+                "summary": "Eliminar rol",
+                "operationId": "f4ba84e17a0c7e7ef3dbd2465f808ecd",
+                "responses": {
+                    "200": {
+                        "description": "Rol eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin - Roles"
+                ],
+                "summary": "Actualizar rol",
+                "operationId": "4d778806e4fc618f0362d32401446e19",
+                "responses": {
+                    "200": {
+                        "description": "Rol actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
+        },
+        "/api/admin/usuarios": {
+            "get": {
+                "tags": [
+                    "Admin - Usuarios"
+                ],
+                "summary": "Listar usuarios",
+                "operationId": "47f2e8942a6dc74d6144a8330b30b7c7",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de usuarios paginada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Sin permiso 'users.view'"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Usuarios"
+                ],
+                "summary": "Crear nuevo usuario",
+                "operationId": "d17fcf5a15b58e64b5e2b301c99e0560",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    },
+                                    "role": {
+                                        "description": "Nombre del rol, ej: 'Usuario'",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Usuario creado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
+        },
+        "/api/admin/usuarios/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin - Usuarios"
+                ],
+                "summary": "Eliminar usuario",
+                "operationId": "9c3311b6330aee7c150a3aeb07ed2f55",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin - Usuarios"
+                ],
+                "summary": "Actualizar usuario",
+                "operationId": "4fd4713718e1c3f3ed46ca8a277808b3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario actualizado"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
+        },
         "/api/register": {
             "post": {
                 "tags": [
@@ -381,6 +631,231 @@
                     }
                 }
             }
+        },
+        "/api/profile/avatar": {
+            "patch": {
+                "tags": [
+                    "Perfil"
+                ],
+                "summary": "Actualizar avatar del usuario",
+                "description": "Sube una nueva imagen de perfil. Requiere autenticación con Bearer Token y permiso 'profile.avatar.update'.",
+                "operationId": "9b6ec122fc3cc896dc68392b0e0f082d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "avatar": {
+                                        "description": "Archivo de imagen (jpg, png, webp, gif). Máximo 5MB.",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Avatar actualizado exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Avatar actualizado correctamente"
+                                        },
+                                        "avatar_url": {
+                                            "type": "string",
+                                            "example": "http://localhost:8081/storage/avatars/123.webp"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para realizar esta acción."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The avatar field must be an image."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
+        },
+        "/api/profile": {
+            "patch": {
+                "tags": [
+                    "Perfil"
+                ],
+                "summary": "Actualizar información del perfil",
+                "description": "Actualiza el nombre y correo electrónico del usuario autenticado. Si el correo cambia, se requerirá verificación nuevamente por seguridad.",
+                "operationId": "9b7235bb283355b576750777fbc0a703",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Carlos Ramos"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "carlos@test.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Perfil actualizado exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Perfil actualizado correctamente."
+                                        },
+                                        "user": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para realizar esta acción."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The email has already been taken."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "0": "bearerAuth"
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -393,6 +868,18 @@
         }
     },
     "tags": [
+        {
+            "name": "Admin - Roles",
+            "description": "Gestión de roles y permisos"
+        },
+        {
+            "name": "Admin - Usuarios",
+            "description": "Gestión de usuarios del sistema (Requiere rol Administrador)"
+        },
+        {
+            "name": "Perfil",
+            "description": "Endpoints para la gestión del perfil de usuario"
+        },
         {
             "name": "Autenticación",
             "description": "Autenticación"
