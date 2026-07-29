@@ -2,6 +2,11 @@ import Alpine from 'alpinejs';
 import Croppie from 'croppie';
 import 'croppie/croppie.css';
 import Swal from 'sweetalert2';
+import TomSelect from 'tom-select';
+import 'tom-select/dist/css/tom-select.css';
+
+// Hacer Tom Select disponible globalmente
+window.TomSelect = TomSelect;
 
 window.Alpine = Alpine;
 Alpine.start();

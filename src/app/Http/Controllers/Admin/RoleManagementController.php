@@ -14,12 +14,19 @@ class RoleManagementController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Role::query();
+        $query = Role::with('permissions');
 
         // Búsqueda por nombre
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('name', 'like', "%{$search}%");
+            $query->where('name', 'like', "%{$request->search}%");
+        }
+
+        // Filtro por módulo de permiso (CAMBIAR 'permission_module' por 'filter_permission')
+        if ($request->filled('filter_permission')) {
+            $module = $request->filter_permission;
+            $query->whereHas('permissions', function ($q) use ($module) {
+                $q->where('name', 'like', $module . '.%');
+            });
         }
 
         $roles = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();

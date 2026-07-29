@@ -15,28 +15,27 @@ class UserManagementController extends Controller
      * Listar usuarios (con búsqueda y paginación)
      */
     public function index(Request $request)
-    {
-        $query = User::query();
+{
+    $query = User::query();
 
-        // Búsqueda por nombre o email
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        // Filtro por rol
-        if ($request->filled('role')) {
-            $query->role($request->role);
-        }
-
-        $users = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
-        $roles = Role::all();
-
-        return view('admin.usuarios.index', compact('users', 'roles'));
+    // Búsqueda por nombre o email
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%");
+        });
     }
+
+    if ($request->filled('filter_role')) {
+        $query->role($request->filter_role);
+    }
+
+    $users = $query->latest()->paginate(10)->withQueryString();
+    $roles = Role::all();
+
+    return view('admin.usuarios.index', compact('users', 'roles'));
+}
 
     /**
      * Mostrar formulario de creación
