@@ -33,6 +33,7 @@
                         allowEmptyOption: true,
                         placeholder: '{{ $placeholder }}',
                         plugins: ['dropdown_input'],
+                        dropdownParent: 'body', // <--- Monta el menú en el body para que no lo corte la tabla
                         onFocus: () => { this.isFocused = true; },
                         onBlur: () => { this.isFocused = false; },
                         onChange: (val) => { 
@@ -55,7 +56,7 @@
             @focus="isFocused = true"
             @blur="isFocused = false"
             {{ $attributes->merge([
-                'class' => 'block w-full px-4 py-3 text-xs text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 peer dark:bg-gray-700'
+                'class' => 'block w-full px-4 py-2.5 text-xs text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 peer dark:bg-gray-700'
             ]) }}
             style="background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e'); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25em 1.25em;"
         >
@@ -72,7 +73,7 @@
             for="{{ $id }}"
             :class="(selectedValue !== '' && selectedValue !== null && selectedValue !== undefined || isFocused) 
                 ? '-translate-y-4 scale-75 top-2 text-xs text-primary-600 dark:text-primary-400 bg-white dark:bg-gray-800 px-2 rounded left-2' 
-                : 'translate-y-0 scale-100 top-3 text-sm text-gray-500 dark:text-gray-400 bg-transparent px-0 left-4'"
+                : 'translate-y-0 scale-100 top-2.5 text-sm text-gray-500 dark:text-gray-400 bg-transparent px-0 left-4'"
             class="absolute z-20 origin-[0] transform transition-all duration-200 pointer-events-none"
         >
             {{ $label }}
