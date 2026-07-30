@@ -8,34 +8,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
+use App\Exports\UsersExport;
+use App\Traits\Exportable;
 
 class UserManagementController extends Controller
 {
+    use Exportable;
     /**
      * Listar usuarios (con búsqueda y paginación)
      */
     public function index(Request $request)
-{
-    $query = User::query();
+    {
+        $query = User::query();
 
-    // Búsqueda por nombre o email
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-              ->orWhere('email', 'like', "%{$search}%");
-        });
+        // Búsqueda
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por rol
+        if ($request->filled('filter_role')) {
+            $query->role($request->filter_role);
+        }
+
+        // Items por página
+        $perPage = $request->get('per_page', 10);
+        $users = $query->latest()->paginate($perPage)->withQueryString();
+        $roles = Role::all();
+
+        return view('admin.usuarios.index', compact('users', 'roles'));
     }
-
-    if ($request->filled('filter_role')) {
-        $query->role($request->filter_role);
-    }
-
-    $users = $query->latest()->paginate(10)->withQueryString();
-    $roles = Role::all();
-
-    return view('admin.usuarios.index', compact('users', 'roles'));
-}
 
     /**
      * Mostrar formulario de creación
@@ -147,5 +153,36 @@ class UserManagementController extends Controller
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', 'Usuario eliminado exitosamente.');
+    }
+
+    /**
+     * Exportar usuarios (CSV, Excel o PDF) usando el Trait estandarizado
+     */
+    public function export(Request $request)
+    {
+        $query = \App\Models\User::with('roles');
+
+        // ... (tus filtros de search y filter_role aquí) ...
+
+        $users = $query->get();
+
+        // Definimos qué columnas queremos en el PDF y sus claves en el modelo
+        $pdfHeaders = [
+            'id' => 'ID',
+            'name' => 'Nombre',
+            'email' => 'Correo',
+            'roles' => 'Rol', // ¡El Trait maneja la conversión de la colección a string automáticamente!
+            'email_verified_at' => 'Verificado',
+            'created_at' => 'Creado'
+        ];
+
+        return $this->handleExport(
+            $request,
+            $users,
+            UsersExport::class,
+            'Listado de Usuarios del Sistema', // Título del PDF
+            $pdfHeaders,                        // Encabezados dinámicos
+            'usuarios'                           // Nombre del archivo
+        );
     }
 }

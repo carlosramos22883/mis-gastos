@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\RoleManagementController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -33,13 +35,22 @@ Route::middleware('auth')->group(function () {
 // Rutas de Configuración del Sistema (Solo para usuarios con permisos)
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')->group(function () {
 
+    // Exportación de usuarios
+    Route::get('usuarios/export', [UserManagementController::class, 'export'])
+         ->name('usuarios.export'); 
+
     // Gestión de Usuarios
-    Route::resource('usuarios', \App\Http\Controllers\Admin\UserManagementController::class)
-        ->middleware('can:users.view'); // Requiere al menos ver para entrar al listado
+    Route::resource('usuarios', UserManagementController::class)
+        ->middleware('can:users.view'); 
+
+    // Exportación de roles
+    Route::get('roles/export', [RoleManagementController::class, 'export'])
+         ->name('roles.export'); 
 
     // Gestión de Roles y Permisos
-    Route::resource('roles', \App\Http\Controllers\Admin\RoleManagementController::class)
+    Route::resource('roles', RoleManagementController::class)
         ->middleware('can:roles.view');
+
 });
 
 // Rutas para autenticación social

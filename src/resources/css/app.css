@@ -97,75 +97,17 @@
 }
 
 /* ============================================
-   TOM SELECT - ESTILOS PERSONALIZADOS
+   ESTILOS TOM SELECT Y FLOATING SELECT
    ============================================ */
 
-.floating-select-container .ts-wrapper {
-    @apply w-full p-0 border-0 bg-transparent;
+/* Igualamos la altura exacta a 42px para el <select> nativo y Tom Select */
+select.appearance-none,
+.ts-control {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    box-sizing: border-box !important;
 }
-
-/* Caja principal cuando searchable=true */
-.floating-select-container .ts-control {
-    @apply px-4 py-3 text-xs text-gray-900 dark:text-white 
-           bg-transparent border border-gray-300 dark:border-gray-600 
-           rounded-lg flex items-center dark:bg-gray-700 w-full;
-    min-height: 44px !important;
-    box-shadow: none !important;
-}
-
-/* Icono de flecha para Tom Select */
-.floating-select-container .ts-wrapper.single .ts-control {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
-    background-position: right 0.75rem center !important;
-    background-repeat: no-repeat !important;
-    background-size: 1.25em 1.25em !important;
-    padding-right: 2.5rem !important;
-}
-
-.floating-select-container .ts-wrapper.single .ts-control::after {
-    display: none !important; /* Ocultar la flecha fea por defecto */
-}
-
-/* Enfoque / Ring de Tailwind */
-.floating-select-container .ts-wrapper.focus .ts-control {
-    @apply ring-2 ring-primary-500 border-primary-500 outline-none;
-}
-
-/* Desplegable personalizado (debajo de la caja) */
-.floating-select-container .ts-dropdown {
-    @apply mt-1 bg-white dark:bg-gray-800 
-           border border-gray-300 dark:border-gray-600 
-           rounded-lg shadow-lg z-50 overflow-hidden;
-}
-
-/* Campo de búsqueda estilo Select2 dentro del desplegable */
-.floating-select-container .ts-dropdown .dropdown-input-wrap {
-    @apply p-2 border-b border-gray-200 dark:border-gray-700;
-}
-
-.floating-select-container .ts-dropdown .dropdown-input {
-    @apply w-full px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-900 
-           border border-gray-300 dark:border-gray-600 rounded 
-           text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500;
-}
-
-/* Opciones de la lista */
-.floating-select-container .ts-dropdown .option {
-    @apply px-4 py-2 text-xs text-gray-900 dark:text-gray-100 
-           hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
-}
-
-.floating-select-container .ts-dropdown .option.active {
-    @apply bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white;
-}
-
-.floating-select-container .ts-dropdown .option.selected {
-    @apply bg-primary-600 text-white font-medium;
-}
-
-/* ============================================
-   ESTILOS TOM SELECT (FLOATING SELECT)
-   ============================================ */
 
 .ts-wrapper {
     padding: 0 !important;
@@ -174,10 +116,7 @@
     width: 100% !important;
 }
 
-/* Forzamos el mismo padding vertical y la altura de los inputs normales */
 .ts-control {
-    /* Mismo padding lateral, pero reducimos el padding vertical a 0.5rem (8px)
-       o forzamos min-height / height a 42px con box-sizing */
     padding: 0.5rem 2.5rem 0.5rem 1rem !important; /* ~8px arriba/abajo */
     font-size: 0.75rem !important; /* text-xs */
     line-height: 1rem !important;
@@ -185,11 +124,8 @@
     border: 1px solid #d1d5db !important;
     background-color: transparent !important;
     box-shadow: none !important;
-    height: 42px !important; /* <--- FORZAMOS LOS 42px EXACTOS */
-    min-height: 42px !important;
     display: flex !important;
     align-items: center !important;
-    box-sizing: border-box !important;
 }
 
 .dark .ts-control {
@@ -197,7 +133,7 @@
     color: #ffffff !important;
 }
 
-/* Flecha desplegable */
+/* Flecha desplegable para Tom Select */
 .ts-wrapper.single .ts-control {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
     background-position: right 0.75rem center !important;
@@ -267,8 +203,6 @@
     background-color: #374151 !important;
     color: #ffffff !important;
 }
-
-/*---------FIN TOM SELECT--------*/
 
 /* Card estilo elegante */
 .card-elegant {

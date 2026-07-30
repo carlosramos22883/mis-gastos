@@ -37,6 +37,8 @@ RUN apk add --no-cache \
     zip \
     bcmath
 
+RUN apk add --no-cache freetype-dev libjpeg-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install gd
+
 # ¿Qué hace?
 # - RUN: Ejecuta un comando dentro de la imagen durante la construcción
 # - apk: Gestor de paquetes de Alpine Linux (como apt-get en Ubuntu)

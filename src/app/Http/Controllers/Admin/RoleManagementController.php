@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use App\Traits\Exportable;
+use App\Exports\RolesExport;
 
 class RoleManagementController extends Controller
 {
+    use Exportable;
     /**
      * Listar roles
      */
@@ -121,5 +124,39 @@ class RoleManagementController extends Controller
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'Rol eliminado exitosamente.');
+    }
+
+    public function export(Request $request)
+    {
+        $query = Role::with('permissions'); // <-- IMPORTANTE: cargar la relación
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', "%{$request->search}%");
+        }
+
+        if ($request->filled('filter_permission')) {
+            $module = $request->filter_permission;
+            $query->whereHas('permissions', function ($q) use ($module) {
+                $q->where('name', 'like', $module . '.%');
+            });
+        }
+
+        $roles = $query->get();
+
+        $pdfHeaders = [
+            'id' => 'ID',
+            'name' => 'Nombre del Rol',
+            'permissions' => 'Permisos Asignados',
+            'created_at' => 'Fecha de Creación'
+        ];
+
+        return $this->handleExport(
+            $request,
+            $roles,
+            RolesExport::class,
+            'Listado de Roles y Permisos',
+            $pdfHeaders,
+            'roles'
+        );
     }
 }

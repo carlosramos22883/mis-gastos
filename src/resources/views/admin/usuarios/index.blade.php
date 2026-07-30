@@ -17,13 +17,14 @@
             @endphp
 
             <x-data-table :headers="$headers" :data="$users" :createRoute="route('admin.usuarios.create')" createPermission="users.create"
+                exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
                 searchPlaceholder="Buscar por nombre o correo...">
 
                 <!-- Slot de Filtros Personalizados -->
                 <x-slot:filters>
                     <div class="w-full sm:w-48">
                         <x-floating-select id="filter_role" name="filter_role" label="Filtrar por rol" :options="$roles->pluck('name', 'name')->toArray()"
-                            :value="request('filter_role')"/>
+                            :value="request('filter_role')" />
                     </div>
                 </x-slot:filters>
 

@@ -15,6 +15,7 @@
             @endphp
 
             <x-data-table :headers="$headers" :data="$roles" :createRoute="route('admin.roles.create')" createPermission="roles.create"
+                exportRoute="{{ route('admin.roles.export') }}" exportPermission="roles.view"
                 searchPlaceholder="Buscar por nombre de rol...">
 
                 <x-slot:filters>

@@ -6,7 +6,8 @@
     'value' => '', 
     'error' => null,
     'searchable' => true,
-    'placeholder' => 'Seleccione...'
+    'placeholder' => 'Seleccione...',
+    'allowEmpty' => true
 ])
 
 @php
@@ -30,14 +31,15 @@
                 if (typeof TomSelect !== 'undefined' && !this.tomSelectInstance) {
                     this.tomSelectInstance = new TomSelect(this.$refs.selectInput, {
                         create: false,
-                        allowEmptyOption: true,
+                        allowEmptyOption: @json((bool)$allowEmpty),
                         placeholder: '{{ $placeholder }}',
                         plugins: ['dropdown_input'],
-                        dropdownParent: 'body', // <--- Monta el menú en el body para que no lo corte la tabla
+                        dropdownParent: 'body',
                         onFocus: () => { this.isFocused = true; },
                         onBlur: () => { this.isFocused = false; },
                         onChange: (val) => { 
                             this.selectedValue = val; 
+                            this.$refs.selectInput.dispatchEvent(new Event('change', { bubbles: true }));
                         }
                     });
                 }
@@ -60,7 +62,10 @@
             ]) }}
             style="background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e'); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25em 1.25em;"
         >
-            <option value="">{{ $placeholder }}</option>
+            @if($allowEmpty)
+                <option value="">{{ $placeholder }}</option>
+            @endif
+
             @foreach($options as $optionValue => $optionLabel)
                 <option value="{{ $optionValue }}" {{ $selectedValue == $optionValue ? 'selected' : '' }}>
                     {{ $optionLabel }}
@@ -68,13 +73,13 @@
             @endforeach
         </select>
 
-        <!-- Label Flotante -->
+        <!-- Label Flotante (Siempre arriba tapando el borde) -->
         <label 
             for="{{ $id }}"
-            :class="(selectedValue !== '' && selectedValue !== null && selectedValue !== undefined || isFocused) 
-                ? '-translate-y-4 scale-75 top-2 text-xs text-primary-600 dark:text-primary-400 bg-white dark:bg-gray-800 px-2 rounded left-2' 
-                : 'translate-y-0 scale-100 top-2.5 text-sm text-gray-500 dark:text-gray-400 bg-transparent px-0 left-4'"
-            class="absolute z-20 origin-[0] transform transition-all duration-200 pointer-events-none"
+            :class="isFocused 
+                ? 'text-primary-600 dark:text-primary-400' 
+                : 'text-gray-500 dark:text-gray-400'"
+            class="absolute -top-2.5 left-2.5 z-20 px-1 text-xs font-normal bg-white dark:bg-gray-800 transition-colors duration-200 pointer-events-none"
         >
             {{ $label }}
         </label>
