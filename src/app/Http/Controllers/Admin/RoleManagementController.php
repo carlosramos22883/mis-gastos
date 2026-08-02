@@ -24,7 +24,7 @@ class RoleManagementController extends Controller
             $query->where('name', 'like', "%{$request->search}%");
         }
 
-        // Filtro por módulo de permiso (CAMBIAR 'permission_module' por 'filter_permission')
+        // Filtro por módulo de permiso
         if ($request->filled('filter_permission')) {
             $module = $request->filter_permission;
             $query->whereHas('permissions', function ($q) use ($module) {
@@ -32,7 +32,22 @@ class RoleManagementController extends Controller
             });
         }
 
-        $roles = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        // --- LÓGICA DE ORDENAMIENTO ---
+        $sortField = $request->get('sort', 'name');
+        $sortDirection = $request->get('direction', 'asc');
+
+        // Solo permitimos ordenar por campos seguros de la tabla 'roles'
+        $allowedSortFields = ['name', 'created_at', 'updated_at'];
+
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('name', 'asc'); // Fallback por defecto
+        }
+
+        // Usamos el per_page del request (default 10) para que coincida con el selector
+        $perPage = $request->get('per_page', 10);
+        $roles = $query->paginate($perPage)->withQueryString();
 
         return view('admin.roles.index', compact('roles'));
     }
@@ -128,8 +143,9 @@ class RoleManagementController extends Controller
 
     public function export(Request $request)
     {
-        $query = Role::with('permissions'); // <-- IMPORTANTE: cargar la relación
+        $query = Role::with('permissions');
 
+        // APLICAR LOS MISMOS FILTROS QUE EN INDEX
         if ($request->filled('search')) {
             $query->where('name', 'like', "%{$request->search}%");
         }
@@ -141,21 +157,30 @@ class RoleManagementController extends Controller
             });
         }
 
-        $roles = $query->get();
+        // APLICAR EL MISMO ORDENAMIENTO QUE EN INDEX
+        $sortField = $request->get('sort', 'name');
+        $sortDirection = $request->get('direction', 'asc');
 
-        $pdfHeaders = [
-            'id' => 'ID',
-            'name' => 'Nombre del Rol',
-            'permissions' => 'Permisos Asignados',
-            'created_at' => 'Fecha de Creación'
-        ];
+        $allowedSortFields = ['name', 'created_at', 'updated_at'];
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        $roles = $query->get(); // Obtenemos TODOS los resultados filtrados y ordenados
 
         return $this->handleExport(
             $request,
             $roles,
             RolesExport::class,
             'Listado de Roles y Permisos',
-            $pdfHeaders,
+            [
+                'id' => 'ID',
+                'name' => 'Nombre del Rol',
+                'permissions' => 'Permisos Asignados',
+                'created_at' => 'Fecha de Creación'
+            ],
             'roles'
         );
     }

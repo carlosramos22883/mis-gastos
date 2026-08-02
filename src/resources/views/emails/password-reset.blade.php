@@ -9,7 +9,7 @@
 <body>
     <div class="email-container">
         <div class="logo-section">
-            <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos">
+            <img src="{{ asset('images/logo-light.png') }}" alt="{{ config('app.name') }}">
         </div>
 
         <div class="content-section">
@@ -50,7 +50,7 @@
         </div>
 
         <div class="footer">
-            Saludos, El equipo de Mis Gastos
+            Saludos, El equipo de {{ config('app.name') }}
         </div>
     </div>
 </body>

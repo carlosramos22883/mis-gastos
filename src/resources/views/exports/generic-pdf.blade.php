@@ -124,7 +124,7 @@
     </table>
 
     <div class="footer">
-        Sistema Mis Gastos &copy; {{ date('Y') }} - Documento generado automáticamente.
+        Sistema {{ config('app.name') }} &copy; {{ date('Y') }} - Documento generado automáticamente.
     </div>
 </body>
 

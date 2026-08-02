@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Mis Gastos') }}</title>
+    <title>{{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center">
     <div class="text-center">
-        <img src="{{ asset('images/logo.png') }}" alt="Mis Gastos" class="h-32 mx-auto mb-8">
+        <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name') }}" class="h-32 mx-auto mb-8">
         <p class="text-gray-600 mb-6">Controla tus finanzas personales</p>
         <div class="space-x-4">
             <a href="{{ route('login') }}" 

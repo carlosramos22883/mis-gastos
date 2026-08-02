@@ -90,12 +90,6 @@
     }
 }
 
-/* Ajustes para floating labels */
-.peer:focus~label,
-.peer:not(:placeholder-shown)~label {
-    @apply -translate-y-4 scale-75 top-2 px-2;
-}
-
 /* ============================================
    ESTILOS TOM SELECT Y FLOATING SELECT
    ============================================ */
@@ -117,25 +111,35 @@ select.appearance-none,
 }
 
 .ts-control {
-    padding: 0.5rem 2.5rem 0.5rem 1rem !important; /* ~8px arriba/abajo */
+    padding: 0.5rem 2.5rem 0.5rem 0.875rem !important;
     font-size: 0.75rem !important; /* text-xs */
     line-height: 1rem !important;
     border-radius: 0.5rem !important;
     border: 1px solid #d1d5db !important;
-    background-color: transparent !important;
+    background-color: #ffffff !important;
     box-shadow: none !important;
     display: flex !important;
     align-items: center !important;
+    color: #111827 !important;
 }
 
+/* Fondo e igualación de color para modo oscuro idéntico a inputs (#323d4d) */
 .dark .ts-control {
-    border-color: #4b5563 !important;
+    border-color: #4b5563 !important; /* gray-600 */
+    background-color: #323d4d !important; /* Mismo color exacto que el floating-input */
     color: #ffffff !important;
+}
+
+/* Ocultar placeholder generado por TomSelect para no chocar con el Floating Label */
+.ts-control .item-placeholder,
+.ts-control input::placeholder {
+    color: transparent !important;
+    opacity: 0 !important;
 }
 
 /* Flecha desplegable para Tom Select */
 .ts-wrapper.single .ts-control {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
     background-position: right 0.75rem center !important;
     background-repeat: no-repeat !important;
     background-size: 1.25em 1.25em !important;
@@ -145,22 +149,23 @@ select.appearance-none,
     display: none !important;
 }
 
-/* Dropdown de opciones */
+/* Dropdown desplegable de opciones (Sólido y 100% Legible) */
 .ts-dropdown {
     border-radius: 0.5rem !important;
     border: 1px solid #d1d5db !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
     z-index: 9999 !important;
     margin-top: 4px !important;
     overflow: hidden !important;
+    background-color: #ffffff !important;
 }
 
 .dark .ts-dropdown {
-    background-color: #1f2937 !important;
+    background-color: #1f2937 !important; /* Fondo gris oscuro neutro sólido */
     border-color: #374151 !important;
 }
 
-/* Buscador interno estilo Select2 */
+/* Buscador interno dentro del dropdown */
 .ts-dropdown .dropdown-input-wrap {
     padding: 6px !important;
     border-bottom: 1px solid #e5e7eb !important;
@@ -184,26 +189,166 @@ select.appearance-none,
 }
 
 .dark .ts-dropdown .dropdown-input {
-    background-color: #1f2937 !important;
+    background-color: #374151 !important;
     border-color: #4b5563 !important;
     color: #ffffff !important;
 }
 
+/* Opciones dentro del dropdown */
 .ts-dropdown .option {
     padding: 8px 12px !important;
     font-size: 0.75rem !important;
+    color: #374151 !important;
 }
 
-.ts-dropdown .option.active {
+.dark .ts-dropdown .option {
+    color: #f3f4f6 !important; /* Texto claro totalmente legible */
+    background-color: transparent !important;
+}
+
+/* Opción activa / Hover en el dropdown */
+.ts-dropdown .option.active,
+.ts-dropdown .option:hover {
     background-color: #f3f4f6 !important;
     color: #111827 !important;
 }
 
-.dark .ts-dropdown .option.active {
-    background-color: #374151 !important;
+.dark .ts-dropdown .option.active,
+.dark .ts-dropdown .option:hover {
+    background-color: #374151 !important; /* Destacado gris medio */
     color: #ffffff !important;
 }
 
+/* Soporte para dropdownParent: body */
+body > .ts-dropdown {
+    z-index: 99999 !important;
+}
+
+/* ============================================
+   ESTILOS TOM SELECT MÚLTIPLE (BADGES)
+   ============================================ */
+
+/* Contenedor general en selección múltiple */
+.ts-control.multi {
+    padding: 4px 8px !important;
+    min-height: 42px !important;
+    height: auto !important; /* Crece si hay muchos elementos */
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+}
+
+/* Badges / Items seleccionados */
+.ts-control .item {
+    background-color: #e5e7eb !important; /* gray-200 */
+    color: #1f2937 !important; /* gray-800 */
+    border-radius: 0.375rem !important;
+    padding: 2px 8px !important;
+    font-size: 0.75rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.dark .ts-control .item {
+    background-color: #4b5563 !important; /* gray-600 */
+    color: #ffffff !important;
+}
+
+/* Botón 'x' para eliminar un badge */
+.ts-control .item .remove {
+    margin-left: 6px !important;
+    border-left: 1px solid #d1d5db !important;
+    padding-left: 4px !important;
+    color: #6b7280 !important;
+}
+
+.dark .ts-control .item .remove {
+    border-color: #6b7280 !important;
+    color: #d1d5db !important;
+}
+
+.ts-control .item .remove:hover {
+    color: #ef4444 !important; /* Rojo al pasar el cursor */
+}
+
+/* ==========================================================================
+   ESTILOS TOM SELECT (SELECCIÓN MÚLTIPLE, BÚSQUEDA Y DROPDOWN BODY)
+   ========================================================================== */
+
+/* 1. Soporte para dropdownParent: body (Evita recortes dentro de tablas con overflow) */
+body > .ts-dropdown {
+    z-index: 99999 !important;
+}
+
+/* 2. Contenedor general en selección múltiple */
+.ts-control.multi {
+    padding: 4px 8px !important;
+    min-height: 42px !important;
+    height: auto !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+}
+
+/* 3. Input de búsqueda escribible dentro de selección múltiple */
+.ts-control.multi > input {
+    display: inline-block !important;
+    flex: 1 1 auto !important;
+    min-width: 60px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 2px !important;
+    color: inherit !important;
+    font-size: 0.75rem !important; /* text-xs */
+}
+
+.ts-control.multi > input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* 4. Badges / Items seleccionados */
+.ts-control .item {
+    background-color: #e5e7eb !important; /* gray-200 */
+    color: #1f2937 !important; /* gray-800 */
+    border-radius: 0.375rem !important;
+    padding: 2px 8px !important;
+    font-size: 0.75rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.dark .ts-control .item {
+    background-color: #4b5563 !important; /* gray-600 */
+    color: #ffffff !important;
+}
+
+/* 5. Botón 'x' para eliminar badge */
+.ts-control .item .remove {
+    margin-left: 6px !important;
+    border-left: 1px solid #d1d5db !important;
+    padding-left: 4px !important;
+    color: #6b7280 !important;
+}
+
+.dark .ts-control .item .remove {
+    border-color: #6b7280 !important;
+    color: #d1d5db !important;
+}
+
+.ts-control .item .remove:hover {
+    color: #ef4444 !important; /* Red hover */
+}
+
+/* Oculta el contenedor de ítem seleccionado cuando el valor está vacío */
+.ts-control .item[data-value=""] {
+    display: none !important;
+}
+
+/* Evita que la primera opción vacía en el dropdown aparezca como un bloque sombreado */
+.ts-dropdown .option[data-value=""] {
+    display: none !important;
+}
 /* Card estilo elegante */
 .card-elegant {
     @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 
@@ -398,4 +543,29 @@ select.appearance-none,
 
 .btn-danger-custom:active {
     background-color: var(--color-danger);
+}
+
+/* ============================================
+   COLUMNAS STICKY EN TABLAS
+   ============================================ */
+
+/* Columna de acciones pegada a la derecha */
+.sticky-col-right {
+    position: sticky;
+    right: 0;
+    background-color: inherit;
+    z-index: 10;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Ajuste para modo oscuro */
+.dark .sticky-col-right {
+    background-color: inherit;
+    box-shadow: -2px 0 5px rgba(255, 255, 255, 0.05);
+}
+
+/* Asegurar que el header tenga más z-index */
+thead .sticky-col-right {
+    z-index: 20;
+    background-color: inherit;
 }

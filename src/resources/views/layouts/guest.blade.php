@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Mis Gastos') }}</title>
+    <title>{{ config('app.name') }}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -26,9 +26,9 @@
         <div>
             <a href="/">
                 <!-- Logo para modo claro -->
-                <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-20 w-auto dark:hidden">
+                <img src="{{ asset('images/logo-light.png') }}" alt="{{ config('app.name') }}" class="h-20 w-auto dark:hidden">
                 <!-- Logo para modo oscuro -->
-                <img src="{{ asset('images/logo-dark.png') }}" alt="Mis Gastos" class="h-20 w-auto hidden dark:block">
+                <img src="{{ asset('images/logo-dark.png') }}" alt="{{ config('app.name') }}" class="h-20 w-auto hidden dark:block">
             </a>
         </div>
 

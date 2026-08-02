@@ -8,15 +8,25 @@
 
             @php
                 $headers = [
-                    ['label' => 'Nombre del Rol', 'width' => 'w-1/2'],
-                    ['label' => 'Permisos Asignados', 'width' => ''],
-                    ['label' => 'Acciones', 'width' => 'text-right'],
+                    // Agregamos 'key' y 'sortable' => true
+                    ['label' => 'Nombre del Rol', 'key' => 'name', 'sortable' => true, 'width' => 'w-1/2'],
+                    // Esta columna NO es ordenable (es una relación)
+                    ['label' => 'Permisos Asignados', 'sortable' => false, 'width' => ''],
+                    ['label' => 'Acciones', 'sortable' => false, 'width' => 'text-right'],
                 ];
             @endphp
 
-            <x-data-table :headers="$headers" :data="$roles" :createRoute="route('admin.roles.create')" createPermission="roles.create"
-                exportRoute="{{ route('admin.roles.export') }}" exportPermission="roles.view"
-                searchPlaceholder="Buscar por nombre de rol...">
+            <x-data-table 
+                :headers="$headers" 
+                :data="$roles" 
+                :createRoute="route('admin.roles.create')" 
+                createPermission="roles.create"
+                exportRoute="{{ route('admin.roles.export') }}" 
+                exportPermission="roles.view"
+                searchPlaceholder="Buscar por nombre de rol..."
+                defaultSort="name"
+                defaultDirection="asc"
+            >
 
                 <x-slot:filters>
                     <div class="w-full sm:w-48">

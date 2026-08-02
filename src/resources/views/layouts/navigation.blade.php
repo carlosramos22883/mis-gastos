@@ -8,9 +8,9 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
                         <!-- Logo para modo claro -->
-                        <img src="{{ asset('images/logo-light.png') }}" alt="Mis Gastos" class="h-10 w-auto dark:hidden">
+                        <img src="{{ asset('images/logo-light.png') }}" alt="{{ config('app.name') }}" class="h-10 w-auto dark:hidden">
                         <!-- Logo para modo oscuro -->
-                        <img src="{{ asset('images/logo-dark.png') }}" alt="Mis Gastos"
+                        <img src="{{ asset('images/logo-dark.png') }}" alt="{{ config('app.name') }}"
                             class="h-10 w-auto hidden dark:block">
                     </a>
                 </div>

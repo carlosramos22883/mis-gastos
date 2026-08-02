@@ -21,7 +21,7 @@ class UserManagementController extends Controller
     {
         $query = User::query();
 
-        // Búsqueda
+        // Búsqueda por nombre o email
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -35,9 +35,20 @@ class UserManagementController extends Controller
             $query->role($request->filter_role);
         }
 
-        // Items por página
+        // Ordenamiento
+        $sortField = $request->get('sort', 'created_at');
+        $sortDirection = $request->get('direction', 'desc');
+
+        // Validar campos permitidos para ordenar (seguridad)
+        $allowedSortFields = ['name', 'email', 'created_at', 'email_verified_at'];
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
         $perPage = $request->get('per_page', 10);
-        $users = $query->latest()->paginate($perPage)->withQueryString();
+        $users = $query->paginate($perPage)->withQueryString();
         $roles = Role::all();
 
         return view('admin.usuarios.index', compact('users', 'roles'));
@@ -162,27 +173,46 @@ class UserManagementController extends Controller
     {
         $query = \App\Models\User::with('roles');
 
-        // ... (tus filtros de search y filter_role aquí) ...
+        // APLICAR LOS MISMOS FILTROS QUE EN INDEX
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
 
-        $users = $query->get();
+        if ($request->filled('filter_role')) {
+            $query->role($request->filter_role);
+        }
 
-        // Definimos qué columnas queremos en el PDF y sus claves en el modelo
-        $pdfHeaders = [
-            'id' => 'ID',
-            'name' => 'Nombre',
-            'email' => 'Correo',
-            'roles' => 'Rol', // ¡El Trait maneja la conversión de la colección a string automáticamente!
-            'email_verified_at' => 'Verificado',
-            'created_at' => 'Creado'
-        ];
+        // APLICAR EL MISMO ORDENAMIENTO QUE EN INDEX
+        $sortField = $request->get('sort', 'created_at');
+        $sortDirection = $request->get('direction', 'desc');
+
+        $allowedSortFields = ['name', 'email', 'created_at', 'email_verified_at'];
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $users = $query->get(); // Obtenemos TODOS los resultados filtrados y ordenados
 
         return $this->handleExport(
             $request,
             $users,
             UsersExport::class,
-            'Listado de Usuarios del Sistema', // Título del PDF
-            $pdfHeaders,                        // Encabezados dinámicos
-            'usuarios'                           // Nombre del archivo
+            'Listado de Usuarios del Sistema',
+            [
+                'id' => 'ID',
+                'name' => 'Nombre',
+                'email' => 'Correo',
+                'roles' => 'Rol',
+                'email_verified_at' => 'Verificado',
+                'created_at' => 'Creado'
+            ],
+            'usuarios'
         );
     }
 }

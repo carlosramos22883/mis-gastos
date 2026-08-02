@@ -8,23 +8,23 @@
 
             @php
                 $headers = [
-                    ['label' => 'Usuario', 'width' => 'w-1/3'],
-                    ['label' => 'Correo', 'width' => ''],
-                    ['label' => 'Rol', 'width' => ''],
-                    ['label' => 'Verificado', 'width' => ''],
-                    ['label' => 'Acciones', 'width' => 'text-right'],
+                    ['label' => 'Usuario', 'key' => 'name', 'sortable' => true, 'width' => 'w-1/3'],
+                    ['label' => 'Correo', 'key' => 'email', 'sortable' => true, 'width' => ''],
+                    ['label' => 'Rol', 'sortable' => false, 'width' => ''],
+                    ['label' => 'Verificado', 'key' => 'email_verified_at', 'sortable' => true, 'width' => ''],
+                    ['label' => 'Acciones', 'sortable' => false, 'width' => 'text-right'],
                 ];
             @endphp
 
             <x-data-table :headers="$headers" :data="$users" :createRoute="route('admin.usuarios.create')" createPermission="users.create"
                 exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
-                searchPlaceholder="Buscar por nombre o correo...">
+                searchPlaceholder="Buscar por nombre o correo..." defaultSort="created_at" defaultDirection="desc">
 
                 <!-- Slot de Filtros Personalizados -->
                 <x-slot:filters>
                     <div class="w-full sm:w-48">
                         <x-floating-select id="filter_role" name="filter_role" label="Filtrar por rol" :options="$roles->pluck('name', 'name')->toArray()"
-                            :value="request('filter_role')" />
+                            :value="request('filter_role')" :searchable="true" />
                     </div>
                 </x-slot:filters>
 
@@ -73,7 +73,7 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4 sticky-col-right">
                             <div class="flex justify-end gap-2">
                                 @can('users.edit')
                                     <x-secondary-button class="py-1.5 px-2"
