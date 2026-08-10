@@ -24,7 +24,6 @@
 <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900 min-h-screen flex flex-col">
     @include('layouts.navigation')
 
-    <!-- Page Heading -->
     @isset($header)
         <header class="bg-white dark:bg-gray-800 shadow border-b border-gray-200 dark:border-gray-700">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -33,12 +32,11 @@
         </header>
     @endisset
 
-    <!-- Page Content -->
-    <main class="flex-grow">
+    <!-- Agregamos pb-20 (80px) para que el footer no tape el último contenido -->
+    <main class="flex-1 w-full pb-20">
         {{ $slot }}
     </main>
 
-    <!-- Footer -->
     <x-app-footer />
 </body>
 
