@@ -17,7 +17,7 @@
             @endphp
 
             <x-data-table :headers="$headers" :data="$users" :createRoute="route('admin.usuarios.create')" createPermission="users.create"
-                exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
+                createModal="user-modal" exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
                 searchPlaceholder="Buscar por nombre o correo..." defaultSort="created_at" defaultDirection="desc">
 
                 <!-- Slot de Filtros Personalizados -->
@@ -28,7 +28,6 @@
                     </div>
                 </x-slot:filters>
 
-                <!-- Bucle AQUÍ, no en el componente -->
                 @forelse($users as $user)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <td class="px-6 py-4">
@@ -66,7 +65,7 @@
                                 <span class="inline-flex items-center text-red-600 dark:text-red-400">
                                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd"
-                                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                                             clip-rule="evenodd" />
                                     </svg>
                                     No
@@ -76,8 +75,8 @@
                         <td class="px-6 py-4 sticky-col-right">
                             <div class="flex justify-end gap-2">
                                 @can('users.edit')
-                                    <x-secondary-button class="py-1.5 px-2"
-                                        onclick="window.location.href='{{ route('admin.usuarios.edit', $user) }}'"
+                                    <x-secondary-button x-data="" type="button" class="py-1.5 px-2"
+                                        x-on:click.prevent="$dispatch('load-user-modal-form', '{{ route('admin.usuarios.edit', $user) }}?modal=1'); $dispatch('open-modal', 'user-modal')"
                                         title="Editar usuario">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -140,4 +139,49 @@
             );
         }
     </script>
+
+    <!-- Modal de Usuario -->
+    <x-modal name="user-modal" :show="false">
+        <div x-data="{ html: '', loading: false }" tabindex="-1"
+            x-on:load-user-modal-form.window="
+            loading = true;
+            html = '';
+            fetch($event.detail)
+                .then(r => r.text())
+                .then(h => { 
+                    // 1. Asignamos el HTML al contenedor de referencia
+                    $refs.formContainer.innerHTML = h;
+                    loading = false;
+                    
+                    // 2. Forzamos a Alpine a escanear e inicializar el nuevo HTML
+                    setTimeout(() => {
+                        if (typeof Alpine !== 'undefined' && typeof Alpine.initTree === 'function') {
+                            Alpine.initTree($refs.formContainer);
+                        }
+                    }, 50);
+                })
+                .catch(err => {
+                    $refs.formContainer.innerHTML = '<p class=\'text-red-500 text-center p-4\'>Error al cargar el formulario</p>';
+                    loading = false;
+                });
+        "
+            x-on:close-modal.window="html = ''; loading = false; if($refs.formContainer) $refs.formContainer.innerHTML = '';"
+            class="p-6 focus:outline-none">
+
+            <!-- Spinner de Carga -->
+            <div x-show="loading" class="flex justify-center items-center py-12">
+                <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                        stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+
+            <!-- Contenedor de referencia para el formulario inyectado -->
+            <div x-show="!loading" x-ref="formContainer"></div>
+        </div>
+    </x-modal>
 </x-app-layout>

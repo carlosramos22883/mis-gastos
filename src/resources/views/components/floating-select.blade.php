@@ -9,6 +9,7 @@
     'allowEmpty' => true,
     'error' => null,
     'required' => false,
+    'submitForm' => false,
 ])
 
 @php
@@ -47,6 +48,9 @@
                 onChange: (val) => {
                     selectedValue = val;
                     $dispatch('change', val);
+                    @if ($submitForm)
+                    $el.closest('form').submit();
+                    @endif
                 }
             });">
                 <select id="{{ $id }}" name="{{ $name }}{{ $multiple ? '[]' : '' }}" x-ref="select"
@@ -74,7 +78,13 @@
         @else
             {{-- SELECT NATIVO SIMPLE --}}
             <select id="{{ $id }}" name="{{ $name }}" x-ref="nativeSelect" x-model="selectedValue"
-                @focus="isFocused = true" @blur="isFocused = false" @change="$dispatch('change', $event.target.value)"
+                @focus="isFocused = true" @blur="isFocused = false" 
+                @change="
+                    $dispatch('change', $event.target.value);
+                    @if ($submitForm)
+                    $el.closest('form').submit();
+                    @endif
+                "
                 {{ $required ? 'required' : '' }}
                 {{ $attributes->merge([
                     'class' =>

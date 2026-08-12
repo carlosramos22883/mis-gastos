@@ -10,6 +10,8 @@ use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 use App\Exports\UsersExport;
 use App\Traits\Exportable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class UserManagementController extends Controller
 {
@@ -60,7 +62,22 @@ class UserManagementController extends Controller
     public function create()
     {
         $roles = Role::all();
+        if (request()->has('modal')) {
+            return view('admin.usuarios._form', compact('roles'));
+        }
         return view('admin.usuarios.create', compact('roles'));
+    }
+
+    /**
+     * Mostrar formulario de edición
+     */
+    public function edit(User $usuario)
+    {
+        $roles = Role::all();
+        if (request()->has('modal')) {
+            return view('admin.usuarios._form', compact('usuario', 'roles'));
+        }
+        return view('admin.usuarios.edit', compact('usuario', 'roles'));
     }
 
     /**
@@ -82,29 +99,29 @@ class UserManagementController extends Controller
             'email' => 'Correo electrónico',
             'password' => 'Contraseña',
             'role' => 'Rol',
-        ]);
+        ]);        
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'email_verified_at' => now(), // El admin crea usuarios ya verificados
+            'email_verified_at' => now(),
         ]);
 
         $user->assignRole($validated['role']);
 
+        // Si es petición AJAX, devolver JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Usuario '{$user->name}' creado exitosamente.",
+                'user' => $user
+            ], 200);
+        }
+
+        // Si no es AJAX, redirect tradicional
         return redirect()->route('admin.usuarios.index')
             ->with('success', "Usuario '{$user->name}' creado exitosamente.");
-    }
-
-    /**
-     * Mostrar formulario de edición
-     */
-    public function edit(User $usuario)
-    {
-        $roles = Role::all();
-        $userRole = $usuario->roles->first()?->name;
-        return view('admin.usuarios.edit', compact('usuario', 'roles', 'userRole'));
     }
 
     /**
@@ -131,20 +148,25 @@ class UserManagementController extends Controller
         $usuario->name = $validated['name'];
         $usuario->email = $validated['email'];
 
-        // Si cambia el email, deshabilitar verificación hasta que confirme el nuevo
         if ($usuario->isDirty('email')) {
             $usuario->email_verified_at = null;
         }
 
-        // Solo actualizar contraseña si se proporcionó una nueva
         if (!empty($validated['password'])) {
             $usuario->password = Hash::make($validated['password']);
         }
 
         $usuario->save();
-
-        // Actualizar rol (sync reemplaza el rol anterior)
         $usuario->syncRoles([$validated['role']]);
+
+        // Si es petición AJAX, devolver JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Usuario '{$usuario->name}' actualizado exitosamente.",
+                'user' => $usuario
+            ], 200);
+        }
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', "Usuario '{$usuario->name}' actualizado exitosamente.");

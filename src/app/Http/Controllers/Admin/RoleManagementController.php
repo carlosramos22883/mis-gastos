@@ -57,12 +57,23 @@ class RoleManagementController extends Controller
      */
     public function create()
     {
-        $permissions = Permission::all()->groupBy(function ($permission) {
-            // Agrupar permisos por módulo (ej: "users.view" -> "users")
-            return explode('.', $permission->name)[0];
-        });
-
+        $permissions = Permission::all()->groupBy(fn($p) => explode('.', $p->name)[0]);
+        if (request()->has('modal')) {
+            return view('admin.roles._form', compact('permissions'));
+        }
         return view('admin.roles.create', compact('permissions'));
+    }
+
+    /**
+     * Mostrar formulario de edición
+     */
+    public function edit(Role $role)
+    {
+        $permissions = Permission::all()->groupBy(fn($p) => explode('.', $p->name)[0]);
+        if (request()->has('modal')) {
+            return view('admin.roles._form', compact('role', 'permissions'));
+        }
+        return view('admin.roles.edit', compact('role', 'permissions'));
     }
 
     /**
@@ -85,22 +96,17 @@ class RoleManagementController extends Controller
             $role->syncPermissions($validated['permissions']);
         }
 
+        // Si es petición AJAX, devolver JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Rol '{$role->name}' actualizado exitosamente.",
+                'role' => $role
+            ], 200);
+        }
+
         return redirect()->route('admin.roles.index')
             ->with('success', "Rol '{$role->name}' creado exitosamente.");
-    }
-
-    /**
-     * Mostrar formulario de edición
-     */
-    public function edit(Role $role)
-    {
-        $permissions = Permission::all()->groupBy(function ($permission) {
-            return explode('.', $permission->name)[0];
-        });
-
-        $rolePermissions = $role->permissions->pluck('name')->toArray();
-
-        return view('admin.roles.edit', compact('role', 'permissions', 'rolePermissions'));
     }
 
     /**
@@ -120,6 +126,12 @@ class RoleManagementController extends Controller
         $role->update(['name' => $validated['name']]);
 
         $role->syncPermissions($validated['permissions'] ?? []);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => "Rol '{$role->name}' actualizado exitosamente."
+            ], 200);
+        }
 
         return redirect()->route('admin.roles.index')
             ->with('success', "Rol '{$role->name}' actualizado exitosamente.");

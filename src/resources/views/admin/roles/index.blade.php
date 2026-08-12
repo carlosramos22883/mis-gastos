@@ -16,17 +16,9 @@
                 ];
             @endphp
 
-            <x-data-table 
-                :headers="$headers" 
-                :data="$roles" 
-                :createRoute="route('admin.roles.create')" 
-                createPermission="roles.create"
-                exportRoute="{{ route('admin.roles.export') }}" 
-                exportPermission="roles.view"
-                searchPlaceholder="Buscar por nombre de rol..."
-                defaultSort="name"
-                defaultDirection="asc"
-            >
+            <x-data-table :headers="$headers" :data="$roles" :createRoute="route('admin.roles.create')" createPermission="roles.create"
+                createModal="role-modal" exportRoute="{{ route('admin.roles.export') }}" exportPermission="roles.view"
+                searchPlaceholder="Buscar por nombre de rol..." defaultSort="name" defaultDirection="asc">
 
                 <x-slot:filters>
                     <div class="w-full sm:w-48">
@@ -59,11 +51,11 @@
                                 @endif
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4 sticky-col-right">
                             <div class="flex justify-end gap-2">
                                 @can('roles.edit')
-                                    <x-secondary-button class="py-1.5 px-2"
-                                        onclick="window.location.href='{{ route('admin.roles.edit', $role) }}'"
+                                    <x-secondary-button x-data="" type="button" class="py-1.5 px-2"
+                                        x-on:click.prevent="$dispatch('load-role-modal-form', '{{ route('admin.roles.edit', $role) }}?modal=1'); $dispatch('open-modal', 'role-modal')"
                                         title="Editar rol">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -73,16 +65,14 @@
                                 @endcan
 
                                 @can('roles.delete')
-                                    @if ($role->name !== 'Administrador')
-                                        <x-danger-button class="py-1.5 px-2" type="button"
-                                            onclick="confirmDelete({{ $role->id }}, '{{ $role->name }}')"
-                                            title="Eliminar rol">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </x-danger-button>
-                                    @endif
+                                    <x-danger-button class="py-1.5 px-2" type="button"
+                                        onclick="confirmDelete({{ $role->id }}, '{{ $role->name }}')"
+                                        title="Eliminar rol">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </x-danger-button>
                                 @endcan
                             </div>
                         </td>
@@ -125,4 +115,43 @@
             );
         }
     </script>
+    <!-- Modal de Rol -->
+    <x-modal name="role-modal" :show="false">
+        <div x-data="{ html: '', loading: false }" tabindex="-1"
+            x-on:load-role-modal-form.window="
+            loading = true;
+            html = '';
+            fetch($event.detail)
+                .then(r => r.text())
+                .then(h => { 
+                    $refs.formContainer.innerHTML = h;
+                    loading = false;
+                    setTimeout(() => {
+                        if (typeof Alpine !== 'undefined' && typeof Alpine.initTree === 'function') {
+                            Alpine.initTree($refs.formContainer);
+                        }
+                    }, 50);
+                })
+                .catch(err => {
+                    $refs.formContainer.innerHTML = '<p class=\'text-red-500 text-center p-4\'>Error al cargar el formulario</p>';
+                    loading = false;
+                });
+        "
+            x-on:close-modal.window="html = ''; loading = false; if($refs.formContainer) $refs.formContainer.innerHTML = '';"
+            class="p-6 focus:outline-none">
+
+            <div x-show="loading" class="flex justify-center items-center py-12">
+                <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                        stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+
+            <div x-show="!loading" x-ref="formContainer"></div>
+        </div>
+    </x-modal>
 </x-app-layout>
