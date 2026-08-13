@@ -20,6 +20,15 @@
         $selectedValue = array_filter(explode(',', (string) $selectedValue));
     }
     $hasValue = $multiple ? !empty($selectedValue) : $selectedValue !== null && $selectedValue !== '';
+
+    // Plugins de Tom Select según el modo del select
+    $plugins = [];
+    if ($multiple) {
+        $plugins[] = 'remove_button';
+    }
+    if ($searchable) {
+        $plugins[] = 'dropdown_input';
+    }
 @endphp
 
 <div x-data="{
@@ -34,86 +43,49 @@
     }
 }" class="relative w-full">
     <div class="relative w-full flex items-center">
-        @if ($searchable || $multiple)
-            {{-- SELECT BUSCABLE Y/O MÚLTIPLE (Tom Select) --}}
-            <div class="w-full" wire:ignore x-init="const tom = new TomSelect($refs.select, {
-                create: false,
-                maxItems: {{ $multiple ? 'null' : '1' }},
-                allowEmptyOption: {{ $allowEmpty ? 'true' : 'false' }},
-                placeholder: '',
-                dropdownParent: 'body',
-                plugins: {{ $multiple ? "['remove_button', 'dropdown_input']" : "['dropdown_input']" }},
-                onFocus: () => { isFocused = true },
-                onBlur: () => { isFocused = false },
-                onChange: (val) => {
-                    selectedValue = val;
-                    @if($submitForm)
-                    $el.closest('form').requestSubmit();
-                    @else
-                    $dispatch('change', val);
-                    @endif
-                }
-            });">
-                <select id="{{ $id }}" name="{{ $name }}{{ $multiple ? '[]' : '' }}" x-ref="select"
-                    {{ $multiple ? 'multiple' : '' }} {{ $required ? 'required' : '' }}
-                    {{ $attributes->merge([
-                        'class' =>
-                            'block w-full text-xs text-gray-900 dark:text-white bg-white dark:bg-[#323d4d] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                    ]) }}>
-                    @if ($allowEmpty && !$multiple)
-                        <option value=""></option>
-                    @endif
-
-                    @foreach ($options as $val => $optLabel)
-                        @php
-                            $isSelected = $multiple
-                                ? is_array($selectedValue) && in_array($val, $selectedValue)
-                                : (string) $selectedValue === (string) $val;
-                        @endphp
-                        <option value="{{ $val }}" {{ $isSelected ? 'selected' : '' }}>
-                            {{ $optLabel }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        @else
-            {{-- SELECT NATIVO SIMPLE --}}
-            <select id="{{ $id }}" name="{{ $name }}" x-ref="nativeSelect" x-model="selectedValue"
-                @focus="isFocused = true" @blur="isFocused = false"
-                @change="
-    @if ($submitForm) $el.closest('form').requestSubmit();
-    @else
-    $dispatch('change', $event.target.value); @endif
-"
-                {{ $required ? 'required' : '' }}
+        {{-- SIEMPRE Tom Select, buscable o no --}}
+        <div class="w-full" wire:ignore x-init="const tom = new TomSelect($refs.select, {
+            create: false,
+            maxItems: {{ $multiple ? 'null' : '1' }},
+            allowEmptyOption: {{ $allowEmpty ? 'true' : 'false' }},
+            placeholder: '',
+            dropdownParent: 'body',
+            plugins: {{ json_encode($plugins) }},
+            @if (!$searchable) controlInput: null, @endif
+            @if (!$allowEmpty) onDelete: () => false, @endif
+            onFocus: () => { isFocused = true },
+            onBlur: () => { isFocused = false },
+            onChange: (val) => {
+                selectedValue = val;
+                @if($submitForm)
+                $el.closest('form').requestSubmit();
+                @else
+                $dispatch('change', val);
+                @endif
+            }
+        });">
+            <select id="{{ $id }}" name="{{ $name }}{{ $multiple ? '[]' : '' }}" x-ref="select"
+                {{ $multiple ? 'multiple' : '' }} {{ $required ? 'required' : '' }}
                 {{ $attributes->merge([
                     'class' =>
-                        'block w-full h-[42px] px-3 py-2 text-xs text-gray-900 dark:text-white bg-white dark:bg-[#323d4d] border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pr-10',
+                        'block w-full text-xs text-gray-900 dark:text-white bg-white dark:bg-[#323d4d] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
                 ]) }}>
-                @if ($allowEmpty)
-                    <option value="" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                        -- Sin Selección --
-                    </option>
+                @if ($allowEmpty && !$multiple)
+                    <option value=""></option>
                 @endif
 
                 @foreach ($options as $val => $optLabel)
-                    <option value="{{ $val }}"
-                        {{ (string) $selectedValue === (string) $val ? 'selected' : '' }}
-                        class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                    @php
+                        $isSelected = $multiple
+                            ? is_array($selectedValue) && in_array($val, $selectedValue)
+                            : (string) $selectedValue === (string) $val;
+                    @endphp
+                    <option value="{{ $val }}" {{ $isSelected ? 'selected' : '' }}>
                         {{ $optLabel }}
                     </option>
                 @endforeach
             </select>
-
-            <!-- Flecha hacia abajo SVG NATIVA -->
-            <div
-                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500 dark:text-gray-400">
-                <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path
-                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                </svg>
-            </div>
-        @endif
+        </div>
 
         <!-- Label Flotante Dinámico -->
         <label for="{{ $id }}"

@@ -27,7 +27,7 @@
                                 'users' => 'Usuarios',
                                 'roles' => 'Roles',
                                 'profile' => 'Perfil',
-                            ]" :value="request('filter_permission')" :searchable="false"/>
+                            ]" :value="request('filter_permission')"/>
                     </div>
                 </x-slot:filters>
 
