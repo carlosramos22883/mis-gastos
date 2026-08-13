@@ -2,7 +2,8 @@
     // Esta función se ejecuta cuando el AJAX es exitoso
     $dispatch('close-modal', 'role-modal'); // Cierra el modal
     showAlert('success', '¡Éxito!', 'Rol guardado correctamente.'); // Muestra alerta
-    setTimeout(() => window.location.reload(), 1500); // Recarga la página suavemente para ver los cambios
+    window.dispatchEvent(new CustomEvent('refresh-table'));
+    $dispatch('close-modal', 'role-modal');
 })" @submit.prevent="submit" method="POST"
     action="{{ isset($role) ? route('admin.roles.update', $role) : route('admin.roles.store') }}" novalidate
     class="space-y-4">

@@ -53,6 +53,15 @@ class UserManagementController extends Controller
         $users = $query->paginate($perPage)->withQueryString();
         $roles = Role::all();
 
+        // Si es una petición AJAX (desde la web), devolvemos solo el HTML de la tabla
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'html' => view('admin.usuarios._table_body', compact('users'))->render(),
+                'pagination' => $users->links()->render(),
+            ]);
+        }
+
+        // Si es una visita normal, devuelve la vista completa
         return view('admin.usuarios.index', compact('users', 'roles'));
     }
 
@@ -109,6 +118,9 @@ class UserManagementController extends Controller
         ]);
 
         $user->assignRole($validated['role']);
+
+        // Enviar correo de verificación
+        $user->sendEmailVerificationNotification();
 
         // Si es petición AJAX, devolver JSON
         if ($request->wantsJson() || $request->ajax()) {
@@ -177,12 +189,18 @@ class UserManagementController extends Controller
      */
     public function destroy(User $usuario)
     {
-        // Seguridad: No permitir que el usuario se elimine a sí mismo
         if ($usuario->id === auth()->id()) {
+            if (request()->wantsJson()) {
+                return response()->json(['message' => 'No puedes eliminar tu propia cuenta.'], 403);
+            }
             return back()->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
         $usuario->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Usuario eliminado exitosamente.'], 200);
+        }
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', 'Usuario eliminado exitosamente.');

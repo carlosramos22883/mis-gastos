@@ -47,9 +47,10 @@
                 onBlur: () => { isFocused = false },
                 onChange: (val) => {
                     selectedValue = val;
+                    @if($submitForm)
+                    $el.closest('form').requestSubmit();
+                    @else
                     $dispatch('change', val);
-                    @if ($submitForm)
-                    $el.closest('form').submit();
                     @endif
                 }
             });">
@@ -78,13 +79,12 @@
         @else
             {{-- SELECT NATIVO SIMPLE --}}
             <select id="{{ $id }}" name="{{ $name }}" x-ref="nativeSelect" x-model="selectedValue"
-                @focus="isFocused = true" @blur="isFocused = false" 
+                @focus="isFocused = true" @blur="isFocused = false"
                 @change="
-                    $dispatch('change', $event.target.value);
-                    @if ($submitForm)
-                    $el.closest('form').submit();
-                    @endif
-                "
+    @if ($submitForm) $el.closest('form').requestSubmit();
+    @else
+    $dispatch('change', $event.target.value); @endif
+"
                 {{ $required ? 'required' : '' }}
                 {{ $attributes->merge([
                     'class' =>

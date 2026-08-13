@@ -16,13 +16,34 @@
 @php
     $currentSort = request('sort', $defaultSort);
     $currentDirection = request('direction', $defaultDirection);
+
+    // Lógica para saber si hay filtros activos (para mostrar el botón limpiar en la carga inicial)
+    $excludedParams = ['page', 'per_page', 'sort', 'direction', '_token'];
+    $actualFilters = array_filter(request()->except($excludedParams), fn($value) => $value !== null && $value !== '');
+    $hasFilters = !empty($actualFilters);
 @endphp
 
-<div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
+<!-- 1. Contenedor principal con x-data -->
+<div x-data="dataTableHandler()" id="data-table-container"
+    class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
+
+    <!-- Spinner de carga sobre la tabla -->
+    <div x-show="loading"
+        class="absolute inset-0 bg-white/60 dark:bg-gray-800/60 z-20 flex items-center justify-center backdrop-blur-sm transition-opacity"
+        style="display: none;">
+        <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+            </circle>
+            <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+        </svg>
+    </div>
 
     <!-- Header: Todo envuelto en un solo formulario -->
     <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-        <form method="GET" action="{{ url()->current() }}" class="flex flex-col gap-4">
+        <form id="data-table-form" method="GET" action="{{ url()->current() }}" class="flex flex-col gap-4">
 
             {{-- Inputs ocultos para mantener el ordenamiento --}}
             @if (request('sort'))
@@ -43,7 +64,7 @@
                             '25' => '25',
                             '50' => '50',
                             '100' => '100',
-                        ]" :value="request('per_page', 10)" :submitForm="true" :searchable="false" />
+                        ]" :value="request('per_page', 10)" :searchable="false" :submitForm="true" />
                 </div>
 
                 <!-- Botones de exportación -->
@@ -51,9 +72,8 @@
                     <div class="flex gap-1 shrink-0">
 
                         <!-- CSV -->
-                        <x-primary-button type="button"
-                            onclick="window.location.href='{{ $exportRoute }}?format=csv&{{ http_build_query(request()->all()) }}'"
-                            title="Exportar a CSV" class="py-2.5 px-3">
+                        <x-primary-button type="button" onclick="exportData('csv')" title="Exportar a CSV"
+                            class="py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -62,9 +82,8 @@
                         </x-primary-button>
 
                         <!-- Excel -->
-                        <x-secondary-button type="button"
-                            onclick="window.location.href='{{ $exportRoute }}?format=xlsx&{{ http_build_query(request()->all()) }}'"
-                            title="Exportar a Excel" class="py-2.5 px-3">
+                        <x-secondary-button type="button" onclick="exportData('xlsx')" title="Exportar a Excel"
+                            class="py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -73,9 +92,8 @@
                         </x-secondary-button>
 
                         <!-- PDF -->
-                        <x-danger-button type="button"
-                            onclick="window.location.href='{{ $exportRoute }}?format=pdf&{{ http_build_query(request()->all()) }}'"
-                            title="Exportar a PDF" class="py-2.5 px-3">
+                        <x-danger-button type="button" onclick="exportData('pdf')" title="Exportar a PDF"
+                            class="py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -93,7 +111,6 @@
 
                 <!-- Contenedor flexible para el input de búsqueda y los filtros adicionales -->
                 <div class="flex flex-1 flex-wrap gap-3 items-end w-full">
-
                     <!-- Input de búsqueda -->
                     <div class="flex-1 min-w-[200px]">
                         <x-floating-input id="search" name="search" label="{{ $searchPlaceholder }}"
@@ -119,44 +136,20 @@
                     </x-primary-button>
 
                     <!-- Botón Limpiar -->
-                    @php
-                        // Excluimos parámetros que NO son filtros
-                        $excludedParams = ['page', 'per_page', 'sort', 'direction', '_token'];
-
-                        // Obtenemos los filtros y eliminamos los valores vacíos
-                        $actualFilters = array_filter(
-                            request()->except($excludedParams),
-                            fn($value) => $value !== null && $value !== '',
-                        );
-
-                        $hasFilters = !empty($actualFilters);
-
-                        // Construimos la URL de limpieza: mantenemos per_page, sort y direction
-                        $cleanUrl = url()->current();
-                        $keepParams = request()->only(['per_page', 'sort', 'direction']);
-                        $keepParams = array_filter($keepParams, fn($v) => $v !== null && $v !== '');
-
-                        if (!empty($keepParams)) {
-                            $cleanUrl .= '?' . http_build_query($keepParams);
-                        }
-                    @endphp
-
-                    @if ($hasFilters)
-                        <x-secondary-button type="button" onclick="window.location.href='{{ $cleanUrl }}'"
-                            class="py-2.5 px-3" title="Limpiar todos los filtros">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                stroke-width="{{ $grosorIconos }}">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </x-secondary-button>
-                    @endif
+                    <x-secondary-button type="button" x-show="hasFilters" x-on:click.prevent="clearFilters()"
+                        class="py-2.5 px-3" title="Limpiar todos los filtros" style="display: none;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            stroke-width="{{ $grosorIconos }}">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </x-secondary-button>
 
                     <!-- Botón Crear Nuevo -->
                     @if ($createRoute && (!$createPermission || auth()->user()->can($createPermission)))
                         @if ($createModal)
-                            <!-- Agregamos type="button" y .prevent para que no envíe el formulario GET de la tabla -->
+                            <!-- 4. Usamos x-on:click.prevent en lugar de @click.prevent -->
                             <x-primary-button x-data="" type="button"
-                                @click.prevent="$dispatch('load-{{ $createModal }}-form', '{{ $createRoute }}?modal=1'); $dispatch('open-modal', '{{ $createModal }}')"
+                                x-on:click.prevent="$dispatch('load-{{ $createModal }}-form', '{{ $createRoute }}?modal=1'); $dispatch('open-modal', '{{ $createModal }}')"
                                 title="Crear nuevo registro">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     stroke-width="{{ $grosorIconos }}">
@@ -164,7 +157,6 @@
                                 </svg>
                             </x-primary-button>
                         @else
-                            <!-- Comportamiento por defecto: navegación normal -->
                             <x-primary-button type="button" onclick="window.location.href='{{ $createRoute }}'"
                                 title="Crear nuevo registro">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -226,15 +218,17 @@
                     @endforeach
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+
+            <!-- El tbody se reemplaza dinámicamente -->
+            <tbody id="ajax-table-body" x-html="tableBodyHtml">
                 {{ $slot }}
             </tbody>
         </table>
     </div>
 
-    <!-- Paginación -->
+    <!-- Paginación dinámica -->
     @if ($data && $data->hasPages())
-        <div class="p-6 border-t border-gray-200 dark:border-gray-700">
+        <div id="ajax-pagination" class="p-6 border-t border-gray-200 dark:border-gray-700" x-html="paginationHtml">
             {{ $data->links() }}
         </div>
     @endif

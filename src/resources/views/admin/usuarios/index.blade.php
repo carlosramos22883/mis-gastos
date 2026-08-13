@@ -88,7 +88,7 @@
                                 @can('users.delete')
                                     @if ($user->id !== auth()->id())
                                         <x-danger-button class="py-1.5 px-2" type="button"
-                                            onclick="confirmDelete({{ $user->id }}, '{{ $user->name }}')"
+                                            x-on:click.prevent="deleteItem({{ $user->id }}, '{{ $user->name }}', '{{ route('admin.usuarios.destroy', $user) }}')"
                                             title="Eliminar usuario">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -110,13 +110,7 @@
             </x-data-table>
 
         </div>
-    </div>
-
-    <!-- Formulario oculto para eliminar -->
-    <form id="delete-form" method="POST" style="display: none;">
-        @csrf
-        @method('DELETE')
-    </form>
+    </div>    
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -126,18 +120,7 @@
             @if (session('error'))
                 showAlert('error', 'Error', '{{ session('error') }}');
             @endif
-        });
-
-        function confirmDelete(userId, userName) {
-            showConfirm(
-                '¿Eliminar usuario?',
-                `¿Estás seguro de eliminar a "${userName}"? Esta acción no se puede deshacer.`,
-                function() {
-                    document.getElementById('delete-form').action = `/configuracion/usuarios/${userId}`;
-                    document.getElementById('delete-form').submit();
-                }
-            );
-        }
+        });        
     </script>
 
     <!-- Modal de Usuario -->

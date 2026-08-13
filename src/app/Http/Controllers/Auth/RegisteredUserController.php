@@ -55,6 +55,10 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Asignar rol por defecto "Usuario" si no se especificó uno
+        $roleName = $validated['role'] ?? 'Usuario';
+        $user->assignRole($roleName);
+
         event(new Registered($user));
 
         // REDIRIGIR AL LOGIN CON MENSAJE DE VERIFICACIÓN

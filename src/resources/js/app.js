@@ -9,6 +9,210 @@ import 'tom-select/dist/css/tom-select.css';
 window.TomSelect = TomSelect;
 
 // ==========================================
+// MANEJADOR DE TABLA DE DATOS AJAX (WEB)
+// ==========================================
+document.addEventListener('alpine:init', () => {
+    Alpine.data('dataTableHandler', () => ({
+        tableBodyHtml: '',
+        paginationHtml: '',
+        loading: false,
+        hasFilters: false,
+        isProcessing: false, // <-- FLAG ANTI-BUCLE
+
+        init() {
+            const tbody = document.getElementById('ajax-table-body');
+            const pagination = document.getElementById('ajax-pagination');
+            if (tbody) this.tableBodyHtml = tbody.innerHTML;
+            if (pagination) this.paginationHtml = pagination.innerHTML;
+
+            this.updateFilterState();
+            this.attachFormListeners();
+            this.attachPerPageListener(); // <-- NUEVO
+
+            window.addEventListener('refresh-table', () => {
+                const form = document.getElementById('data-table-form');
+                if (form) this.fetchData(form.action, new FormData(form));
+            });
+        },
+
+        attachFormListeners() {
+            const form = document.getElementById('data-table-form');
+            if (!form) return;
+
+            // Intercepta el envío del formulario
+            form.addEventListener('submit', (e) => {
+                if (this.isProcessing) return;
+                e.preventDefault();
+                this.fetchData(form.action, new FormData(form));
+            });
+
+            // Escucha cambios para actualizar el botón "Limpiar"
+            form.addEventListener('input', () => this.updateFilterState());
+            form.addEventListener('change', () => this.updateFilterState());
+        },
+
+        attachPerPageListener() {
+            // Escucha el evento personalizado del selector "Por página"
+            window.addEventListener('per-page-changed', (e) => {
+                if (this.isProcessing) return; // <-- EVITA BUCLE
+
+                const form = document.getElementById('data-table-form');
+                if (!form) return;
+
+                const formData = new FormData(form);
+                formData.set('per_page', e.detail.value);
+
+                this.fetchData(form.action, formData);
+            });
+        },
+
+        updateFilterState() {
+            const form = document.getElementById('data-table-form');
+            if (!form) return;
+
+            const formData = new FormData(form);
+            let active = false;
+
+            for (let [key, value] of formData.entries()) {
+                if (['page', 'per_page', 'sort', 'direction', '_token'].includes(key)) continue;
+                if (value && value.trim() !== '') {
+                    active = true;
+                    break;
+                }
+            }
+            this.hasFilters = active;
+        },
+
+        clearFilters() {
+            const form = document.getElementById('data-table-form');
+            if (!form) return;
+
+            const searchInput = form.querySelector('input[name="search"]');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+
+            form.querySelectorAll('select').forEach(select => {
+                if (['per_page', 'sort', 'direction'].includes(select.name)) return;
+
+                if (select.tomselect) {
+                    select.tomselect.clear();
+                } else {
+                    select.value = '';
+                    select.dispatchEvent(new Event('change'));
+                }
+            });
+
+            this.updateFilterState();
+            this.fetchData(form.action, new FormData(form));
+        },
+
+        async fetchData(baseUrl, formData) {
+            if (this.isProcessing) return; // <-- SEGURIDAD EXTRA
+
+            this.isProcessing = true;
+            this.loading = true;
+
+            try {
+                const url = new URL(baseUrl, window.location.origin);
+                for (let [key, value] of formData.entries()) {
+                    if (value) url.searchParams.append(key, value);
+                }
+
+                const response = await fetch(url.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.tableBodyHtml = data.html;
+                    this.paginationHtml = data.pagination;
+
+                    window.history.pushState({}, '', url.toString());
+
+                    setTimeout(() => {
+                        if (typeof Alpine !== 'undefined' && typeof Alpine.initTree === 'function') {
+                            const tbody = document.getElementById('ajax-table-body');
+                            const pagination = document.getElementById('ajax-pagination');
+
+                            if (tbody) Alpine.initTree(tbody);
+                            if (pagination) Alpine.initTree(pagination);
+                        }
+                    }, 50);
+                } else {
+                    console.error("Error en la respuesta:", response.status);
+                }
+            } catch (error) {
+                console.error('Error AJAX:', error);
+                showAlert('error', 'Error', 'No se pudieron cargar los datos.');
+            } finally {
+                this.loading = false;
+                this.isProcessing = false; // <-- LIBERA EL BLOQUEO
+            }
+        }
+    }));
+});
+
+
+window.deleteItem = function (id, name, url) {
+    showConfirm('¿Eliminar?', `¿Estás seguro de eliminar a "${name}"?`, async () => {
+        try {
+            const formData = new FormData();
+            formData.append('_method', 'DELETE');
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+
+            if (response.ok) {
+                showAlert('success', '¡Éxito!', 'Registro eliminado correctamente.');
+                window.dispatchEvent(new CustomEvent('refresh-table'));
+            } else {
+                const data = await response.json();
+                showAlert('error', 'Error', data.message || 'No se pudo eliminar.');
+            }
+        } catch (error) {
+            showAlert('error', 'Error de conexión', 'No se pudo comunicar con el servidor.');
+        }
+    });
+};
+
+// Función para exportar datos con los filtros actuales
+window.exportData = function (format) {
+    const form = document.getElementById('data-table-form');
+    if (!form) return;
+
+    // Construir URL base de exportación
+    const exportUrl = new URL(form.action);
+
+    // Obtener todos los valores del formulario
+    const formData = new FormData(form);
+
+    // Agregar cada parámetro a la URL
+    for (let [key, value] of formData.entries()) {
+        if (value && value.trim() !== '') {
+            exportUrl.searchParams.append(key, value);
+        }
+    }
+
+    // Agregar el formato de exportación
+    exportUrl.searchParams.append('format', format);
+
+    // Reemplazar la ruta base con la ruta de exportación
+    // (asumiendo que la exportación está en la misma ruta base)
+    const currentPath = window.location.pathname;
+    exportUrl.pathname = currentPath + '/export';
+
+    // Abrir la exportación en una nueva pestaña
+    window.open(exportUrl.toString(), '_blank');
+};
+
+
+// ==========================================
 // MANEJADOR DE FORMULARIOS AJAX REUTILIZABLE
 // ==========================================
 document.addEventListener('alpine:init', () => {
@@ -33,8 +237,13 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 if (response.status === 422) {
-                    // Errores de validación de Laravel
                     const data = await response.json();
+
+                    // Console.log detallado
+                    console.log('Validación de formulario fallida:');
+                    console.log('   Campos con errores:', Object.keys(data.errors));
+                    console.log('   Mensajes:', data.errors);
+
                     this.errors = data.errors;
                     this.showValidationErrors();
                 } else if (response.ok) {

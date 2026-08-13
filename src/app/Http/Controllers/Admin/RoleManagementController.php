@@ -48,7 +48,16 @@ class RoleManagementController extends Controller
         // Usamos el per_page del request (default 10) para que coincida con el selector
         $perPage = $request->get('per_page', 10);
         $roles = $query->paginate($perPage)->withQueryString();
+        
+        // Si es una petición AJAX (desde la web), devolvemos solo el HTML de la tabla
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'html' => view('admin.roles._table_body', compact('roles'))->render(),
+                'pagination' => $roles->links()->render(),
+            ]);
+        }
 
+        // Si es una visita normal, devuelve la vista completa
         return view('admin.roles.index', compact('roles'));
     }
 
@@ -144,10 +153,30 @@ class RoleManagementController extends Controller
     {
         // No permitir eliminar el rol Administrador
         if ($role->name === 'Administrador') {
+            if (request()->wantsJson()) {
+                return response()->json(['message' => 'No puedes eliminar el rol de Administrador.'], 403);
+            }
             return back()->with('error', 'No puedes eliminar el rol de Administrador.');
         }
 
+        // Verificar si el rol tiene usuarios asignados
+        if ($role->users()->count() > 0) {
+            $usersCount = $role->users()->count();
+            
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'message' => "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s)."
+                ], 422);
+            }
+            
+            return back()->with('error', "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s).");
+        }
+
         $role->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Rol eliminado exitosamente.'], 200);
+        }
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'Rol eliminado exitosamente.');

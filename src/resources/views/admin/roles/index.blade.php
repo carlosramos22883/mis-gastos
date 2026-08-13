@@ -27,7 +27,7 @@
                                 'users' => 'Usuarios',
                                 'roles' => 'Roles',
                                 'profile' => 'Perfil',
-                            ]" :value="request('filter_permission')" />
+                            ]" :value="request('filter_permission')" :searchable="false"/>
                     </div>
                 </x-slot:filters>
 
@@ -67,6 +67,7 @@
                                 @can('roles.delete')
                                     <x-danger-button class="py-1.5 px-2" type="button"
                                         onclick="confirmDelete({{ $role->id }}, '{{ $role->name }}')"
+                                        x-on:click.prevent="deleteItem({{ $role->id }}, '{{ $role->name }}', '{{ route('admin.roles.destroy', $role) }}')"
                                         title="Eliminar rol">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -89,11 +90,6 @@
         </div>
     </div>
 
-    <form id="delete-form" method="POST" style="display: none;">
-        @csrf
-        @method('DELETE')
-    </form>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             @if (session('success'))
@@ -103,17 +99,6 @@
                 showAlert('error', 'Error', '{{ session('error') }}');
             @endif
         });
-
-        function confirmDelete(roleId, roleName) {
-            showConfirm(
-                '¿Eliminar rol?',
-                `¿Estás seguro de eliminar el rol "${roleName}"? Los usuarios con este rol perderán sus permisos.`,
-                function() {
-                    document.getElementById('delete-form').action = `/configuracion/roles/${roleId}`;
-                    document.getElementById('delete-form').submit();
-                }
-            );
-        }
     </script>
     <!-- Modal de Rol -->
     <x-modal name="role-modal" :show="false">

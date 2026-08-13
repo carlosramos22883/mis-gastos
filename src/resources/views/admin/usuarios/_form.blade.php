@@ -1,7 +1,8 @@
 <form x-data="ajaxForm(function() {
     $dispatch('close-modal', 'user-modal');
     showAlert('success', '¡Éxito!', 'Usuario guardado correctamente.');
-    setTimeout(() => window.location.reload(), 1000);
+    window.dispatchEvent(new CustomEvent('refresh-table'));
+    $dispatch('close-modal', 'user-modal');
 })" @submit.prevent="submit"
     action="{{ isset($usuario) ? route('admin.usuarios.update', $usuario) : route('admin.usuarios.store') }}"
     method="POST" novalidate class="space-y-4">
@@ -50,7 +51,7 @@
             type="password" />
     @endif
 
-    <x-floating-select id="role" name="role" label="Rol del usuario" :options="$roles->pluck('name', 'name')->toArray()" :value="isset($usuario) ? old('role', $usuario->roles->first()?->name) : old('role')"
+    <x-floating-select id="role" name="role" label="Rol del usuario" :options="$roles->pluck('name', 'name')->toArray()" :value="isset($usuario) ? old('role', $usuario->roles->first()?->name) : old('role', 'Usuario')"
         :error="$errors->first('role')" required :searchable="true" />
 
     <div class="mt-6 flex justify-end gap-3">
