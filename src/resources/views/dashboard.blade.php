@@ -15,15 +15,29 @@
         </div>
     </div>
 </x-app-layout>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Mostrar SweetAlert de éxito si viene del registro
-    @if (session('success'))
-        showAlert('success', '¡Registro exitoso!', '{{ session('success') }}')
-            .then(() => {
-                // Opcional: Puedes redirigir a otra página si quieres
-                // window.location.href = "{{ route('profile.edit') }}";
-            });
-    @endif
-});
-</script>
+    console.log('Todas las sesiones:', @json(session()->all()));
+    document.addEventListener('DOMContentLoaded', function() {
+
+        @if (session('verification_error'))
+            showAlert(
+                'warning',
+                'No se puede verificar esta cuenta',
+                '{{ session('verification_error') }}',
+                { timer: 6000 }
+            );
+        @endif
+
+        // Intento de resetear contraseña de otra cuenta
+        @if (session('password_reset_error'))
+            showAlert(
+                'warning',
+                'Atención',
+                '{{ session('password_reset_error') }}',
+                 { timer: 6000 }
+            );
+        @endif
+
+    });
+</script>   

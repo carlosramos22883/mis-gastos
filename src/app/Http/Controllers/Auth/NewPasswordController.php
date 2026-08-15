@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -20,8 +21,14 @@ class NewPasswordController extends Controller
     /**
      * Display the password reset view.
      */
-    public function create(Request $request): View
-    {
+    public function create(Request $request): View|RedirectResponse
+    {        
+        // VALIDACIÓN: Si hay alguien logueado y el correo del enlace NO es el suyo
+        if (Auth::check() && $request->email !== Auth::user()->email) {
+            return redirect()->route('dashboard')
+                ->with('password_reset_error', 'Estás intentando restablecer la contraseña de otra cuenta. Por favor, cierra sesión primero o usa el enlace enviado a tu propio correo.');
+        }
+
         return view('auth.reset-password', ['request' => $request]);
     }
 

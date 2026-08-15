@@ -32,23 +32,22 @@ class RoleManagementController extends Controller
             });
         }
 
-        // --- LÓGICA DE ORDENAMIENTO ---
-        $sortField = $request->get('sort', 'name');
-        $sortDirection = $request->get('direction', 'asc');
+        // Ordenamiento
+        $sortField = $request->get('sort', 'name'); // <-- Cambiado de 'created_at' a 'name'
+        $sortDirection = $request->get('direction', 'asc'); // <-- Cambiado de 'desc' a 'asc'
 
-        // Solo permitimos ordenar por campos seguros de la tabla 'roles'
-        $allowedSortFields = ['name', 'created_at', 'updated_at'];
-
+        // Validar campos permitidos para ordenar (seguridad)
+        $allowedSortFields = ['name', 'email', 'created_at', 'email_verified_at'];
         if (in_array($sortField, $allowedSortFields)) {
             $query->orderBy($sortField, $sortDirection);
         } else {
-            $query->orderBy('name', 'asc'); // Fallback por defecto
+            $query->orderBy('name', 'asc'); // Fallback seguro
         }
 
         // Usamos el per_page del request (default 10) para que coincida con el selector
         $perPage = $request->get('per_page', 10);
         $roles = $query->paginate($perPage)->withQueryString();
-        
+
         // Si es una petición AJAX (desde la web), devolvemos solo el HTML de la tabla
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -92,24 +91,25 @@ class RoleManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
-            'permissions' => ['nullable', 'array'],
+            'permissions' => ['required', 'array', 'min:1'],
             'permissions.*' => ['exists:permissions,name'],
-        ], [], [
+        ], [
+            // Mensajes de error personalizados
+            'permissions.required' => 'Debes seleccionar al menos un permiso para el rol.',
+            'permissions.min' => 'Debes seleccionar al menos un permiso para el rol.',
+        ], [
+            // Nombres de atributos para los mensajes
             'name' => 'Nombre del rol',
             'permissions' => 'Permisos',
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
+        $role->syncPermissions($validated['permissions']);
 
-        if (!empty($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
-        }
-
-        // Si es petición AJAX, devolver JSON
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => "Rol '{$role->name}' actualizado exitosamente.",
+                'message' => "Rol '{$role->name}' creado exitosamente.",
                 'role' => $role
             ], 200);
         }
@@ -125,16 +125,18 @@ class RoleManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name,' . $role->id],
-            'permissions' => ['nullable', 'array'],
+            'permissions' => ['required', 'array', 'min:1'],
             'permissions.*' => ['exists:permissions,name'],
-        ], [], [
+        ], [
+            'permissions.required' => 'Debes seleccionar al menos un permiso para el rol.',
+            'permissions.min' => 'Debes seleccionar al menos un permiso para el rol.',
+        ], [
             'name' => 'Nombre del rol',
             'permissions' => 'Permisos',
         ]);
 
         $role->update(['name' => $validated['name']]);
-
-        $role->syncPermissions($validated['permissions'] ?? []);
+        $role->syncPermissions($validated['permissions']);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -152,29 +154,47 @@ class RoleManagementController extends Controller
     public function destroy(Role $role)
     {
         // No permitir eliminar el rol Administrador
-        if ($role->name === 'Administrador') {
+        if ($role->name === 'Administrador' || $role->name === 'Usuario') {
             if (request()->wantsJson()) {
-                return response()->json(['message' => 'No puedes eliminar el rol de Administrador.'], 403);
+                return response()->json(['message' => $role->name === 'Administrador' ? 'No puedes eliminar el rol Administrador.' : 'No puedes eliminar el rol Usuario'], 403);
             }
-            return back()->with('error', 'No puedes eliminar el rol de Administrador.');
+            return back()->with('error', $role->name === 'Administrador' ? 'No puedes eliminar el rol Administrador.' : 'No puedes eliminar el rol Usuario');
         }
 
         // Verificar si el rol tiene usuarios asignados
         if ($role->users()->count() > 0) {
             $usersCount = $role->users()->count();
-            
+
             if (request()->wantsJson()) {
                 return response()->json([
                     'message' => "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s)."
                 ], 422);
             }
-            
+
             return back()->with('error', "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s).");
         }
+
+        // Obtener la página actual antes de eliminar
+        $currentPage = request('page', 1);
 
         $role->delete();
 
         if (request()->wantsJson()) {
+
+            // Verificar si la página actual sigue siendo válida
+            $perPage = request('per_page', 10);
+            $totalRecords = Role::count(); // O User::count() según el controller
+            $lastPage = ceil($totalRecords / $perPage);
+
+            // Si la página actual es mayor que la última página válida
+            if ($currentPage > $lastPage && $lastPage > 0) {
+                // Redirigir a la última página válida
+                return response()->json([
+                    'message' => 'Rol eliminado exitosamente.',
+                    'redirect_to_page' => $lastPage
+                ], 200);
+            }
+
             return response()->json(['message' => 'Rol eliminado exitosamente.'], 200);
         }
 

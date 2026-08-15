@@ -18,7 +18,7 @@
 
             <x-data-table :headers="$headers" :data="$users" :createRoute="route('admin.usuarios.create')" createPermission="users.create"
                 createModal="user-modal" exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
-                searchPlaceholder="Buscar por nombre o correo..." defaultSort="created_at" defaultDirection="desc">
+                searchPlaceholder="Buscar por nombre o correo..." defaultSort="name" defaultDirection="asc">
 
                 <!-- Slot de Filtros Personalizados -->
                 <x-slot:filters>

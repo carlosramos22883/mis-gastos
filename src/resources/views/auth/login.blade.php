@@ -20,7 +20,7 @@
         <div class="flex justify-end mb-4">
             <a href="{{ route('password.request') }}">
                 ¿Olvidaste tu contraseña?
-            </a>            
+            </a>
         </div>
 
         <div class="mb-4">
@@ -67,25 +67,92 @@
     </form>
 </x-guest-layout>
 <script>
+    /*console.log('=== DEBUG LOGIN ===');
+    console.log('Todas las sesiones:', @json(session()->all()));
+    console.log('session(status):', @json(session('status')));
+    console.log('session(verification_success):', @json(session('verification_success')));
+    console.log('showAlert existe?:', typeof showAlert);*/
+    
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Si viene del registro exitoso
+        //console.log('DOMContentLoaded disparado');
+
+        // Registro exitoso
         @if (session('status') === 'verification-link-sent')
-            showAlert('success', '¡Registro exitoso!', 'Te hemos enviado un enlace de verificación a tu correo. Por favor, revísalo (incluyendo spam) para activar tu cuenta.');
+            showAlert(
+                'success',
+                '¡Registro exitoso!',
+                'Te hemos enviado un enlace de verificación a tu correo. Por favor, revísalo (incluyendo spam) para activar tu cuenta.'
+            );
         @endif
 
-        // 2. Si intenta hacer algo que requiere verificación y no la tiene
+        @if (session('status') === 'verification-success')
+            showAlert(
+                'success',
+                '¡Correo verificado!',
+                '¡Correo verificado exitosamente! Ya puedes iniciar sesión con tu cuenta.'
+            );
+        @endif
+
+        // Correo verificado
+        @if (session('verification_success'))
+            showAlert(
+                'success',
+                '¡Correo verificado!',
+                '{{ session('verification_success') }}'
+            );
+        @endif
+
+        // Información de verificación
+        @if (session('verification_info'))
+            showAlert(
+                'info',
+                'Información',
+                '{{ session('verification_info') }}'
+            );
+        @endif
+
+        // Intento de verificar otra cuenta
+        @if (session('verification_error'))
+            showAlert(
+                'warning',
+                'No se puede verificar',
+                '{{ session('verification_error') }}'
+            );
+        @endif
+
+        // Verificación requerida
         @if (session('status') === 'verification-required')
-            showAlert('warning', 'Verificación requerida', 'Debes verificar tu correo electrónico antes de acceder a esta sección.');
+            showAlert(
+                'warning',
+                'Verificación requerida',
+                'Debes verificar tu correo electrónico antes de acceder a esta sección.'
+            );
         @endif
 
-        // 3. Restablecimiento de contraseña
+        // Restablecimiento de contraseña
         @if (session('status') === 'password-reset')
-            showAlert('success', '¡Contraseña restablecida!', 'Tu contraseña ha sido restablecida correctamente.');
+            showAlert(
+                'success',
+                '¡Contraseña restablecida!',
+                'Tu contraseña ha sido restablecida correctamente.'
+            );
         @endif
 
-        // 4. Cuenta eliminada
+        // Cuenta eliminada
         @if (session('status') === 'account-deleted')
-            showAlert('info', 'Cuenta Eliminada', 'Tu cuenta ha sido eliminada correctamente. Esperamos verte de nuevo pronto.');
+            showAlert(
+                'info',
+                'Cuenta Eliminada',
+                'Tu cuenta ha sido eliminada correctamente. Esperamos verte de nuevo pronto.'
+            );
+        @endif
+
+        @if (session('error'))
+            showAlert(
+                'error',
+                'Error',
+                '{{ session('error') }}'
+            );
         @endif
     });
 </script>

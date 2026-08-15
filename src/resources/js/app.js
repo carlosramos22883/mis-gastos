@@ -22,12 +22,30 @@ document.addEventListener('alpine:init', () => {
         init() {
             const tbody = document.getElementById('ajax-table-body');
             const pagination = document.getElementById('ajax-pagination');
+            const container = document.getElementById('data-table-container');
+
             if (tbody) this.tableBodyHtml = tbody.innerHTML;
             if (pagination) this.paginationHtml = pagination.innerHTML;
 
+            // Leer los defaults del componente
+            this.defaultSort = container?.dataset.defaultSort || 'created_at';
+            this.defaultDirection = container?.dataset.defaultDirection || 'desc';
+
             this.updateFilterState();
             this.attachFormListeners();
-            this.attachPerPageListener(); // <-- NUEVO
+            this.attachPerPageListener();
+
+            // Aplicar ordenamiento inicial si no hay sort en la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('sort')) {
+                const form = document.getElementById('data-table-form');
+                if (form) {
+                    const sortInput = form.querySelector('input[name="sort"]');
+                    const directionInput = form.querySelector('input[name="direction"]');
+                    if (sortInput) sortInput.value = this.defaultSort;
+                    if (directionInput) directionInput.value = this.defaultDirection;
+                }
+            }
 
             window.addEventListener('refresh-table', () => {
                 const form = document.getElementById('data-table-form');
@@ -108,16 +126,59 @@ document.addEventListener('alpine:init', () => {
             this.fetchData(form.action, new FormData(form));
         },
 
+        handleSort(field) {
+            const form = document.getElementById('data-table-form');
+            if (!form) return;
+
+            const sortInput = form.querySelector('input[name="sort"]');
+            const directionInput = form.querySelector('input[name="direction"]');
+            const pageInput = form.querySelector('input[name="page"]');
+
+            if (!sortInput || !directionInput) return;
+
+            // Determinar la nueva dirección basándonos en el estado REAL actual
+            let newDirection = 'asc';
+
+            if (sortInput.value === field) {
+                newDirection = directionInput.value === 'asc'
+                    ? 'desc'
+                    : 'asc';
+            }
+
+            // Actualizar los inputs ocultos
+            sortInput.value = field;
+            directionInput.value = newDirection;
+
+            if (pageInput) {
+                pageInput.value = '1';
+            }
+
+            // Crear FormData DESPUÉS de actualizar los inputs
+            const formData = new FormData(form);
+
+            // Asegurar los valores
+            formData.set('sort', field);
+            formData.set('direction', newDirection);
+            formData.set('page', '1');
+
+            // Enviar petición AJAX
+            this.fetchData(form.action, formData);
+        },
+
         async fetchData(baseUrl, formData) {
-            if (this.isProcessing) return; // <-- SEGURIDAD EXTRA
+            if (this.isProcessing) return;
 
             this.isProcessing = true;
             this.loading = true;
 
             try {
                 const url = new URL(baseUrl, window.location.origin);
+
+                // Agregar parámetros del formulario a la URL de forma limpia
                 for (let [key, value] of formData.entries()) {
-                    if (value) url.searchParams.append(key, value);
+                    if (value) {
+                        url.searchParams.set(key, value);
+                    }
                 }
 
                 const response = await fetch(url.toString(), {
@@ -148,9 +209,9 @@ document.addEventListener('alpine:init', () => {
                 showAlert('error', 'Error', 'No se pudieron cargar los datos.');
             } finally {
                 this.loading = false;
-                this.isProcessing = false; // <-- LIBERA EL BLOQUEO
+                this.isProcessing = false;
             }
-        }
+        },
     }));
 });
 
@@ -162,15 +223,48 @@ window.deleteItem = function (id, name, url) {
             formData.append('_method', 'DELETE');
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
 
-            const response = await fetch(url, {
+            // Obtener la página actual de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentPage = urlParams.get('page') || '1';
+            const perPage = urlParams.get('per_page') || '10';
+
+            // Agregar página y per_page a la URL
+            const deleteUrl = new URL(url, window.location.origin);
+            deleteUrl.searchParams.set('page', currentPage);
+            deleteUrl.searchParams.set('per_page', perPage);
+
+            const response = await fetch(deleteUrl.toString(), {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
             });
 
             if (response.ok) {
-                showAlert('success', '¡Éxito!', 'Registro eliminado correctamente.');
-                window.dispatchEvent(new CustomEvent('refresh-table'));
+                const data = await response.json();
+                showAlert('success', '¡Éxito!', data.message || 'Registro eliminado correctamente.');
+
+                // Obtener el formulario y construir los datos para refrescar
+                const form = document.getElementById('data-table-form');
+                if (form) {
+                    const refreshFormData = new FormData(form);
+
+                    // Determinar qué página mostrar
+                    let targetPage = currentPage;
+                    if (data.redirect_to_page) {
+                        targetPage = data.redirect_to_page;
+                    }
+
+                    refreshFormData.set('page', targetPage);
+
+                    // Llamar directamente a fetchData del componente Alpine
+                    const container = document.getElementById('data-table-container');
+                    if (container) {
+                        const alpineData = Alpine.$data(container);
+                        if (alpineData && alpineData.fetchData) {
+                            alpineData.fetchData(form.action, refreshFormData);
+                        }
+                    }
+                }
             } else {
                 const data = await response.json();
                 showAlert('error', 'Error', data.message || 'No se pudo eliminar.');
@@ -262,30 +356,45 @@ document.addEventListener('alpine:init', () => {
         },
 
         showValidationErrors() {
-            // 1. Limpiar errores visuales anteriores
             this.clearValidationErrors();
 
-            // 2. Pintar los nuevos errores
             for (const [field, messages] of Object.entries(this.errors)) {
-                // Busca el input por nombre (maneja también arrays como permissions[])
-                const inputName = field.includes('.') ? field.replace('.', '\\.') : field;
-                const input = document.querySelector(`[name="${inputName}"], [name="${field}[]"]`);
+                let input;
+
+                // CASO ESPECIAL: Permisos (grupo de checkboxes)
+                if (field === 'permissions') {
+                    input = document.getElementById('permissions-error-container');
+                } else {
+                    // Comportamiento normal para inputs de texto, selects, etc.
+                    const inputName = field.includes('.') ? field.replace('.', '\\.') : field;
+                    input = document.querySelector(`[name="${inputName}"], [name="${field}[]"]`);
+                }
 
                 if (input) {
-                    // Resaltar el borde del input
-                    input.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
-                    input.classList.remove('border-gray-300', 'dark:border-gray-600', 'focus:ring-primary-500', 'focus:border-primary-500');
+                    if (field === 'permissions') {
+                        // Para el contenedor de permisos, solo mostramos el mensaje
+                        input.classList.remove('hidden');
+                        input.innerHTML = `
+                            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            ${messages[0]}
+                        `;
+                    } else {
+                        // Comportamiento normal para otros campos
+                        input.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+                        input.classList.remove('border-gray-300', 'dark:border-gray-600', 'focus:ring-primary-500', 'focus:border-primary-500');
 
-                    // Crear el mensaje de error debajo del input
-                    const errorDiv = document.createElement('p');
-                    errorDiv.className = 'mt-1 text-xs flex items-center gap-1 text-red-600 dark:text-red-400 font-medium';
-                    errorDiv.innerHTML = `
-                        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                        ${messages[0]}
-                    `;
-                    input.parentElement.appendChild(errorDiv);
+                        const errorDiv = document.createElement('p');
+                        errorDiv.className = 'mt-1 text-xs flex items-center gap-1 text-red-600 dark:text-red-400 font-medium';
+                        errorDiv.innerHTML = `
+                            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            ${messages[0]}
+                        `;
+                        input.parentElement.appendChild(errorDiv);
+                    }
                 }
             }
         },
@@ -296,6 +405,13 @@ document.addEventListener('alpine:init', () => {
                 el.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
                 el.classList.add('border-gray-300', 'dark:border-gray-600', 'focus:ring-primary-500', 'focus:border-primary-500');
             });
+
+            // Limpiar el contenedor especial de permisos
+            const permError = document.getElementById('permissions-error-container');
+            if (permError) {
+                permError.classList.add('hidden');
+                permError.innerHTML = '';
+            }
 
             // Limpiar mensajes de error (usa un selector más simple)
             document.querySelectorAll('.text-red-600').forEach(el => {
@@ -313,6 +429,24 @@ document.addEventListener('alpine:init', () => {
             });
         }
     }));
+});
+
+// ==========================================
+// MANEJO DE ALERTAS DESDE SESIONES FLASH
+// ==========================================
+document.addEventListener('DOMContentLoaded', function () {
+    // Verificar si hay mensajes en localStorage (backup)
+    const alertMessage = localStorage.getItem('alertMessage');
+    const alertTitle = localStorage.getItem('alertTitle');
+    const alertIcon = localStorage.getItem('alertIcon');
+
+    if (alertMessage) {
+        showAlert(alertIcon || 'info', alertTitle || 'Información', alertMessage);
+        // Limpiar después de mostrar
+        localStorage.removeItem('alertMessage');
+        localStorage.removeItem('alertTitle');
+        localStorage.removeItem('alertIcon');
+    }
 });
 
 window.Alpine = Alpine;

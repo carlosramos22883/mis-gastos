@@ -38,6 +38,41 @@
     </main>
 
     <x-app-footer />
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            @if (session('useLocalStorage'))
+                // Guardar en localStorage para que sobreviva la redirección
+                @if (session('success'))
+                    localStorage.setItem('alertMessage', '{{ session('success') }}');
+                    localStorage.setItem('alertTitle', '¡Éxito!');
+                    localStorage.setItem('alertIcon', 'success');
+                @endif
+                @if (session('info'))
+                    localStorage.setItem('alertMessage', '{{ session('info') }}');
+                    localStorage.setItem('alertTitle', 'Información');
+                    localStorage.setItem('alertIcon', 'info');
+                @endif
+            @endif
+
+            // Mostrar alertas de localStorage
+            const alertMessage = localStorage.getItem('alertMessage');
+            const alertTitle = localStorage.getItem('alertTitle');
+            const alertIcon = localStorage.getItem('alertIcon');
+
+            if (alertMessage) {
+                showAlert(alertIcon || 'info', alertTitle || 'Información', alertMessage);
+                localStorage.removeItem('alertMessage');
+                localStorage.removeItem('alertTitle');
+                localStorage.removeItem('alertIcon');
+            }
+
+            // También mostrar flash messages tradicionales
+            @if (session('success') && !session('useLocalStorage'))
+                showAlert('success', '¡Éxito!', '{{ session('success') }}');
+            @endif
+        });
+    </script>
 </body>
 
 </html>

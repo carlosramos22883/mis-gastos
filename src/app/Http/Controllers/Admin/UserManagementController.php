@@ -38,22 +38,21 @@ class UserManagementController extends Controller
         }
 
         // Ordenamiento
-        $sortField = $request->get('sort', 'created_at');
-        $sortDirection = $request->get('direction', 'desc');
+        $sortField = $request->get('sort', 'name'); // <-- Cambiado de 'created_at' a 'name'
+        $sortDirection = $request->get('direction', 'asc'); // <-- Cambiado de 'desc' a 'asc'
 
         // Validar campos permitidos para ordenar (seguridad)
         $allowedSortFields = ['name', 'email', 'created_at', 'email_verified_at'];
         if (in_array($sortField, $allowedSortFields)) {
             $query->orderBy($sortField, $sortDirection);
         } else {
-            $query->orderBy('created_at', 'desc');
+            $query->orderBy('name', 'asc'); // Fallback seguro
         }
 
         $perPage = $request->get('per_page', 10);
         $users = $query->paginate($perPage)->withQueryString();
         $roles = Role::all();
 
-        // Si es una petición AJAX (desde la web), devolvemos solo el HTML de la tabla
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html' => view('admin.usuarios._table_body', compact('users'))->render(),
@@ -61,7 +60,6 @@ class UserManagementController extends Controller
             ]);
         }
 
-        // Si es una visita normal, devuelve la vista completa
         return view('admin.usuarios.index', compact('users', 'roles'));
     }
 
@@ -108,13 +106,14 @@ class UserManagementController extends Controller
             'email' => 'Correo electrónico',
             'password' => 'Contraseña',
             'role' => 'Rol',
-        ]);        
+        ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'email_verified_at' => now(),
+            // NO marcar como verificado - dejar que el usuario lo haga
+            // email_verified_at => null, // Esto es automático si no lo pones
         ]);
 
         $user->assignRole($validated['role']);
@@ -122,18 +121,16 @@ class UserManagementController extends Controller
         // Enviar correo de verificación
         $user->sendEmailVerificationNotification();
 
-        // Si es petición AJAX, devolver JSON
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => "Usuario '{$user->name}' creado exitosamente.",
+                'message' => "Usuario '{$user->name}' creado exitosamente. Se ha enviado un correo de verificación.",
                 'user' => $user
             ], 200);
         }
 
-        // Si no es AJAX, redirect tradicional
         return redirect()->route('admin.usuarios.index')
-            ->with('success', "Usuario '{$user->name}' creado exitosamente.");
+            ->with('success', "Usuario '{$user->name}' creado exitosamente. Se ha enviado un correo de verificación.");
     }
 
     /**
@@ -162,6 +159,8 @@ class UserManagementController extends Controller
 
         if ($usuario->isDirty('email')) {
             $usuario->email_verified_at = null;
+            // Enviar nuevo correo de verificación
+            $usuario->sendEmailVerificationNotification();
         }
 
         if (!empty($validated['password'])) {
@@ -171,17 +170,16 @@ class UserManagementController extends Controller
         $usuario->save();
         $usuario->syncRoles([$validated['role']]);
 
-        // Si es petición AJAX, devolver JSON
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => "Usuario '{$usuario->name}' actualizado exitosamente.",
+                'message' => "Usuario '{$usuario->name}' actualizado exitosamente. Se ha enviado un nuevo correo de verificación.",
                 'user' => $usuario
             ], 200);
         }
 
         return redirect()->route('admin.usuarios.index')
-            ->with('success', "Usuario '{$usuario->name}' actualizado exitosamente.");
+            ->with('success', "Usuario '{$usuario->name}' actualizado exitosamente. Se ha enviado un nuevo correo de verificación.");
     }
 
     /**
@@ -196,9 +194,27 @@ class UserManagementController extends Controller
             return back()->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
+        // Obtener la página actual antes de eliminar
+        $currentPage = request('page', 1);
+
         $usuario->delete();
 
         if (request()->wantsJson()) {
+
+            // Verificar si la página actual sigue siendo válida
+            $perPage = request('per_page', 10);
+            $totalRecords = User::count(); // O User::count() según el controller
+            $lastPage = ceil($totalRecords / $perPage);
+
+            // Si la página actual es mayor que la última página válida
+            if ($currentPage > $lastPage && $lastPage > 0) {
+                // Redirigir a la última página válida
+                return response()->json([
+                    'message' => 'Usuario eliminado exitosamente.',
+                    'redirect_to_page' => $lastPage
+                ], 200);
+            }
+
             return response()->json(['message' => 'Usuario eliminado exitosamente.'], 200);
         }
 

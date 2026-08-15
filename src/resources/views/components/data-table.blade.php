@@ -17,14 +17,15 @@
     $currentSort = request('sort', $defaultSort);
     $currentDirection = request('direction', $defaultDirection);
 
-    // Lógica para saber si hay filtros activos (para mostrar el botón limpiar en la carga inicial)
+    // Lógica para saber si hay filtros activos
     $excludedParams = ['page', 'per_page', 'sort', 'direction', '_token'];
     $actualFilters = array_filter(request()->except($excludedParams), fn($value) => $value !== null && $value !== '');
     $hasFilters = !empty($actualFilters);
 @endphp
 
 <!-- 1. Contenedor principal con x-data -->
-<div x-data="dataTableHandler()" id="data-table-container"
+<div x-data="dataTableHandler()" id="data-table-container" data-default-sort="{{ $defaultSort }}"
+    data-default-direction="{{ $defaultDirection }}"
     class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
 
     <!-- Spinner de carga sobre la tabla -->
@@ -46,12 +47,9 @@
         <form id="data-table-form" method="GET" action="{{ url()->current() }}" class="flex flex-col gap-4">
 
             {{-- Inputs ocultos para mantener el ordenamiento --}}
-            @if (request('sort'))
-                <input type="hidden" name="sort" value="{{ request('sort') }}">
-            @endif
-            @if (request('direction'))
-                <input type="hidden" name="direction" value="{{ request('direction') }}">
-            @endif
+            <input type="hidden" name="sort" value="{{ request('sort', $defaultSort) }}">
+            <input type="hidden" name="direction" value="{{ request('direction', $defaultDirection) }}">
+            <input type="hidden" name="page" value="{{ request('page', 1) }}">
 
             <!-- Fila 1: Registros por página y Botones de Exportación -->
             <div class="flex justify-between items-start gap-2 overflow-x-auto pt-4 pb-2 pl-1">
@@ -187,6 +185,7 @@
                                     $isActive = $currentSort === $sortField;
                                 @endphp
                                 <a href="{{ request()->fullUrlWithQuery(['sort' => $sortField, 'direction' => $newDirection]) }}"
+                                    x-on:click.prevent="handleSort('{{ $sortField }}')"
                                     class="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
                                     {{ $header['label'] }}
                                     @if ($isActive)
@@ -226,10 +225,11 @@
         </table>
     </div>
 
-    <!-- Paginación dinámica -->
-    @if ($data && $data->hasPages())
-        <div id="ajax-pagination" class="p-6 border-t border-gray-200 dark:border-gray-700" x-html="paginationHtml">
+    <!-- Paginación dinámica (SIEMPRE renderizada, Alpine controla la visibilidad) -->
+    <div id="ajax-pagination" class="p-6 border-t border-gray-200 dark:border-gray-700" x-html="paginationHtml"
+        x-show="paginationHtml !== ''" style="display: none;">
+        @if ($data && $data->hasPages())
             {{ $data->links() }}
-        </div>
-    @endif
+        @endif
+    </div>
 </div>

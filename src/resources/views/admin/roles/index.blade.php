@@ -18,7 +18,7 @@
 
             <x-data-table :headers="$headers" :data="$roles" :createRoute="route('admin.roles.create')" createPermission="roles.create"
                 createModal="role-modal" exportRoute="{{ route('admin.roles.export') }}" exportPermission="roles.view"
-                searchPlaceholder="Buscar por nombre de rol..." defaultSort="name" defaultDirection="asc">
+                searchPlaceholder="Buscar por nombre de rol..." defaultSort="name" defaultDirection="desc">
 
                 <x-slot:filters>
                     <div class="w-full sm:w-48">
@@ -66,7 +66,6 @@
 
                                 @can('roles.delete')
                                     <x-danger-button class="py-1.5 px-2" type="button"
-                                        onclick="confirmDelete({{ $role->id }}, '{{ $role->name }}')"
                                         x-on:click.prevent="deleteItem({{ $role->id }}, '{{ $role->name }}', '{{ route('admin.roles.destroy', $role) }}')"
                                         title="Eliminar rol">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

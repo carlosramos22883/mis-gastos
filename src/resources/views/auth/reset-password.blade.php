@@ -40,7 +40,7 @@
         </div>
 
         <!-- Botones -->
-        <div class="flex items-center justify-end gap-4 mt-8">
+        <div class="flex items-center justify-end gap-4">
             <!-- Botón secundario redondo y reutilizable -->
             <x-secondary-button onclick="window.location.href='{{ route('login') }}'">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
