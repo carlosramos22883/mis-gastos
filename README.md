@@ -2,7 +2,7 @@
 
 Sistema moderno desarrollado con Laravel 11, PHP 8.3 y PostgreSQL 16.
 
-## 🚀 Tecnologías
+## Tecnologías
 
 - **Backend**: Laravel 11.x
 - **PHP**: 8.3
@@ -17,7 +17,7 @@ Sistema moderno desarrollado con Laravel 11, PHP 8.3 y PostgreSQL 16.
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 
-## 📋 Requisitos
+## Requisitos
 
 - Docker
 - Docker Compose
@@ -74,7 +74,7 @@ Perfecto para probar:
 - Verificación de emails
 - Notificaciones del sistema
 
-## 🌐 Accesos
+## Accesos
 Una vez que los contenedores estén corriendo, puedes acceder a:
 | **Servicio**      | **URL**          | **Credenciales** |
 |---------------|--------------|--------------|
@@ -83,7 +83,7 @@ Una vez que los contenedores estén corriendo, puedes acceder a:
 | PostgreSQL      | http://localhost:5433    | Usuario: misgastos_user / Password: misgastos_secret |
 | Dashboard de emails | http://localhost:8025 |  |
 
-## 🌐 Credenciales
+## Credenciales
 Usuario Admiistrador
 | **Usuario**      | **Rol**          | **Password** |
 |---------------|--------------|--------------|
