@@ -91,7 +91,7 @@ Usuario Admiistrador
 
 ## Características Principales
 
-###  Autenticación y Seguridad
+### Autenticación y Seguridad
 - Registro e inicio de sesión de usuarios
 - Verificación de correo electrónico
 - Recuperación de contraseña
@@ -100,7 +100,7 @@ Usuario Admiistrador
 - Protección de rutas por permisos
 - Modo oscuro/claro global
 
-### 👥 Gestión de Usuarios (Admin)
+### Gestión de Usuarios (Admin)
 - CRUD completo con AJAX
 - Búsqueda y filtros en tiempo real
 - Paginación configurable
@@ -108,7 +108,7 @@ Usuario Admiistrador
 - Asignación de roles y permisos
 - Validaciones en frontend y backend
 
-###  Gestión de Roles y Permisos
+### Gestión de Roles y Permisos
 - Creación y edición de roles
 - Asignación dinámica de permisos
 - Permisos granulares por módulo
