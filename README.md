@@ -132,3 +132,10 @@ Usuario Admiistrador
 - **Carlos Adolfo Ramos Ramírez**
 - **Linkedln**: https://www.linkedin.com/in/carlos-adolfo-ramos/
 - **Email**: carlosramos22883@gmail.com
+
+## 📝 Licencia
+
+Este proyecto es **propiedad intelectual de Carlos Adolfo Ramos Ramírez**. 
+Se muestra públicamente **únicamente con fines de portafolio profesional**. 
+Queda estrictamente prohibida su copia, distribución o uso sin permiso explícito del autor. 
+Todos los derechos reservados.
