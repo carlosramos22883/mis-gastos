@@ -5,14 +5,18 @@
         </h2>
 
         <p class="mb-4">
+            @can('profile.update')
             {{ __('Actualiza la información de perfil y correo electrónico de tu cuenta.') }}
+            @elsecan('profile.view')
+            {{ __('Información de perfil y correo electrónico de tu cuenta.') }}
+            @endcan
         </p>
     </header>
 
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
-
+    @can('profile.update')
     <form method="post" action="{{ route('profile.update') }}" class="space-y-2" novalidate id="profile-update-form">
         @csrf
         @method('patch')
@@ -50,6 +54,24 @@
             </x-primary-button>
         </div>
     </form>
+    @elsecan('profile.view')
+        <div class="mb-6 text-center mt-4">
+            <div>
+                <div class="mb-4">
+                    <h5>Nombre</h5>
+                </div>
+                <div class="mb-4">
+                    <p>{{$user->name}}</p>
+                </div>
+            </div>
+            <div class="mb-4">
+                <h5>Correo electrónico</h5>
+            </div>
+            <div class="mb-4">
+                <p>{{$user->email}}</p>
+            </div>            
+        </div>
+    @endcan
 </section>
 
 <!-- Scripts para manejar las notificaciones con SweetAlert -->

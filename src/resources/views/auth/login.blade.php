@@ -67,15 +67,8 @@
     </form>
 </x-guest-layout>
 <script>
-    /*console.log('=== DEBUG LOGIN ===');
-    console.log('Todas las sesiones:', @json(session()->all()));
-    console.log('session(status):', @json(session('status')));
-    console.log('session(verification_success):', @json(session('verification_success')));
-    console.log('showAlert existe?:', typeof showAlert);*/
-    
     document.addEventListener('DOMContentLoaded', function() {
-        //console.log('DOMContentLoaded disparado');
-
+        
         // Registro exitoso
         @if (session('status') === 'verification-link-sent')
             showAlert(

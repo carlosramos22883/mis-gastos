@@ -1,28 +1,25 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
+    <div class="mb-4">
         <h2>{{ __('¡Hola!') }}</h2>
     </div>
-    <div class="mb-4 text-sm text-gray-600">
+    <div class="mb-4">
         <p>{{ __('Estás aquí por una de estas razones:') }}</p>
     </div>
-    <div class="mb-4 text-sm text-gray-600">
-        <!-- Se agregaron las clases list-disc, list-inside y un margen superior/inferior -->
-        <ul class="list-disc list-inside space-y-1 mb-4">
-            <li>{{ __('Te registraste en el sistema, pero aún no has verificado tu correo electrónico.') }}
+    <div class="mb-4">
+        <ul class="list-disc list-inside space-y-2 mb-4">
+            <li>{{ __('Te registraste en el sistema, pero aún no has verificado tu correo electrónico.') }}</li>
+            <li>
+                {{ __('Cambiaste tu dirección de correo y debes verificarla de nuevo para poder ingresar.') }}
             </li>
-            <ul class="list-disc list-inside space-y-1 mb-4">
-                <li>{{ __('Cambiaste tu dirección de correo y debes verificarla de nuevo para poder ingresar.') }}
-                </li>
-            </ul>
+        </ul>
     </div>
 
-    <div class="mb-8 text-sm text-gray-600">
+    <div class="mb-8">
         <p><b>¿Que debes hacer?</b>
             {{ __('Revisa tu bandeja de entrada. Si no lo encuentras, avísanos y con gusto te enviaremos otro.') }}</p>
     </div>
 
     <div class="flex flex-row items-center justify-end gap-4">
-
         <form id="logout-form" method="POST" action="{{ route('logout') }}" class="w-full sm:w-auto">
             @csrf
             <x-secondary-button type="submit" class="w-full justify-center">
@@ -41,16 +38,14 @@
                 {{ __('Reenviar') }}
             </x-primary-button>
         </form>
-
     </div>
-
 </x-guest-layout>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         @if (session('status') == 'verification-link-sent')
             showAlert('success', 'Mensaje Reenviado',
                 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.'
-                )
+            )
             .then(() => {
                 document.getElementById('logout-form').submit();
             });

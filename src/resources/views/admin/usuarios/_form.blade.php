@@ -23,12 +23,34 @@
             </svg>
         </button>
     </div>
-
+    @if (isset($usuario))
+    <!-- SECCIÓN DE FOTO DE PERFIL -->
+    <div class="pb-6 dark:border-gray-700">
+        <div class="flex justify-center">
+            <div class="relative group">
+                <img id="avatar-preview"
+                    src="{{ $usuario->avatar
+                        ? (filter_var($usuario->avatar, FILTER_VALIDATE_URL)
+                            ? $usuario->avatar
+                            : asset('storage/' . $usuario->avatar))
+                        : 'https://ui-avatars.com/api/?name=' . urlencode($usuario->name) . '&background=0a0a5e&color=fff&size=256' }}"
+                    alt="Avatar"
+                    class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600 shadow-lg">                            
+            </div>
+        </div>                        
+    </div>
+    <div class="mb-6">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            Completa los datos para editar al usuario.
+        </p>
+    </div>
+    @else
     <div class="mb-6">
         <p class="text-sm text-gray-600 dark:text-gray-400">
             Completa los datos para crear un nuevo usuario en el sistema.
         </p>
     </div>
+    @endif
 
     <x-floating-input id="name" name="name" label="Nombre completo" type="text" :value="isset($usuario) ? old('name', $usuario->name) : old('name')"
         :error="$errors->first('name')" required />

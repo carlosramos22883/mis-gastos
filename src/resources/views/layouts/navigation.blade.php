@@ -8,7 +8,8 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
                         <!-- Logo para modo claro -->
-                        <img src="{{ asset('images/logo-light.png') }}" alt="{{ config('app.name') }}" class="h-10 w-auto dark:hidden">
+                        <img src="{{ asset('images/logo-light.png') }}" alt="{{ config('app.name') }}"
+                            class="h-10 w-auto dark:hidden">
                         <!-- Logo para modo oscuro -->
                         <img src="{{ asset('images/logo-dark.png') }}" alt="{{ config('app.name') }}"
                             class="h-10 w-auto hidden dark:block">
@@ -107,17 +108,22 @@
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link :href="route('profile.edit')"
-                                class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                                {{ __('Perfil') }}
-                            </x-dropdown-link>
+                            @canany(['profile.view', 'profile.avatar.update', 'profile.password.update',
+                                'profile.delete'])
+                                @can('profile.view')
+                                    <x-dropdown-link :href="route('profile.edit')"
+                                        class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                                        {{ __('Perfil') }}
+                                    </x-dropdown-link>
+                                @endcan
+                            @endcanany
 
                             <!-- Authentication -->
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <x-dropdown-link :href="route('logout')"
                                     onclick="event.preventDefault();
-                                this.closest('form').submit();"
+            this.closest('form').submit();"
                                     class="dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
                                     {{ __('Cerrar Sesión') }}
                                 </x-dropdown-link>
@@ -182,10 +188,14 @@
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')"
-                    class="text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white">
-                    {{ __('Perfil') }}
-                </x-responsive-nav-link>
+                @canany(['profile.view', 'profile.avatar.update', 'profile.password.update', 'profile.delete'])
+                    @can('profile.view')
+                        <x-responsive-nav-link :href="route('profile.edit')"
+                            class="text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white">
+                            {{ __('Perfil') }}
+                        </x-responsive-nav-link>
+                    @endcan
+                @endcanany
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

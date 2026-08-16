@@ -32,9 +32,7 @@
        ENLACES (<a>) - Globales
        ============================================ */
     a {
-        @apply text-sm text-primary-600 hover:text-primary-700 
-               dark:text-primary-400 dark:hover:text-primary-300               
-               transition-colors duration-200;
+        @apply text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors duration-200;
     }
 
     /* ============================================
@@ -63,10 +61,20 @@
         @apply text-base font-medium text-gray-800 dark:text-gray-100;
     }
 
+    /* ===========================================
+        LISTAS
+       =========================================== */
+    /* Forzar que las listas no tengan negrita por defecto */
+    ul li,
+    ol li {
+        @apply text-sm font-normal text-gray-600 dark:text-gray-400;
+    }
+
     /* ============================================
        TEXTOS PEQUEÑOS - Globales
        ============================================ */
-    small, .text-small {
+    small,
+    .text-small {
         @apply text-xs text-gray-500 dark:text-gray-400;
     }
 }
@@ -84,9 +92,7 @@
     }
 
     .input-field {
-        @apply w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
-               bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 
-               focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+        @apply w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent;
     }
 }
 
@@ -112,7 +118,8 @@ select.appearance-none,
 
 .ts-control {
     padding: 0.5rem 2.5rem 0.5rem 0.875rem !important;
-    font-size: 0.75rem !important; /* text-xs */
+    font-size: 0.75rem !important;
+    /* text-xs */
     line-height: 1rem !important;
     border-radius: 0.5rem !important;
     border: 1px solid #d1d5db !important;
@@ -125,8 +132,10 @@ select.appearance-none,
 
 /* Fondo e igualación de color para modo oscuro idéntico a inputs (#323d4d) */
 .dark .ts-control {
-    border-color: #4b5563 !important; /* gray-600 */
-    background-color: #323d4d !important; /* Mismo color exacto que el floating-input */
+    border-color: #4b5563 !important;
+    /* gray-600 */
+    background-color: #323d4d !important;
+    /* Mismo color exacto que el floating-input */
     color: #ffffff !important;
 }
 
@@ -161,7 +170,8 @@ select.appearance-none,
 }
 
 .dark .ts-dropdown {
-    background-color: #1f2937 !important; /* Fondo gris oscuro neutro sólido */
+    background-color: #1f2937 !important;
+    /* Fondo gris oscuro neutro sólido */
     border-color: #374151 !important;
 }
 
@@ -202,7 +212,8 @@ select.appearance-none,
 }
 
 .dark .ts-dropdown .option {
-    color: #f3f4f6 !important; /* Texto claro totalmente legible */
+    color: #f3f4f6 !important;
+    /* Texto claro totalmente legible */
     background-color: transparent !important;
 }
 
@@ -215,12 +226,13 @@ select.appearance-none,
 
 .dark .ts-dropdown .option.active,
 .dark .ts-dropdown .option:hover {
-    background-color: #374151 !important; /* Destacado gris medio */
+    background-color: #374151 !important;
+    /* Destacado gris medio */
     color: #ffffff !important;
 }
 
 /* Soporte para dropdownParent: body */
-body > .ts-dropdown {
+body>.ts-dropdown {
     z-index: 99999 !important;
 }
 
@@ -232,15 +244,18 @@ body > .ts-dropdown {
 .ts-control.multi {
     padding: 4px 8px !important;
     min-height: 42px !important;
-    height: auto !important; /* Crece si hay muchos elementos */
+    height: auto !important;
+    /* Crece si hay muchos elementos */
     flex-wrap: wrap !important;
     gap: 4px !important;
 }
 
 /* Badges / Items seleccionados */
 .ts-control .item {
-    background-color: #e5e7eb !important; /* gray-200 */
-    color: #1f2937 !important; /* gray-800 */
+    background-color: #e5e7eb !important;
+    /* gray-200 */
+    color: #1f2937 !important;
+    /* gray-800 */
     border-radius: 0.375rem !important;
     padding: 2px 8px !important;
     font-size: 0.75rem !important;
@@ -249,7 +264,8 @@ body > .ts-dropdown {
 }
 
 .dark .ts-control .item {
-    background-color: #4b5563 !important; /* gray-600 */
+    background-color: #4b5563 !important;
+    /* gray-600 */
     color: #ffffff !important;
 }
 
@@ -267,7 +283,8 @@ body > .ts-dropdown {
 }
 
 .ts-control .item .remove:hover {
-    color: #ef4444 !important; /* Rojo al pasar el cursor */
+    color: #ef4444 !important;
+    /* Rojo al pasar el cursor */
 }
 
 /* ==========================================================================
@@ -275,7 +292,7 @@ body > .ts-dropdown {
    ========================================================================== */
 
 /* 1. Soporte para dropdownParent: body (Evita recortes dentro de tablas con overflow) */
-body > .ts-dropdown {
+body>.ts-dropdown {
     z-index: 99999 !important;
 }
 
@@ -289,7 +306,7 @@ body > .ts-dropdown {
 }
 
 /* 3. Input de búsqueda escribible dentro de selección múltiple */
-.ts-control.multi > input {
+.ts-control.multi>input {
     display: inline-block !important;
     flex: 1 1 auto !important;
     min-width: 60px !important;
@@ -299,18 +316,21 @@ body > .ts-dropdown {
     padding: 0 !important;
     margin: 2px !important;
     color: inherit !important;
-    font-size: 0.75rem !important; /* text-xs */
+    font-size: 0.75rem !important;
+    /* text-xs */
 }
 
-.ts-control.multi > input:focus {
+.ts-control.multi>input:focus {
     outline: none !important;
     box-shadow: none !important;
 }
 
 /* 4. Badges / Items seleccionados */
 .ts-control .item {
-    background-color: #e5e7eb !important; /* gray-200 */
-    color: #1f2937 !important; /* gray-800 */
+    background-color: #e5e7eb !important;
+    /* gray-200 */
+    color: #1f2937 !important;
+    /* gray-800 */
     border-radius: 0.375rem !important;
     padding: 2px 8px !important;
     font-size: 0.75rem !important;
@@ -319,7 +339,8 @@ body > .ts-dropdown {
 }
 
 .dark .ts-control .item {
-    background-color: #4b5563 !important; /* gray-600 */
+    background-color: #4b5563 !important;
+    /* gray-600 */
     color: #ffffff !important;
 }
 
@@ -337,7 +358,8 @@ body > .ts-dropdown {
 }
 
 .ts-control .item .remove:hover {
-    color: #ef4444 !important; /* Red hover */
+    color: #ef4444 !important;
+    /* Red hover */
 }
 
 /* Oculta el contenedor de ítem seleccionado cuando el valor está vacío */
@@ -349,10 +371,10 @@ body > .ts-dropdown {
 .ts-dropdown .option[data-value=""] {
     display: none !important;
 }
+
 /* Card estilo elegante */
 .card-elegant {
-    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 
-           shadow-md hover:shadow-lg transition-shadow duration-300;
+    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow duration-300;
 }
 
 /* ============================================
@@ -361,43 +383,23 @@ body > .ts-dropdown {
    ============================================ */
 
 .swal-btn-primary {
-    @apply inline-flex items-center px-6 py-3 bg-primary-600 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           hover:bg-primary-500 focus:bg-primary-500 active:bg-primary-700 
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 
-           transition ease-in-out duration-150;
+    @apply inline-flex items-center px-6 py-3 bg-primary-600 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest hover:bg-primary-500 focus:bg-primary-500 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition ease-in-out duration-150;
 }
 
 .swal-btn-secondary {
-    @apply inline-flex items-center px-6 py-3 bg-gray-200 border border-transparent 
-           rounded-full font-semibold text-xs text-gray-700 tracking-widest 
-           hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 
-           focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 
-           transition ease-in-out duration-150;
+    @apply inline-flex items-center px-6 py-3 bg-gray-200 border border-transparent rounded-full font-semibold text-xs text-gray-700 tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150;
 }
 
 .swal-btn-danger {
-    @apply inline-flex items-center px-6 py-3 bg-red-600 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           hover:bg-red-500 focus:bg-red-500 active:bg-red-700 
-           focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 
-           transition ease-in-out duration-150;
+    @apply inline-flex items-center px-6 py-3 bg-red-600 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest hover:bg-red-500 focus:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150;
 }
 
 .swal-btn-success {
-    @apply inline-flex items-center px-6 py-3 bg-success border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           hover:bg-success-hover focus:bg-success-hover active:bg-success 
-           focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2 
-           transition ease-in-out duration-150;
+    @apply inline-flex items-center px-6 py-3 bg-success border border-transparent rounded-full font-semibold text-xs text-white tracking-widest hover:bg-success-hover focus:bg-success-hover active:bg-success focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2 transition ease-in-out duration-150;
 }
 
 .swal-btn-warning {
-    @apply inline-flex items-center px-6 py-3 bg-yellow-600 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           hover:bg-yellow-500 focus:bg-yellow-500 active:bg-yellow-700 
-           focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 
-           transition ease-in-out duration-150;
+    @apply inline-flex items-center px-6 py-3 bg-yellow-600 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest hover:bg-yellow-500 focus:bg-yellow-500 active:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition ease-in-out duration-150;
 }
 
 .swal-actions {
@@ -418,22 +420,28 @@ body > .ts-dropdown {
 
 /* Popup en modo oscuro */
 .dark .swal2-popup {
-    background-color: #1f2937; /* gray-800 */
-    color: #f9fafb; /* gray-50 */
-    border: 1px solid #374151; /* gray-700 */
+    background-color: #1f2937;
+    /* gray-800 */
+    color: #f9fafb;
+    /* gray-50 */
+    border: 1px solid #374151;
+    /* gray-700 */
 }
 
 /* Título y texto en modo oscuro */
 .dark .swal2-title {
-    color: #f9fafb !important; /* gray-50 */
+    color: #f9fafb !important;
+    /* gray-50 */
 }
 
 .dark .swal2-html-container {
-    color: #d1d5db !important; /* gray-300 */
+    color: #d1d5db !important;
+    /* gray-300 */
 }
 
 .dark .swal2-content {
-    color: #d1d5db; /* gray-300 */
+    color: #d1d5db;
+    /* gray-300 */
 }
 
 /* Iconos en modo oscuro */
@@ -447,15 +455,19 @@ body > .ts-dropdown {
 
 /* Línea de tiempo (timer progress bar) */
 .dark .swal2-timer-progress-bar {
-    background-color: #6b7280; /* gray-500 */
+    background-color: #6b7280;
+    /* gray-500 */
 }
 
 /* Input fields dentro de SweetAlert */
 .dark .swal2-input,
 .dark .swal2-textarea {
-    background-color: #374151 !important; /* gray-700 */
-    color: #f9fafb !important; /* gray-50 */
-    border-color: #4b5563 !important; /* gray-600 */
+    background-color: #374151 !important;
+    /* gray-700 */
+    color: #f9fafb !important;
+    /* gray-50 */
+    border-color: #4b5563 !important;
+    /* gray-600 */
 }
 
 .dark .swal2-input:focus,
@@ -469,11 +481,13 @@ body > .ts-dropdown {
 }
 
 .dark .swal-btn-success {
-    background-color: #3CB371 !important; /* hover color más brillante */
+    background-color: #3CB371 !important;
+    /* hover color más brillante */
 }
 
 .dark .swal-btn-success:hover {
-    background-color: #2E8B57 !important; /* original color */
+    background-color: #2E8B57 !important;
+    /* original color */
 }
 
 .dark .swal-btn-danger {
@@ -494,10 +508,7 @@ body > .ts-dropdown {
    ============================================ */
 
 .btn-primary-custom {
-    @apply inline-flex items-center px-3 py-2 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 
-           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    @apply inline-flex items-center px-3 py-2 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
     background-color: var(--color-primary);
 }
 
@@ -511,10 +522,7 @@ body > .ts-dropdown {
 }
 
 .btn-secondary-custom {
-    @apply inline-flex items-center px-3 py-2 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 
-           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    @apply inline-flex items-center px-3 py-2 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
     background-color: var(--color-secondary);
     color: var(--color-text-dark);
 }
@@ -529,10 +537,7 @@ body > .ts-dropdown {
 }
 
 .btn-danger-custom {
-    @apply inline-flex items-center px-3 py-2 border border-transparent 
-           rounded-full font-semibold text-xs text-white tracking-widest 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 
-           dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
+    @apply inline-flex items-center px-3 py-2 border border-transparent rounded-full font-semibold text-xs text-white tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150;
     background-color: var(--color-danger);
 }
 
