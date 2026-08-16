@@ -83,6 +83,8 @@ Una vez que los contenedores estén corriendo, puedes acceder a:
 | PostgreSQL      | http://localhost:5433    | Usuario: misgastos_user / Password: misgastos_secret |
 | Dashboard de emails | http://localhost:8025 |  |
 
+## 🌐 Credenciales
+Usuario Admiistrador
 | **Usuario**      | **Rol**          | **Password** |
 |---------------|--------------|--------------|
 | admin@misgastos.com      | Administrador       | Admin123!   |
