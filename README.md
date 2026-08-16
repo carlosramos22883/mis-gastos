@@ -23,7 +23,7 @@ Sistema moderno desarrollado con Laravel 11, PHP 8.3 y PostgreSQL 16.
 - Docker Compose
 - Git
 
-## 🛠️ Instalación
+## Instalación
 
 ### 1. Clonar el repositorio
 ```bash
