@@ -32,6 +32,18 @@ class RoleAndPermissionSeeder extends Seeder
             'roles.create',
             'roles.edit',
             'roles.delete',
+
+            // Gestión de monedas
+            'monedas.view', 'monedas.create', 'monedas.edit', 'monedas.delete',
+
+            // Gestión de bancos
+            'bancos.view', 'bancos.create', 'bancos.edit', 'bancos.delete',
+
+            // Gestión de tipos de cuenta
+            'tipos_cuenta.view', 'tipos_cuenta.create', 'tipos_cuenta.edit', 'tipos_cuenta.delete',
+
+            //Marcas
+            'marcas-red.view', 'marcas-red.create', 'marcas-red.edit', 'marcas-red.delete',
         ];
 
         foreach ($permissions as $permission) {

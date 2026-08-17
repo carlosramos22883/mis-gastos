@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import collapse from '@alpinejs/collapse';
 import Croppie from 'croppie';
 import 'croppie/croppie.css';
 import Swal from 'sweetalert2';
@@ -17,7 +18,7 @@ document.addEventListener('alpine:init', () => {
         paginationHtml: '',
         loading: false,
         hasFilters: false,
-        isProcessing: false, // <-- FLAG ANTI-BUCLE
+        isProcessing: false,
 
         init() {
             const tbody = document.getElementById('ajax-table-body');
@@ -27,7 +28,6 @@ document.addEventListener('alpine:init', () => {
             if (tbody) this.tableBodyHtml = tbody.innerHTML;
             if (pagination) this.paginationHtml = pagination.innerHTML;
 
-            // Leer los defaults del componente
             this.defaultSort = container?.dataset.defaultSort || 'created_at';
             this.defaultDirection = container?.dataset.defaultDirection || 'desc';
 
@@ -35,7 +35,6 @@ document.addEventListener('alpine:init', () => {
             this.attachFormListeners();
             this.attachPerPageListener();
 
-            // Aplicar ordenamiento inicial si no hay sort en la URL
             const urlParams = new URLSearchParams(window.location.search);
             if (!urlParams.has('sort')) {
                 const form = document.getElementById('data-table-form');
@@ -51,7 +50,16 @@ document.addEventListener('alpine:init', () => {
                 const form = document.getElementById('data-table-form');
                 if (form) this.fetchData(form.action, new FormData(form));
             });
+
+            // ✅ AGREGA ESTO: Forzar la carga de datos frescos al inicializar el componente
+            setTimeout(() => {
+                const form = document.getElementById('data-table-form');
+                if (form) {
+                    this.fetchData(form.action, new FormData(form));
+                }
+            }, 100);
         },
+        
 
         attachFormListeners() {
             const form = document.getElementById('data-table-form');
@@ -432,6 +440,115 @@ document.addEventListener('alpine:init', () => {
 });
 
 // ==========================================
+// COMPONENTE REUTILIZABLE: RECORTE DE IMÁGENES (Croppie)
+// Sirve para cualquier formulario con logo/foto + modal de recorte,
+// incluso cuando el formulario entero se inyecta por AJAX dentro de
+// otro modal (banco-modal, marca-red-modal, etc). Al ser un x-data
+// de Alpine (no un <script> suelto), Alpine lo detecta e inicializa
+// automáticamente apenas el HTML se inyecta en el DOM.
+//
+// Uso en Blade:
+// <div x-data="imageCropper({
+//         previewId: 'logo-preview',
+//         inputId: 'logo-upload',
+//         cropContainerId: 'banco-crop-container',
+//         cropModalName: 'crop-banco-logo',
+//         shape: 'square',        // 'square' | 'circle'
+//         outputFormat: 'jpeg',   // 'jpeg' | 'png'
+//     })">
+//     ...input file con x-on:change="handleSelect($event)"...
+//     ...modal con div#cropContainerId y botones
+//        x-on:click="cancelCrop()" / x-on:click="saveCrop()"...
+// </div>
+// ==========================================
+document.addEventListener('alpine:init', () => {
+    Alpine.data('imageCropper', ({
+        previewId,
+        inputId,
+        cropContainerId,
+        cropModalName,
+        shape = 'circle',
+        viewportSize = 200,
+        outputSize = 256,
+        outputFormat = 'jpeg',
+    }) => ({
+        croppieInstance: null,
+
+        handleSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageUrl = e.target.result;
+
+                // Abrimos el modal PRIMERO. Si Croppie se inicializa mientras
+                // el modal todavía está oculto (display:none), mide 0x0 y el
+                // recorte se ve roto/diminuto. $nextTick espera a que Alpine
+                // ya haya aplicado el cambio de "show" al DOM antes de crear
+                // la instancia de Croppie.
+                this.$dispatch('open-modal', cropModalName);
+
+                this.$nextTick(() => {
+                    if (this.croppieInstance) {
+                        this.croppieInstance.destroy();
+                        this.croppieInstance = null;
+                    }
+
+                    const container = document.getElementById(cropContainerId);
+                    if (!container) return;
+
+                    this.croppieInstance = new Croppie(container, {
+                        viewport: { width: viewportSize, height: viewportSize, type: shape },
+                        boundary: { width: viewportSize + 100, height: viewportSize + 100 },
+                        enableExif: true,
+                        enableOrientation: true,
+                        enableZoom: true,
+                        mouseWheelZoom: true,
+                    });
+
+                    this.croppieInstance.bind({ url: imageUrl, orientation: 1 });
+                });
+            };
+            reader.readAsDataURL(file);
+        },
+
+        saveCrop() {
+            if (!this.croppieInstance) return;
+
+            this.croppieInstance.result({
+                type: 'blob',
+                size: { width: outputSize, height: outputSize },
+                format: outputFormat,
+                quality: 0.9,
+            }).then((blob) => {
+                const extension = outputFormat === 'png' ? 'png' : 'jpg';
+                const file = new File([blob], `logo.${extension}`, { type: `image/${outputFormat}` });
+
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                const input = document.getElementById(inputId);
+                if (input) input.files = dataTransfer.files;
+
+                // URL.createObjectURL es SÍNCRONO (a diferencia de FileReader),
+                // así que la preview queda lista antes de cerrar el modal —
+                // sin eso, el cierre podía ganarle la carrera a la lectura
+                // async del FileReader y el <img> ya no existía cuando
+                // intentábamos setear el .src.
+                const preview = document.getElementById(previewId);
+                if (preview) preview.src = URL.createObjectURL(blob);
+
+                this.$dispatch('close-modal', cropModalName);
+            });
+        },
+
+        cancelCrop() {
+            this.$dispatch('close-modal', cropModalName);
+        },
+    }));
+});
+
+// ==========================================
 // MANEJO DE ALERTAS DESDE SESIONES FLASH
 // ==========================================
 document.addEventListener('DOMContentLoaded', function () {
@@ -450,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 window.Alpine = Alpine;
+Alpine.plugin(collapse);
 Alpine.start();
 
 window.Croppie = Croppie;

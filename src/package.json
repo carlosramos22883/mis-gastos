@@ -18,6 +18,7 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
+        "@alpinejs/collapse": "^3.16.1",
         "croppie": "^2.6.5",
         "sweetalert2": "^11.26.25",
         "tom-select": "^2.6.2"

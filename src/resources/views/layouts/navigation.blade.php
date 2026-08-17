@@ -78,6 +78,73 @@
                 </div>
             </div>
         @endcanany
+
+        @canany(['monedas.view', 'monedas.create', 'bancos.view', 'bancos.create', 'tipos_cuenta.view',
+            'marcas-red.view'])
+            <div x-data="{ openCatalogos: {{ request()->routeIs('admin.catalogos.*') ? 'true' : 'false' }} }" class="space-y-1">
+                <button @click="openCatalogos = !openCatalogos"
+                    class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        {{ __('Catálogos') }}
+                    </div>
+                    <svg :class="openCatalogos ? 'rotate-180' : ''" class="w-4 h-4 transition-transform duration-200"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div x-show="openCatalogos" x-collapse class="pl-11 space-y-1">
+                    @canany(['bancos.view', 'bancos.create', 'bancos.edit', 'bancos.delete'])
+                        <a href="{{ route('admin.catalogos.bancos.index') }}" @click="sidebarOpen = false"
+                            class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.bancos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                            </svg>
+                            {{ __('Bancos') }}
+                        </a>
+                    @endcanany
+
+                    @canany(['marcas-red.view', 'marcas-red.create', 'marcas-red.edit', 'marcas-red.delete'])
+                        <a href="{{ route('admin.catalogos.marcas-red.index') }}" @click="sidebarOpen = false"
+                            class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.marcas-red.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            {{ __('Marcas de Red') }}
+                        </a>
+                    @endcanany
+
+                    @canany(['monedas.view', 'monedas.create', 'monedas.edit', 'monedas.delete'])
+                        <a href="{{ route('admin.catalogos.monedas.index') }}" @click="sidebarOpen = false"
+                            class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.monedas.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ __('Monedas') }}
+                        </a>
+                    @endcanany
+
+                    @canany(['tipos_cuenta.view', 'tipos_cuenta.create', 'tipos_cuenta.edit', 'tipos_cuenta.delete'])
+                        <a href="{{ route('admin.catalogos.tipos-cuenta.index') }}" @click="sidebarOpen = false"
+                            class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.tipos-cuenta.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            {{ __('Tipos de Cuenta') }}
+                        </a>
+                    @endcanany
+
+                </div>
+            </div>
+        @endcanany
     </nav>
 
     <!-- Perfil -->
