@@ -14,12 +14,10 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-
 #[Fillable(['name', 'email', 'password', 'google_id', 'avatar', 'moneda_preferida', 'fecha_corte_dia', 'zona_horaria'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
@@ -38,7 +36,15 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->notify(new CustomVerifyEmailNotification);
     }
-    
+
+    /**
+     * Relación con la moneda preferida del usuario
+     */
+    public function monedaPreferida()
+    {
+        return $this->belongsTo(Moneda::class, 'moneda_preferida');
+    }
+
 
     /**
      * Get the attributes that should be cast.

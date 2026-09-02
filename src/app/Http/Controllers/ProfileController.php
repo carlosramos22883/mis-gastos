@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Models\Moneda;
 
 
 class ProfileController extends Controller
@@ -19,8 +20,15 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        // Obtener solo las monedas activas, clave = codigo, valor = nombre
+        $monedas = Moneda::where('activo', true)
+            ->orderBy('nombre')
+            ->get()
+            ->pluck('nombre', 'codigo');
+
         return view('profile.edit', [
             'user' => $request->user(),
+            'monedas' => $monedas, // <-- PASAR A LA VISTA
         ]);
     }
 
@@ -39,7 +47,7 @@ class ProfileController extends Controller
             'zona_horaria' => ['required', 'string', 'max:50'],
         ]);
 
-    $user->fill($validated);
+        $user->fill($validated);
 
         $user->fill($request->validated());
 

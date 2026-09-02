@@ -50,23 +50,7 @@
 
             <!-- Moneda Preferida -->
             <div class="mt-4">
-                <x-floating-select id="moneda_preferida" name="moneda_preferida" label="Moneda Preferida" :options="[
-                    'USD' => 'Dólar Estadounidense (USD)',
-                    'EUR' => 'Euro (EUR)',
-                    'MXN' => 'Peso Mexicano (MXN)',
-                    'GTQ' => 'Quetzal (GTQ)',
-                    'HNL' => 'Lempira Hondureña (HNL)',
-                    'CRC' => 'Colón Costarricense (CRC)',
-                    'NIO' => 'Córdoba Nicaragüense (NIO)',
-                    'COP' => 'Peso Colombiano (COP)',
-                    'PEN' => 'Sol Peruano (PEN)',
-                    'CLP' => 'Peso Chileno (CLP)',
-                    'ARS' => 'Peso Argentino (ARS)',
-                    'GBP' => 'Libra Esterlina (GBP)',
-                    'CAD' => 'Dólar Canadiense (CAD)',
-                    'JPY' => 'Yen Japonés (JPY)',
-                    'CNY' => 'Yuan Chino (CNY)',
-                ]"
+                <x-floating-select id="moneda_preferida" name="moneda_preferida" label="Moneda Preferida" :options="$monedas"
                     :value="old('moneda_preferida', $user->moneda_preferida)" required />
             </div>
 

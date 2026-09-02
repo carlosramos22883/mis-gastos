@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use App\Models\Moneda;
 use Illuminate\Support\Facades\Hash;
 
 class RoleAndPermissionSeeder extends Seeder
@@ -20,13 +21,13 @@ class RoleAndPermissionSeeder extends Seeder
             'profile.avatar.update',
             'profile.password.update',
             'profile.delete',
-            
+
             // Gestión de Usuarios (NUEVOS)
             'users.view',
             'users.create',
             'users.edit',
             'users.delete',
-            
+
             // Gestión de Roles y Permisos (NUEVOS)
             'roles.view',
             'roles.create',
@@ -34,16 +35,28 @@ class RoleAndPermissionSeeder extends Seeder
             'roles.delete',
 
             // Gestión de monedas
-            'monedas.view', 'monedas.create', 'monedas.edit', 'monedas.delete',
+            'monedas.view',
+            'monedas.create',
+            'monedas.edit',
+            'monedas.delete',
 
             // Gestión de bancos
-            'bancos.view', 'bancos.create', 'bancos.edit', 'bancos.delete',
+            'bancos.view',
+            'bancos.create',
+            'bancos.edit',
+            'bancos.delete',
 
             // Gestión de tipos de cuenta
-            'tipos_cuenta.view', 'tipos_cuenta.create', 'tipos_cuenta.edit', 'tipos_cuenta.delete',
+            'tipos_cuenta.view',
+            'tipos_cuenta.create',
+            'tipos_cuenta.edit',
+            'tipos_cuenta.delete',
 
             //Marcas
-            'marcas-red.view', 'marcas-red.create', 'marcas-red.edit', 'marcas-red.delete',
+            'marcas-red.view',
+            'marcas-red.create',
+            'marcas-red.edit',
+            'marcas-red.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -57,19 +70,28 @@ class RoleAndPermissionSeeder extends Seeder
         // 3. Rol Usuario Básico (Solo puede ver y editar su propio perfil, NO gestión)
         $userRole = Role::firstOrCreate(['name' => 'Usuario']);
         $userRole->givePermissionTo([
-            'profile.view', 
-            'profile.update', 
-            'profile.avatar.update', 
+            'profile.view',
+            'profile.update',
+            'profile.avatar.update',
             'profile.password.update'
         ]);
 
         // 4. Crear Usuario Administrador por defecto
+
+        // 4. Crear Usuario Administrador por defecto CON MONEDA USD
+        // Buscamos la moneda USD que fue creada por el MonedaSeeder
+        $monedaUsd = Moneda::where('codigo', 'USD')->first();
+
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@misgastos.com'],
             [
                 'name' => 'Administrador del Sistema',
-                'password' => Hash::make('Admin123!'), // Cumple con la nueva regla de contraseña fuerte
-                'email_verified_at' => now(), // El admin ya viene verificado
+                'password' => Hash::make('Admin123!'),
+                'email_verified_at' => now(),
+                // Asignamos el ID de la moneda USD
+                'moneda_preferida' => $monedaUsd ? $monedaUsd->id : null,
+                'fecha_corte_dia' => 31,
+                'zona_horaria' => 'America/El_Salvador',
             ]
         );
 

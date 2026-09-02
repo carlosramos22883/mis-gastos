@@ -17,8 +17,11 @@ class DatabaseSeeder extends Seeder
     {
         // Ejecutamos el seeder de Roles, Permisos y el Usuario Admin
         $this->call([
+            MonedaSeeder::class,
+            BancoSeeder::class,
+            TipoCuentaSeeder::class,
+            MarcaRedSeeder::class,
             RoleAndPermissionSeeder::class,
         ]);
-        
     }
 }
