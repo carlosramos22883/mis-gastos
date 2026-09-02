@@ -23,12 +23,12 @@ class ProfileController extends Controller
         // Obtener solo las monedas activas, clave = codigo, valor = nombre
         $monedas = Moneda::where('activo', true)
             ->orderBy('nombre')
-            ->get()
-            ->pluck('nombre', 'codigo');
+            ->pluck('nombre', 'id')
+            ->toArray();
 
         return view('profile.edit', [
             'user' => $request->user(),
-            'monedas' => $monedas, // <-- PASAR A LA VISTA
+            'monedas' => $monedas,
         ]);
     }
 

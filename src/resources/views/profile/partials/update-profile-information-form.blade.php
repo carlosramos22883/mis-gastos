@@ -22,14 +22,14 @@
             @method('patch')
 
             <div>
-                <div class="mb-4">
+                <div class="mb-6">
                     <x-floating-input id="name" label="Nombre" type="text" :error="$errors->first('name')" :value="$user->name"
                         required autofocus autocomplete="name" />
                 </div>
             </div>
 
             <div>
-                <div class="mb-4">
+                <div class="mb-6">
                     <x-floating-input id="email" label="Correo electrónico" type="email" :error="$errors->first('email')"
                         :value="$user->email" required autocomplete="username" />
                 </div>
@@ -49,13 +49,13 @@
             </div>
 
             <!-- Moneda Preferida -->
-            <div class="mt-4">
+            <div class="mt-6">
                 <x-floating-select id="moneda_preferida" name="moneda_preferida" label="Moneda Preferida" :options="$monedas"
                     :value="old('moneda_preferida', $user->moneda_preferida)" required />
             </div>
 
             <!-- Fecha de Corte -->
-            <div class="mt-4">
+            <div class="mt-6">
                 <x-floating-input id="fecha_corte_dia" name="fecha_corte_dia" label="Día de Corte Mensual" type="number"
                     min="1" max="31" :value="old('fecha_corte_dia', $user->fecha_corte_dia)" required />
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Día del mes en que se realiza el corte financiero
@@ -63,7 +63,7 @@
             </div>
 
             <!-- Zona Horaria -->
-            <div class="mt-4">
+            <div class="mt-6">
                 <x-floating-select id="zona_horaria" name="zona_horaria" label="Zona Horaria" :options="[
                     'UTC' => 'Coordinated Universal Time (UTC/GMT)',
                     'America/El_Salvador' => 'El Salvador (GMT-6)',

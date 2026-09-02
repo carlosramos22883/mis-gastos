@@ -80,6 +80,14 @@ Perfecto para probar:
 - Verificación de emails
 - Notificaciones del sistema
 
+## Post-Instalación
+
+Después de levantar los contenedores, ejecutar:
+
+```bash
+docker-compose exec app php artisan storage:link
+```
+
 ## Accesos
 Una vez que los contenedores estén corriendo, puedes acceder a:
 | **Servicio**      | **URL**          | **Credenciales** |
