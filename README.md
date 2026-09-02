@@ -46,28 +46,34 @@ docker-compose up -d --build
 docker-compose exec app composer install
 ```
 
-### 5. Generar la clave de la aplicación
+### 5. Instalar dependencias de frontend y compilar assets (Tailwind, Alpine, etc.)
+```bash
+docker-compose exec app npm install
+docker-compose exec app npm run build
+```
+
+### 6. Generar la clave de la aplicación
 ```bash
 docker-compose exec app php artisan key:generate
 ```
 
-### 6. Dar permisos correctos
+### 7. Dar permisos correctos
 ```bash
 docker-compose exec app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 docker-compose exec app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 ```
 
-### 7. Ejecutar migraciones y seeders
+### 8. Ejecutar migraciones y seeders
 ```bash
 docker-compose exec app php artisan migrate:fresh --seed
 ```
 
-### 8. Probar la aplicación
+### 9. Probar la aplicación
 ```bash
 docker-compose ps
 ```
 
-### 9. Correos en ambiente de pruebas
+### 10. Correos en ambiente de pruebas
 Usa la imagen oficial de Mailpit, el cual es un servidor de correo para desarrollo. Captura todos los emails enviados por la aplicación y los muestra en una interfaz web para testing.
 Perfecto para probar:
 - Reset de contraseñas
