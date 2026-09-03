@@ -33,7 +33,7 @@
                                                 : asset('storage/' . Auth::user()->avatar))
                                             : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff&size=256' }}"
                                         alt="Avatar"
-                                        class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600 shadow-lg">
+                                        class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600 shadow-lg user-avatar">
                                     @can('profile.avatar.update')
                                         <!-- Icono de cámara -->
                                         <label for="avatar-upload" title="Haga clic para cambiar foto de perfil"
@@ -59,7 +59,7 @@
 
 
                     <!-- 2. INFORMACIÓN DEL PERFIL -->
-                    @include('profile.partials.update-profile-information-form')                    
+                    @include('profile.partials.update-profile-information-form')
 
                 </div>
             </div>

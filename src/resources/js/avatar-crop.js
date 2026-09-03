@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cancelCrop) cancelCrop.addEventListener('click', closeCropModal);
 
     // Guardar imagen
+    // Guardar imagen
     if (saveCrop) {
         saveCrop.addEventListener('click', function() {
             if (!croppie) return;
@@ -94,12 +95,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         closeCropModal();
 
-                        const avatarPreview = document.getElementById('avatar-preview');
-                        if (avatarPreview) avatarPreview.src = base64;
-
-                        const navbarAvatars = document.querySelectorAll('.navbar-avatar-img');
-                        navbarAvatars.forEach(img => { img.src = base64; });
-
                         if (avatarForm) {
                             fetch(avatarForm.action, {
                                 method: 'POST',
@@ -108,6 +103,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             })
                             .then(response => {
                                 if (response.ok) {
+                                    // 1. Actualizar el preview central del perfil
+                                    const avatarPreview = document.getElementById('avatar-preview');
+                                    if (avatarPreview) avatarPreview.src = base64;
+
+                                    // 2. Seleccionar TODAS las imágenes de avatar (TopBar, Sidebar, Menús)
+                                    const allAvatars = document.querySelectorAll('.navbar-avatar-img, .user-avatar, [data-avatar]');
+                                    allAvatars.forEach(img => { 
+                                        img.src = base64; 
+                                    });
+
                                     showAlert('success', '¡Éxito!', 'Foto de perfil actualizada correctamente');
                                 } else {
                                     showAlert('error', 'Error', 'Error al guardar la imagen');

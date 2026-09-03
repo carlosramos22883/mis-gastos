@@ -112,6 +112,14 @@ class ProfileController extends Controller
             $user->save();
         }
 
+        // Si la petición es AJAX/Fetch, responde con JSON con la nueva URL
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'avatar_url' => asset('storage/' . $user->avatar) . '?v=' . time()
+            ]);
+        }
+
         return back()->with('status', 'avatar-updated');
     }
 }

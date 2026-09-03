@@ -12,6 +12,7 @@ use App\Exports\UsersExport;
 use App\Traits\Exportable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use App\Models\Moneda;
 
 class UserManagementController extends Controller
 {
@@ -112,6 +113,9 @@ class UserManagementController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'moneda_preferida' => Moneda::where('nombre', 'Dólar Estadounidense')->value('id') ?? 1, // ID del Dólar (USD)
+            'fecha_corte_dia' => 31, // valor por defecto
+            'zona_horaria' => 'America/El_Salvador',
             // NO marcar como verificado - dejar que el usuario lo haga
             // email_verified_at => null, // Esto es automático si no lo pones
         ]);

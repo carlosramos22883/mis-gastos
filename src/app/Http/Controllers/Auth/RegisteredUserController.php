@@ -13,6 +13,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Models\Moneda;
 
 class RegisteredUserController extends Controller
 {
@@ -53,6 +54,9 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'moneda_preferida' => Moneda::where('nombre', 'Dólar Estadounidense')->value('id') ?? 1, // ID del Dólar (USD)
+            'fecha_corte_dia' => 31, // valor por defecto
+            'zona_horaria' => 'America/El_Salvador', // Valor por defecto
         ]);
 
         // Asignar rol por defecto "Usuario" si no se especificó uno
@@ -63,6 +67,5 @@ class RegisteredUserController extends Controller
 
         // REDIRIGIR AL LOGIN CON MENSAJE DE VERIFICACIÓN
         return redirect()->route('login')->with('status', 'verification-link-sent');
-
     }
 }

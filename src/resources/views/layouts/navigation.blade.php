@@ -151,7 +151,8 @@
     <div class="p-4 border-t border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-3 mb-3">
             <img src="{{ Auth::user()->avatar ? (filter_var(Auth::user()->avatar, FILTER_VALIDATE_URL) ? Auth::user()->avatar : asset('storage/' . Auth::user()->avatar)) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
-                alt="Avatar" class="w-9 h-9 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                alt="Avatar"
+                class="w-9 h-9 rounded-full object-cover border border-gray-300 dark:border-gray-600 user-avatar">
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ Auth::user()->name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ Auth::user()->email }}</p>

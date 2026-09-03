@@ -60,7 +60,7 @@
                                 class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none">
                                 <img src="{{ Auth::user()->avatar ? (filter_var(Auth::user()->avatar, FILTER_VALIDATE_URL) ? Auth::user()->avatar : asset('storage/' . Auth::user()->avatar)) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0a0a5e&color=fff' }}"
                                     alt="Avatar"
-                                    class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                    class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600 user-avatar">
                                 <span class="hidden md:block">{{ Str::limit(Auth::user()->name, 20) }}</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
