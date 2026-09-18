@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Moneda;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use App\Models\Moneda;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -34,7 +34,7 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => [
                 'required',
                 'confirmed',
@@ -54,18 +54,18 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'moneda_preferida' => Moneda::where('nombre', 'Dólar Estadounidense')->value('id') ?? 1, // ID del Dólar (USD)
+            'moneda_preferida' => Moneda::where('codigo', 'USD')->value('id'),
             'fecha_corte_dia' => 31, // valor por defecto
             'zona_horaria' => 'America/El_Salvador', // Valor por defecto
         ]);
 
         // Asignar rol por defecto "Usuario" si no se especificó uno
-        $roleName = $validated['role'] ?? 'Usuario';
-        $user->assignRole($roleName);
+        $user->assignRole(Role::firstOrCreate(['name' => 'Usuario']));
 
         event(new Registered($user));
 
-        // REDIRIGIR AL LOGIN CON MENSAJE DE VERIFICACIÓN
-        return redirect()->route('login')->with('status', 'verification-link-sent');
+        Auth::login($user);
+
+        return redirect()->route('dashboard');
     }
 }

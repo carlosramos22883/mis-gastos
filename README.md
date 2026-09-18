@@ -101,7 +101,7 @@ Una vez que los contenedores estén corriendo, puedes acceder a:
 Usuario Admiistrador
 | **Usuario**      | **Rol**          | **Password** |
 |---------------|--------------|--------------|
-| admin@misgastos.com      | Administrador       | Admin123!   |
+| admin@misgastos.com      | Administrador       | La contraseña definida en `ADMIN_PASSWORD` |
 
 ## Características Principales
 

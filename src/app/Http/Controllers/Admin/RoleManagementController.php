@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use App\Traits\Exportable;
 use App\Exports\RolesExport;
+use App\Http\Controllers\Controller;
+use App\Traits\Exportable;
+use Illuminate\Http\Request;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleManagementController extends Controller
 {
     use Exportable;
+
     /**
      * Listar roles
      */
@@ -28,7 +29,7 @@ class RoleManagementController extends Controller
         if ($request->filled('filter_permission')) {
             $module = $request->filter_permission;
             $query->whereHas('permissions', function ($q) use ($module) {
-                $q->where('name', 'like', $module . '.%');
+                $q->where('name', 'like', $module.'.%');
             });
         }
 
@@ -65,10 +66,11 @@ class RoleManagementController extends Controller
      */
     public function create()
     {
-        $permissions = Permission::all()->groupBy(fn($p) => explode('.', $p->name)[0]);
+        $permissions = Permission::all()->groupBy(fn ($p) => explode('.', $p->name)[0]);
         if (request()->has('modal')) {
             return view('admin.roles._form', compact('permissions'));
         }
+
         return view('admin.roles.create', compact('permissions'));
     }
 
@@ -77,10 +79,11 @@ class RoleManagementController extends Controller
      */
     public function edit(Role $role)
     {
-        $permissions = Permission::all()->groupBy(fn($p) => explode('.', $p->name)[0]);
+        $permissions = Permission::all()->groupBy(fn ($p) => explode('.', $p->name)[0]);
         if (request()->has('modal')) {
             return view('admin.roles._form', compact('role', 'permissions'));
         }
+
         return view('admin.roles.edit', compact('role', 'permissions'));
     }
 
@@ -104,13 +107,13 @@ class RoleManagementController extends Controller
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
-        $role->syncPermissions($validated['permissions']);
+        $role->syncPermissions($this->normalizePermissions($validated['permissions']));
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => "Rol '{$role->name}' creado exitosamente.",
-                'role' => $role
+                'role' => $role,
             ], 200);
         }
 
@@ -124,7 +127,7 @@ class RoleManagementController extends Controller
     public function update(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name,' . $role->id],
+            'name' => ['required', 'string', 'max:255', 'unique:roles,name,'.$role->id],
             'permissions' => ['required', 'array', 'min:1'],
             'permissions.*' => ['exists:permissions,name'],
         ], [
@@ -136,11 +139,11 @@ class RoleManagementController extends Controller
         ]);
 
         $role->update(['name' => $validated['name']]);
-        $role->syncPermissions($validated['permissions']);
+        $role->syncPermissions($this->normalizePermissions($validated['permissions']));
 
         if ($request->wantsJson()) {
             return response()->json([
-                'message' => "Rol '{$role->name}' actualizado exitosamente."
+                'message' => "Rol '{$role->name}' actualizado exitosamente.",
             ], 200);
         }
 
@@ -158,6 +161,7 @@ class RoleManagementController extends Controller
             if (request()->wantsJson()) {
                 return response()->json(['message' => $role->name === 'Administrador' ? 'No puedes eliminar el rol Administrador.' : 'No puedes eliminar el rol Usuario'], 403);
             }
+
             return back()->with('error', $role->name === 'Administrador' ? 'No puedes eliminar el rol Administrador.' : 'No puedes eliminar el rol Usuario');
         }
 
@@ -167,7 +171,7 @@ class RoleManagementController extends Controller
 
             if (request()->wantsJson()) {
                 return response()->json([
-                    'message' => "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s)."
+                    'message' => "No se puede eliminar el rol '{$role->name}'. Tiene {$usersCount} usuario(s) asignado(s).",
                 ], 422);
             }
 
@@ -191,7 +195,7 @@ class RoleManagementController extends Controller
                 // Redirigir a la última página válida
                 return response()->json([
                     'message' => 'Rol eliminado exitosamente.',
-                    'redirect_to_page' => $lastPage
+                    'redirect_to_page' => $lastPage,
                 ], 200);
             }
 
@@ -200,6 +204,28 @@ class RoleManagementController extends Controller
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'Rol eliminado exitosamente.');
+    }
+
+    private function normalizePermissions(array $permissions): array
+    {
+        $permissions = array_values(array_unique($permissions));
+        $modules = [];
+
+        foreach ($permissions as $permission) {
+            [$module] = explode('.', $permission, 2);
+            $modules[$module] = true;
+        }
+
+        foreach (array_keys($modules) as $module) {
+            if (! in_array("{$module}.view", $permissions, true)) {
+                $permissions = array_values(array_filter(
+                    $permissions,
+                    fn (string $permission): bool => ! str_starts_with($permission, "{$module}.")
+                ));
+            }
+        }
+
+        return $permissions;
     }
 
     public function export(Request $request)
@@ -214,7 +240,7 @@ class RoleManagementController extends Controller
         if ($request->filled('filter_permission')) {
             $module = $request->filter_permission;
             $query->whereHas('permissions', function ($q) use ($module) {
-                $q->where('name', 'like', $module . '.%');
+                $q->where('name', 'like', $module.'.%');
             });
         }
 
@@ -240,7 +266,7 @@ class RoleManagementController extends Controller
                 'id' => 'ID',
                 'name' => 'Nombre del Rol',
                 'permissions' => 'Permisos Asignados',
-                'created_at' => 'Fecha de Creación'
+                'created_at' => 'Fecha de Creación',
             ],
             'roles'
         );

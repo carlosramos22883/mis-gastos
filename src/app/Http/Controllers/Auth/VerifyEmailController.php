@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
-
 
 class VerifyEmailController extends Controller
 {
@@ -47,7 +45,7 @@ class VerifyEmailController extends Controller
         // Si hay alguien logueado y NO es el usuario del enlace,
         // no permitimos verificar la cuenta.
         if (Auth::check() && Auth::id() !== $user->id) {
-            return redirect()->route('dashboard')
+            return redirect()->to(route('dashboard').'?verified=1')
                 ->with(
                     'verification_error',
                     'Tienes una sesión iniciada con otro usuario. Para verificar esta cuenta, primero debes cerrar tu sesión actual e iniciar sesión con la cuenta correspondiente.'
@@ -58,7 +56,7 @@ class VerifyEmailController extends Controller
         if ($user->hasVerifiedEmail()) {
 
             if (Auth::id() === $user->id) {
-                return redirect()->route('dashboard')
+                return redirect()->to(route('dashboard').'?verified=1')
                     ->with(
                         'verification_info',
                         'Tu correo ya estaba verificado.'
@@ -79,7 +77,7 @@ class VerifyEmailController extends Controller
 
         // 7. Si el usuario está logueado y es el propietario
         if (Auth::id() === $user->id) {
-            return redirect()->route('dashboard')
+            return redirect()->to(route('dashboard').'?verified=1')
                 ->with(
                     'verification_success',
                     '¡Correo verificado exitosamente!'

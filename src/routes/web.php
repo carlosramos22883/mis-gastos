@@ -1,16 +1,17 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SocialAuthController;
-use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\BancoController;
+use App\Http\Controllers\Admin\MarcaRedController;
+use App\Http\Controllers\Admin\MonedaController;
 use App\Http\Controllers\Admin\RoleManagementController;
+use App\Http\Controllers\Admin\TipoCuentaController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use \App\Http\Controllers\Admin\MonedaController;
-use \App\Http\Controllers\Admin\BancoController;
-use \App\Http\Controllers\Admin\TipoCuentaController;
-use \App\Http\Controllers\Admin\MarcaRedController;
-
+use App\Http\Controllers\CategoriaPersonalController;
+use App\Http\Controllers\MovimientoEfectivoController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SocialAuthController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -28,17 +29,43 @@ Route::middleware('auth')->group(function () {
 
     // Protegemos la actualización con el permiso específico
     Route::patch('/profile', [ProfileController::class, 'update'])
-        ->middleware('can:profile.update')
         ->name('profile.update');
 
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])
-        ->middleware('can:profile.avatar.update')
         ->name('profile.avatar.update');
 
     // Protegemos la eliminación (solo Admin o quien tenga el permiso)
     Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->middleware('can:profile.delete')
         ->name('profile.destroy');
+
+    Route::get('categorias/export', [CategoriaPersonalController::class, 'export'])
+        ->middleware('can:categorias.view')->name('categorias.export');
+    Route::get('categorias', [CategoriaPersonalController::class, 'index'])
+        ->middleware('can:categorias.view')->name('categorias.index');
+    Route::get('categorias/create', [CategoriaPersonalController::class, 'create'])
+        ->middleware('can:categorias.create')->name('categorias.create');
+    Route::post('categorias', [CategoriaPersonalController::class, 'store'])
+        ->middleware('can:categorias.create')->name('categorias.store');
+    Route::get('categorias/{categoria}/edit', [CategoriaPersonalController::class, 'edit'])
+        ->middleware('can:categorias.edit')->name('categorias.edit');
+    Route::put('categorias/{categoria}', [CategoriaPersonalController::class, 'update'])
+        ->middleware('can:categorias.edit')->name('categorias.update');
+    Route::delete('categorias/{categoria}', [CategoriaPersonalController::class, 'destroy'])
+        ->middleware('can:categorias.delete')->name('categorias.destroy');
+    Route::get('efectivo/export', [MovimientoEfectivoController::class, 'export'])
+        ->middleware('can:efectivo.view')->name('efectivo.export');
+    Route::get('efectivo', [MovimientoEfectivoController::class, 'index'])
+        ->middleware('can:efectivo.view')->name('efectivo.index');
+    Route::get('efectivo/create', [MovimientoEfectivoController::class, 'create'])
+        ->middleware('can:efectivo.create')->name('efectivo.create');
+    Route::post('efectivo', [MovimientoEfectivoController::class, 'store'])
+        ->middleware('can:efectivo.create')->name('efectivo.store');
+    Route::get('efectivo/{movimiento}/edit', [MovimientoEfectivoController::class, 'edit'])
+        ->middleware('can:efectivo.edit')->name('efectivo.edit');
+    Route::put('efectivo/{movimiento}', [MovimientoEfectivoController::class, 'update'])
+        ->middleware('can:efectivo.edit')->name('efectivo.update');
+    Route::delete('efectivo/{movimiento}', [MovimientoEfectivoController::class, 'destroy'])
+        ->middleware('can:efectivo.delete')->name('efectivo.destroy');
 });
 
 // Rutas de Configuración del Sistema (Solo para usuarios con permisos)
@@ -60,28 +87,24 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')
     Route::resource('roles', RoleManagementController::class)
         ->middleware('can:roles.view');
 
-
-
     // ============================================
     // CATÁLOGOS DEL SISTEMA
     // ============================================
     Route::prefix('catalogos')->name('catalogos.')->group(function () {  // ← Cambia aquí
 
-       /* // Monedas
-        Route::resource('monedas', \App\Http\Controllers\Admin\MonedaController::class)->except(['show']);
+        /* // Monedas
+         Route::resource('monedas', \App\Http\Controllers\Admin\MonedaController::class)->except(['show']);
 
-        // Bancos
-        Route::resource('bancos', \App\Http\Controllers\Admin\BancoController::class)->except(['show']);
+         // Bancos
+         Route::resource('bancos', \App\Http\Controllers\Admin\BancoController::class)->except(['show']);
 
-        // Tipos de Cuenta
-        Route::resource('tipos-cuenta', \App\Http\Controllers\Admin\TipoCuentaController::class)->except(['show']);
+         // Tipos de Cuenta
+         Route::resource('tipos-cuenta', \App\Http\Controllers\Admin\TipoCuentaController::class)->except(['show']);
 
-        // Marcas de Red
-        Route::resource('marca-red', \App\Http\Controllers\Admin\MarcaRedController::class)->except(['show']);
+         // Marcas de Red
+         Route::resource('marca-red', \App\Http\Controllers\Admin\MarcaRedController::class)->except(['show']);
 */
 
-        
-    
         // --- MONEDAS ---
         Route::get('monedas', [MonedaController::class, 'index'])->name('monedas.index');
         Route::get('monedas/create', [MonedaController::class, 'create'])->name('monedas.create');
@@ -114,8 +137,6 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')
         Route::put('marcas-red/{marcaRed}', [MarcaRedController::class, 'update'])->name('marcas-red.update');
         Route::delete('marcas-red/{marcaRed}', [MarcaRedController::class, 'destroy'])->name('marcas-red.destroy');
 
-    
-
     });
 });
 
@@ -123,6 +144,4 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')
 Route::get('/auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
 
-
-
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

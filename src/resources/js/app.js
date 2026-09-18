@@ -46,9 +46,73 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            window.addEventListener('refresh-table', () => {
+            window.addEventListener('refresh-table', (event) => {
                 const form = document.getElementById('data-table-form');
-                if (form) this.fetchData(form.action, new FormData(form));
+                if (!form) return;
+
+                const refreshFormData = new FormData(form);
+                const targetPage = event.detail?.redirect_to_page;
+                if (targetPage) {
+                    refreshFormData.set('page', targetPage);
+                    const pageInput = form.querySelector('input[name="page"]');
+                    if (pageInput) pageInput.value = targetPage;
+                }
+                this.highlightRecordId = event.detail?.highlight_id || null;
+                this.fetchData(form.action, refreshFormData);
+            });
+
+            window.formatMoneyInput = function (input) {
+                const raw = input.value.replace(/,/g, '');
+                if (!raw) return;
+                const [integerPart, decimalPart = ''] = raw.split('.');
+                const integer = (integerPart || '0').replace(/\D/g, '') || '0';
+                input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + `.${decimalPart.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}`;
+            };
+
+            window.normalizeDateInput = function (input) {
+                const digits = input.value.replace(/\D/g, '').slice(0, 8);
+                if (digits.length !== 8) return;
+                input.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+                const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
+                const picker = input.closest('.relative')?.querySelector('[data-date-picker]');
+                if (picker) picker.value = `${year}-${month}-${day}`;
+            };
+
+            window.syncDateInput = function (picker) {
+                const display = picker.closest('.relative')?.querySelector('[data-date-input]');
+                if (display && picker.value) {
+                    const [year, month, day] = picker.value.split('-');
+                    display.value = `${day}/${month}/${year}`;
+                }
+            };
+
+            document.addEventListener('input', (event) => {
+                const input = event.target;
+                if (!(input instanceof HTMLInputElement) || !input.matches('[data-money-input]')) return;
+
+                const [integerPart, decimalPart] = input.value.replace(/[^\d.]/g, '').split('.');
+                const integer = (integerPart || '0').replace(/^0+(?=\d)/, '');
+                input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    + (decimalPart === undefined ? '' : `.${decimalPart.slice(0, 2)}`);
+            });
+
+            document.addEventListener('submit', (event) => {
+                event.target.querySelectorAll('[data-money-input]').forEach((input) => {
+                    input.value = input.value.replace(/,/g, '');
+                    if (input.value && !input.value.includes('.')) input.value += '.00';
+                    if (input.value) {
+                        const [integer, decimals = ''] = input.value.split('.');
+                        input.value = `${integer}.${decimals.padEnd(2, '0').slice(0, 2)}`;
+                    }
+                });
+            });
+
+            document.addEventListener('input', (event) => {
+                const input = event.target;
+                if (!(input instanceof HTMLInputElement) || !input.matches('[data-date-input]')) return;
+                const digits = input.value.replace(/\D/g, '').slice(0, 8);
+                input.value = digits.length > 4 ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}` :
+                    digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
             });
 
             // ✅ AGREGA ESTO: Forzar la carga de datos frescos al inicializar el componente
@@ -207,6 +271,14 @@ document.addEventListener('alpine:init', () => {
 
                             if (tbody) Alpine.initTree(tbody);
                             if (pagination) Alpine.initTree(pagination);
+                            if (this.highlightRecordId) {
+                                const row = document.querySelector(`[data-record-id="${this.highlightRecordId}"]`);
+                                if (row) {
+                                    row.classList.add('animate-pulse', 'bg-primary-50', 'dark:bg-primary-900/30');
+                                    setTimeout(() => row.classList.remove('animate-pulse', 'bg-primary-50', 'dark:bg-primary-900/30'), 2500);
+                                }
+                                this.highlightRecordId = null;
+                            }
                         }
                     }, 50);
                 } else {
@@ -318,6 +390,32 @@ window.exportData = function (format) {
 // MANEJADOR DE FORMULARIOS AJAX REUTILIZABLE
 // ==========================================
 document.addEventListener('alpine:init', () => {
+    Alpine.data('rolePermissions', () => ({
+        init() {
+            this.syncPermissionControls();
+        },
+        permissionChanged(event) {
+            const checkbox = event.target;
+            if (checkbox.dataset.permissionAction === 'view' && !checkbox.checked) {
+                document.querySelectorAll(`[data-permission-module="${checkbox.dataset.permissionModule}"]`)
+                    .forEach((input) => {
+                        input.checked = false;
+                    });
+            }
+            this.syncPermissionControls();
+        },
+        syncPermissionControls() {
+            document.querySelectorAll('[data-permission-module]').forEach((input) => {
+                if (input.dataset.permissionAction === 'view') return;
+                const view = document.querySelector(
+                    `[data-permission-module="${input.dataset.permissionModule}"][data-permission-action="view"]`
+                );
+                input.disabled = !view?.checked;
+                if (input.disabled) input.checked = false;
+            });
+        },
+    }));
+
     Alpine.data('ajaxForm', (onSuccessCallback) => ({
         loading: false,
         errors: {},
@@ -326,6 +424,9 @@ document.addEventListener('alpine:init', () => {
             this.loading = true;
             this.errors = {};
             const form = e.target;
+            form.querySelectorAll('[data-money-input]').forEach((input) => {
+                input.value = input.value.replace(/,/g, '');
+            });
             const formData = new FormData(form);
 
             try {
@@ -351,7 +452,9 @@ document.addEventListener('alpine:init', () => {
                 } else if (response.ok) {
                     // Éxito
                     this.clearValidationErrors();
-                    if (onSuccessCallback) onSuccessCallback();
+                    const data = await response.json();
+                    window.dispatchEvent(new CustomEvent('refresh-table', { detail: data }));
+                    if (onSuccessCallback) onSuccessCallback(data);
                 } else {
                     showAlert('error', 'Error', 'Ocurrió un error inesperado en el servidor.');
                 }

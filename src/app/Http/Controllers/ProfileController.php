@@ -3,15 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Moneda;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use App\Models\Moneda;
-
+use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
@@ -38,16 +36,6 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'moneda_preferida' => ['required', 'string', 'max:10'],
-            'fecha_corte_dia' => ['required', 'integer', 'min:1', 'max:31'],
-            'zona_horaria' => ['required', 'string', 'max:50'],
-        ]);
-
-        $user->fill($validated);
 
         $user->fill($request->validated());
 
@@ -82,7 +70,7 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         // Redirigir al login enviando la variable de estado 'account-deleted'
-        return redirect()->route('login')->with('status', 'account-deleted');
+        return redirect('/')->with('status', 'account-deleted');
     }
 
     public function updateAvatar(Request $request)
@@ -103,7 +91,7 @@ class ProfileController extends Controller
             $image = $request->file('avatar');
 
             // Generar nombre único
-            $filename = 'avatars/' . uniqid() . '.webp';
+            $filename = 'avatars/'.uniqid().'.webp';
 
             // Guardar imagen
             Storage::disk('public')->put($filename, file_get_contents($image->getRealPath()));
@@ -116,7 +104,7 @@ class ProfileController extends Controller
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'avatar_url' => asset('storage/' . $user->avatar) . '?v=' . time()
+                'avatar_url' => asset('storage/'.$user->avatar).'?v='.time(),
             ]);
         }
 

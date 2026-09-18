@@ -45,6 +45,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Moneda::class, 'moneda_preferida');
     }
 
+    public function categoriasPersonales()
+    {
+        return $this->hasMany(CategoriaPersonal::class);
+    }
+
+    public function movimientosEfectivo()
+    {
+        return $this->hasMany(MovimientoEfectivo::class);
+    }
+
 
     /**
      * Get the attributes that should be cast.

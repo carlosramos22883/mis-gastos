@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use App\Models\User;
 use App\Models\Moneda;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleAndPermissionSeeder extends Seeder
 {
@@ -52,11 +53,19 @@ class RoleAndPermissionSeeder extends Seeder
             'tipos_cuenta.edit',
             'tipos_cuenta.delete',
 
-            //Marcas
+            // Marcas
             'marcas-red.view',
             'marcas-red.create',
             'marcas-red.edit',
             'marcas-red.delete',
+            'categorias.view',
+            'categorias.create',
+            'categorias.edit',
+            'categorias.delete',
+            'efectivo.view',
+            'efectivo.create',
+            'efectivo.edit',
+            'efectivo.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -73,7 +82,8 @@ class RoleAndPermissionSeeder extends Seeder
             'profile.view',
             'profile.update',
             'profile.avatar.update',
-            'profile.password.update'
+            'profile.password.update', 'categorias.view', 'categorias.create', 'categorias.edit', 'categorias.delete',
+            'efectivo.view', 'efectivo.create', 'efectivo.edit', 'efectivo.delete',
         ]);
 
         // 4. Crear Usuario Administrador por defecto
@@ -82,11 +92,16 @@ class RoleAndPermissionSeeder extends Seeder
         // Buscamos la moneda USD que fue creada por el MonedaSeeder
         $monedaUsd = Moneda::where('codigo', 'USD')->first();
 
+        $adminPassword = env('ADMIN_PASSWORD');
+        if (blank($adminPassword)) {
+            throw new RuntimeException('ADMIN_PASSWORD debe estar definido antes de ejecutar los seeders.');
+        }
+
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@misgastos.com'],
             [
                 'name' => 'Administrador del Sistema',
-                'password' => Hash::make('Admin123!'),
+                'password' => Hash::make($adminPassword),
                 'email_verified_at' => now(),
                 // Asignamos el ID de la moneda USD
                 'moneda_preferida' => $monedaUsd ? $monedaUsd->id : null,

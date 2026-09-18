@@ -1,10 +1,10 @@
-<form x-data="ajaxForm(function() {
+<form x-data="Object.assign(rolePermissions(), ajaxForm(function() {
     // Esta función se ejecuta cuando el AJAX es exitoso
     $dispatch('close-modal', 'role-modal'); // Cierra el modal
     showAlert('success', '¡Éxito!', 'Rol guardado correctamente.'); // Muestra alerta
     window.dispatchEvent(new CustomEvent('refresh-table'));
     $dispatch('close-modal', 'role-modal');
-})" @submit.prevent="submit" method="POST"
+}))" @submit.prevent="submit" method="POST"
     action="{{ isset($role) ? route('admin.roles.update', $role) : route('admin.roles.store') }}" novalidate
     class="space-y-4">
     @csrf
@@ -47,6 +47,9 @@
                         @foreach ($modulePermissions as $permission)
                             <label class="flex items-center cursor-pointer">
                                 <input type="checkbox" name="permissions[]" value="{{ $permission->name }}"
+                                    data-permission-module="{{ $module }}"
+                                    data-permission-action="{{ explode('.', $permission->name, 2)[1] ?? '' }}"
+                                    x-on:change="permissionChanged($event)"
                                     {{ in_array($permission->name, old('permissions', isset($role) ? $role->permissions->pluck('name')->toArray() : [])) ? 'checked' : '' }}
                                     class="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500">
                                 <span

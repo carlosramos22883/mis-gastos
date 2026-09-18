@@ -4,48 +4,48 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use OpenApi\Attributes as OA;
+use Spatie\Permission\Models\Role;
 
-#[OA\Tag(name: "Admin - Roles", description: "Gestión de roles y permisos")]
+#[OA\Tag(name: 'Admin - Roles', description: 'Gestión de roles y permisos')]
 class RoleController extends Controller
 {
     #[OA\Get(
-        path: "/api/admin/roles",
-        summary: "Listar roles",
-        tags: ["Admin - Roles"],
-        security: [["bearerAuth"]],
-        responses: [new OA\Response(response: 200, description: "Lista de roles")]
+        path: '/api/admin/roles',
+        summary: 'Listar roles',
+        tags: ['Admin - Roles'],
+        security: [['bearerAuth']],
+        responses: [new OA\Response(response: 200, description: 'Lista de roles')]
     )]
     public function index(Request $request)
     {
-        if (!$request->user()->can('roles.view')) {
+        if (! $request->user()->can('roles.view')) {
             return response()->json(['message' => 'Acción no autorizada.'], 403);
         }
+
         return response()->json(Role::with('permissions')->get());
     }
 
     #[OA\Post(
-        path: "/api/admin/roles",
-        summary: "Crear nuevo rol",
-        tags: ["Admin - Roles"],
-        security: [["bearerAuth"]],
+        path: '/api/admin/roles',
+        summary: 'Crear nuevo rol',
+        tags: ['Admin - Roles'],
+        security: [['bearerAuth']],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["name"],
+                required: ['name'],
                 properties: [
-                    new OA\Property(property: "name", type: "string"),
-                    new OA\Property(property: "permissions", type: "array", items: new OA\Items(type: "string"), example: ["users.view", "users.edit"]),
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string'), example: ['users.view', 'users.edit']),
                 ]
             )
         ),
-        responses: [new OA\Response(response: 201, description: "Rol creado")]
+        responses: [new OA\Response(response: 201, description: 'Rol creado')]
     )]
     public function store(Request $request)
     {
-        if (!$request->user()->can('roles.create')) {
+        if (! $request->user()->can('roles.create')) {
             return response()->json(['message' => 'Acción no autorizada.'], 403);
         }
 
@@ -56,49 +56,71 @@ class RoleController extends Controller
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
-        if (!empty($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
+        if (! empty($validated['permissions'])) {
+            $role->syncPermissions($this->normalizePermissions($validated['permissions']));
         }
 
         return response()->json(['message' => 'Rol creado.', 'role' => $role->load('permissions')], 201);
     }
 
     #[OA\Patch(
-        path: "/api/admin/roles/{id}",
-        summary: "Actualizar rol",
-        tags: ["Admin - Roles"],
-        security: [["bearerAuth"]],
-        responses: [new OA\Response(response: 200, description: "Rol actualizado")]
+        path: '/api/admin/roles/{id}',
+        summary: 'Actualizar rol',
+        tags: ['Admin - Roles'],
+        security: [['bearerAuth']],
+        responses: [new OA\Response(response: 200, description: 'Rol actualizado')]
     )]
     public function update(Request $request, $id)
     {
-        if (!$request->user()->can('roles.edit')) {
+        if (! $request->user()->can('roles.edit')) {
             return response()->json(['message' => 'Acción no autorizada.'], 403);
         }
 
         $role = Role::findOrFail($id);
         $validated = $request->validate([
-            'name' => ['required', 'string', 'unique:roles,name,' . $role->id],
+            'name' => ['required', 'string', 'unique:roles,name,'.$role->id],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
 
         $role->update(['name' => $validated['name']]);
-        $role->syncPermissions($validated['permissions'] ?? []);
+        $role->syncPermissions($this->normalizePermissions($validated['permissions'] ?? []));
 
         return response()->json(['message' => 'Rol actualizado.', 'role' => $role->fresh()->load('permissions')]);
     }
 
+    private function normalizePermissions(array $permissions): array
+    {
+        $permissions = array_values(array_unique($permissions));
+        $modules = [];
+
+        foreach ($permissions as $permission) {
+            [$module] = explode('.', $permission, 2);
+            $modules[$module] = true;
+        }
+
+        foreach (array_keys($modules) as $module) {
+            if (! in_array("{$module}.view", $permissions, true)) {
+                $permissions = array_values(array_filter(
+                    $permissions,
+                    fn (string $permission): bool => ! str_starts_with($permission, "{$module}.")
+                ));
+            }
+        }
+
+        return $permissions;
+    }
+
     #[OA\Delete(
-        path: "/api/admin/roles/{id}",
-        summary: "Eliminar rol",
-        tags: ["Admin - Roles"],
-        security: [["bearerAuth"]],
-        responses: [new OA\Response(response: 200, description: "Rol eliminado")]
+        path: '/api/admin/roles/{id}',
+        summary: 'Eliminar rol',
+        tags: ['Admin - Roles'],
+        security: [['bearerAuth']],
+        responses: [new OA\Response(response: 200, description: 'Rol eliminado')]
     )]
     public function destroy(Request $request, $id)
     {
-        if (!$request->user()->can('roles.delete')) {
+        if (! $request->user()->can('roles.delete')) {
             return response()->json(['message' => 'Acción no autorizada.'], 403);
         }
 
@@ -108,6 +130,7 @@ class RoleController extends Controller
         }
 
         $role->delete();
+
         return response()->json(['message' => 'Rol eliminado.']);
     }
 }
