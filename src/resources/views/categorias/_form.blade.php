@@ -1,4 +1,4 @@
-<form x-data="ajaxForm(function(data) { $dispatch('close-modal', 'categoria-modal'); showAlert('success', '¡Éxito!', data.message); window.dispatchEvent(new CustomEvent('refresh-table', { detail: data })); })" @submit.prevent="submit" method="POST" action="{{ isset($categoria) ? route('categorias.update',$categoria) : route('categorias.store') }}" class="space-y-4" novalidate>
+<form x-data="ajaxForm(async function(data) { $dispatch('close-modal', 'categoria-modal'); await showAlert('success', '¡Éxito!', data.message); window.dispatchEvent(new CustomEvent('refresh-table', { detail: data })); })" @submit.prevent="submit" method="POST" action="{{ isset($categoria) ? route('categorias.update',$categoria) : route('categorias.store') }}" class="space-y-4" novalidate>
     @csrf @isset($categoria) @method('PUT') @endisset
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ isset($categoria) ? 'Editar Categoría' : 'Nueva Categoría' }}</h2>
@@ -6,7 +6,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
     </div>
-    <x-floating-input id="nombre" label="Nombre" :value="$categoria->nombre ?? ''" :error="$errors->first('nombre')" required />
+    <x-floating-input id="nombre" name="nombre" label="Nombre" maxlength="100" :value="$categoria->nombre ?? ''" :error="$errors->first('nombre')" required />
     <x-floating-select id="tipo" label="Tipo" :options="['ingreso'=>'Ingreso','egreso'=>'Egreso']" :value="$categoria->tipo ?? 'egreso'" :error="$errors->first('tipo')" required />
     <div class="mt-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color de la categoría</label>

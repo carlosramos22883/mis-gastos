@@ -31,7 +31,7 @@
         </p>
     </div>
 
-    <x-floating-input id="name" name="name" label="Nombre del rol" type="text" :value="isset($role) ? old('name', $role->name) : old('name')"
+    <x-floating-input id="name" name="name" label="Nombre del rol" type="text" maxlength="255" :value="isset($role) ? old('name', $role->name) : old('name')"
         :error="$errors->first('name')" required placeholder="Ej: Editor, Contador, Supervisor" />
 
     <div>

@@ -52,10 +52,10 @@
     </div>
     @endif
 
-    <x-floating-input id="name" name="name" label="Nombre completo" type="text" :value="isset($usuario) ? old('name', $usuario->name) : old('name')"
+    <x-floating-input id="name" name="name" label="Nombre completo" type="text" maxlength="255" :value="isset($usuario) ? old('name', $usuario->name) : old('name')"
         :error="$errors->first('name')" required />
 
-    <x-floating-input id="email" name="email" label="Correo electrónico" type="email" :value="isset($usuario) ? old('email', $usuario->email) : old('email')"
+    <x-floating-input id="email" name="email" label="Correo electrónico" type="email" maxlength="255" :value="isset($usuario) ? old('email', $usuario->email) : old('email')"
         :error="$errors->first('email')" required />
 
     <x-floating-input id="password" name="password"

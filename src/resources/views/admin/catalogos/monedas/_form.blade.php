@@ -15,9 +15,9 @@
         </button>
     </div>
 
-    <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" :value="isset($moneda) ? old('nombre', $moneda->nombre) : old('nombre')" :error="$errors->first('nombre')" required placeholder="Ej: Dólar Estadounidense" />
+    <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" maxlength="255" :value="isset($moneda) ? old('nombre', $moneda->nombre) : old('nombre')" :error="$errors->first('nombre')" required placeholder="Ej: Dólar Estadounidense" />
     <x-floating-input id="codigo" name="codigo" label="Código (3 letras)" type="text" :value="isset($moneda) ? old('codigo', $moneda->codigo) : old('codigo')" :error="$errors->first('codigo')" required placeholder="Ej: USD" maxlength="3" />
-    <x-floating-input id="simbolo" name="simbolo" label="Símbolo" type="text" :value="isset($moneda) ? old('simbolo', $moneda->simbolo) : old('simbolo')" :error="$errors->first('simbolo')" required placeholder="Ej: $" />
+    <x-floating-input id="simbolo" name="simbolo" label="Símbolo" type="text" maxlength="10" :value="isset($moneda) ? old('simbolo', $moneda->simbolo) : old('simbolo')" :error="$errors->first('simbolo')" required placeholder="Ej: $" />
 
     <!-- Checkbox Activo (Marcado por defecto al crear) -->
     <div class="flex items-center gap-2 mt-6">

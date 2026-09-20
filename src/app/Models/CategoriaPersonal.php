@@ -17,6 +17,11 @@ class CategoriaPersonal extends Model
 
     protected $casts = ['activo' => 'boolean'];
 
+    public function isInitialBalance(): bool
+    {
+        return $this->nombre === 'Saldo inicial';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use Illuminate\Http\Request;
@@ -9,8 +10,11 @@ use Illuminate\Support\Facades\Storage;
 
 class BancoController extends Controller
 {
+    use HandlesTableNavigation;
+
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = Banco::query();
 
         if ($request->filled('search')) {
@@ -51,7 +55,11 @@ class BancoController extends Controller
             $validated['logo'] = $request->file('logo')->store('logos/bancos', 'public');
         }
 
-        Banco::create($validated);
+        $banco = Banco::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Banco creado correctamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $banco->id));
+        }
 
         return redirect()->back()->with('success', 'Banco creado correctamente.');
     }
@@ -79,6 +87,10 @@ class BancoController extends Controller
 
         $banco->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Banco actualizado correctamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $banco->id));
+        }
+
         return redirect()->back()->with('success', 'Banco actualizado correctamente.');
     }
 
@@ -87,8 +99,20 @@ class BancoController extends Controller
         $banco->delete();
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Banco eliminado exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Banco eliminado exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request), 200);
         }
+
         return redirect()->back()->with('success', 'Banco eliminado exitosamente.');
+    }
+
+    private function tableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = Banco::query();
+        if ($request->filled('search')) {
+            $query->where(fn ($q) => $q->where('nombre', 'like', "%{$request->search}%")->orWhere('codigo', 'like', "%{$request->search}%"));
+        }
+
+        return $query->orderBy($request->get('sort', 'created_at'), $request->get('direction', 'desc'));
     }
 }

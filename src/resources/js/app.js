@@ -9,6 +9,17 @@ import 'tom-select/dist/css/tom-select.css';
 // Hacer Tom Select disponible globalmente
 window.TomSelect = TomSelect;
 
+window.formatMoneyInput = function (input) {
+    const raw = String(input.value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
+    if (!raw) {
+        input.value = '';
+        return;
+    }
+    const [integerPart, decimalPart = ''] = raw.split('.');
+    const integer = (integerPart || '0').replace(/\D/g, '') || '0';
+    input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + `.${decimalPart.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}`;
+};
+
 // ==========================================
 // MANEJADOR DE TABLA DE DATOS AJAX (WEB)
 // ==========================================
@@ -62,20 +73,60 @@ document.addEventListener('alpine:init', () => {
             });
 
             window.formatMoneyInput = function (input) {
-                const raw = input.value.replace(/,/g, '');
-                if (!raw) return;
+                const raw = String(input.value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
+                if (!raw) {
+                    input.value = '';
+                    return;
+                }
                 const [integerPart, decimalPart = ''] = raw.split('.');
                 const integer = (integerPart || '0').replace(/\D/g, '') || '0';
                 input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + `.${decimalPart.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}`;
             };
 
-            window.normalizeDateInput = function (input) {
+            window.validateDateInput = function (input) {
                 const digits = input.value.replace(/\D/g, '').slice(0, 8);
-                if (digits.length !== 8) return;
+                const wrapper = input.closest('.relative');
+                const picker = wrapper?.querySelector('[data-date-picker]');
+                const error = wrapper?.querySelector('[data-date-error]');
+                const fail = (message) => {
+                    input.value = '';
+                    if (picker) picker.value = '';
+                    if (error) {
+                        error.textContent = message;
+                        error.classList.remove('hidden');
+                    }
+                    return false;
+                };
+
+                if (!digits) {
+                    if (!input.required) {
+                        if (error) error.classList.add('hidden');
+                        return true;
+                    }
+                    return fail('La fecha es obligatoria.');
+                }
+                if (digits.length !== 8) return fail('Usa el formato dd/mm/aaaa.');
+
+                const day = Number(digits.slice(0, 2));
+                const month = Number(digits.slice(2, 4));
+                const year = Number(digits.slice(4));
+                const date = new Date(year, month - 1, day);
+                if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+                    return fail('La fecha no es válida.');
+                }
+
+                const iso = `${year.toString().padStart(4, '0')}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
+                if (picker?.min && iso < picker.min || picker?.max && iso > picker.max) {
+                    return fail('La fecha debe estar dentro del ciclo permitido.');
+                }
+
                 input.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-                const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
-                const picker = input.closest('.relative')?.querySelector('[data-date-picker]');
-                if (picker) picker.value = `${year}-${month}-${day}`;
+                if (picker) picker.value = iso;
+                if (error) {
+                    error.textContent = '';
+                    error.classList.add('hidden');
+                }
+                return true;
             };
 
             window.syncDateInput = function (picker) {
@@ -83,8 +134,29 @@ document.addEventListener('alpine:init', () => {
                 if (display && picker.value) {
                     const [year, month, day] = picker.value.split('-');
                     display.value = `${day}/${month}/${year}`;
+                    display.dispatchEvent(new Event('input', { bubbles: true }));
+                    display.dispatchEvent(new Event('change', { bubbles: true }));
+                    display.closest('.relative')?.querySelector('[data-date-error]')?.classList.add('hidden');
                 }
             };
+
+            window.applyClientFieldLimits = function (root = document) {
+                if (!document.body) return;
+                const limits = {
+                    name: 255, nombre: 255, descripcion: 500, email: 255,
+                    codigo: 10, simbolo: 10, search: 255, color: 7,
+                };
+                root.querySelectorAll('input[name], textarea[name]').forEach((input) => {
+                    const limit = limits[input.name];
+                    if (limit && !input.maxLength) input.maxLength = limit;
+                    if (limit && input.value.length > limit) input.value = input.value.slice(0, limit);
+                });
+                if (!window.clientFieldLimitObserver) {
+                    window.clientFieldLimitObserver = new MutationObserver(() => window.applyClientFieldLimits());
+                    window.clientFieldLimitObserver.observe(document.body, { childList: true, subtree: true });
+                }
+            };
+            window.applyClientFieldLimits();
 
             document.addEventListener('input', (event) => {
                 const input = event.target;
@@ -95,6 +167,12 @@ document.addEventListener('alpine:init', () => {
                 input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                     + (decimalPart === undefined ? '' : `.${decimalPart.slice(0, 2)}`);
             });
+
+            document.addEventListener('blur', (event) => {
+                if (event.target instanceof HTMLInputElement && event.target.matches('[data-money-input]')) {
+                    window.formatMoneyInput(event.target);
+                }
+            }, true);
 
             document.addEventListener('submit', (event) => {
                 event.target.querySelectorAll('[data-money-input]').forEach((input) => {
@@ -261,6 +339,10 @@ document.addEventListener('alpine:init', () => {
                     const data = await response.json();
                     this.tableBodyHtml = data.html;
                     this.paginationHtml = data.pagination;
+                    ['balance', 'ingresos', 'egresos'].forEach((key) => {
+                        const value = document.querySelector(`[data-cash-card="${key}"] [data-cash-value]`);
+                        if (value && data[key] !== undefined) value.textContent = `${value.dataset.cashSymbol || ''} ${data[key]}`;
+                    });
 
                     window.history.pushState({}, '', url.toString());
 
@@ -321,30 +403,10 @@ window.deleteItem = function (id, name, url) {
 
             if (response.ok) {
                 const data = await response.json();
-                showAlert('success', '¡Éxito!', data.message || 'Registro eliminado correctamente.');
-
-                // Obtener el formulario y construir los datos para refrescar
-                const form = document.getElementById('data-table-form');
-                if (form) {
-                    const refreshFormData = new FormData(form);
-
-                    // Determinar qué página mostrar
-                    let targetPage = currentPage;
-                    if (data.redirect_to_page) {
-                        targetPage = data.redirect_to_page;
-                    }
-
-                    refreshFormData.set('page', targetPage);
-
-                    // Llamar directamente a fetchData del componente Alpine
-                    const container = document.getElementById('data-table-container');
-                    if (container) {
-                        const alpineData = Alpine.$data(container);
-                        if (alpineData && alpineData.fetchData) {
-                            alpineData.fetchData(form.action, refreshFormData);
-                        }
-                    }
-                }
+                await showAlert('success', '¡Éxito!', data.message || 'Registro eliminado correctamente.');
+                window.dispatchEvent(new CustomEvent('refresh-table', {
+                    detail: { ...data, redirect_to_page: data.redirect_to_page || currentPage }
+                }));
             } else {
                 const data = await response.json();
                 showAlert('error', 'Error', data.message || 'No se pudo eliminar.');
@@ -427,7 +489,32 @@ document.addEventListener('alpine:init', () => {
             form.querySelectorAll('[data-money-input]').forEach((input) => {
                 input.value = input.value.replace(/,/g, '');
             });
+            let datesValid = true;
+            form.querySelectorAll('[data-date-input]').forEach((input) => {
+                datesValid = validateDateInput(input) && datesValid;
+            });
+            if (!datesValid) {
+                this.loading = false;
+                return;
+            }
+            applyClientFieldLimits(form);
             const formData = new FormData(form);
+            const tableForm = document.getElementById('data-table-form');
+            if (tableForm) {
+                const tableFields = [
+                    'search', 'amount', 'from', 'to', 'tipo', 'categoria',
+                    'activo', 'sort', 'direction', 'per_page', 'cycle',
+                ];
+                const tableData = new FormData(tableForm);
+
+                tableFields.forEach((name) => {
+                    const value = tableData.get(name);
+                    formData.set(`table_${name}`, value ?? '');
+                    if (['sort', 'direction', 'per_page', 'cycle'].includes(name) && value !== null && value !== '') {
+                        formData.set(name, value);
+                    }
+                });
+            }
 
             try {
                 const response = await fetch(form.action, {
@@ -443,18 +530,17 @@ document.addEventListener('alpine:init', () => {
                     const data = await response.json();
 
                     // Console.log detallado
-                    console.log('Validación de formulario fallida:');
-                    console.log('   Campos con errores:', Object.keys(data.errors));
-                    console.log('   Mensajes:', data.errors);
-
                     this.errors = data.errors;
                     this.showValidationErrors();
                 } else if (response.ok) {
                     // Éxito
                     this.clearValidationErrors();
                     const data = await response.json();
-                    window.dispatchEvent(new CustomEvent('refresh-table', { detail: data }));
-                    if (onSuccessCallback) onSuccessCallback(data);
+                    if (onSuccessCallback) {
+                        await onSuccessCallback(data);
+                    } else {
+                        window.dispatchEvent(new CustomEvent('refresh-table', { detail: data }));
+                    }
                 } else {
                     showAlert('error', 'Error', 'Ocurrió un error inesperado en el servidor.');
                 }

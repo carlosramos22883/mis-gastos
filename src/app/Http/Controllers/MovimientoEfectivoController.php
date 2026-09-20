@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Exports\MovimientosEfectivoExport;
 use App\Models\CategoriaPersonal;
+use App\Models\Compromiso;
 use App\Models\MovimientoEfectivo;
 use App\Models\User;
+use App\Services\CicloEfectivoService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,29 +22,35 @@ class MovimientoEfectivoController extends Controller
     private function query(Request $request)
     {
         [$cycleStart, $cycleEnd] = $this->cycle($request->user(), $request->get('cycle'));
-        $from = $this->parseFilterDate($request->get('from'))?->max($cycleStart) ?? $cycleStart;
-        $to = $this->parseFilterDate($request->get('to'))?->min($cycleEnd) ?? $cycleEnd;
+        $fromValue = $request->has('table_from') ? $request->input('table_from') : $request->input('from');
+        $toValue = $request->has('table_to') ? $request->input('table_to') : $request->input('to');
+        $tipo = $request->has('table_tipo') ? $request->input('table_tipo') : $request->input('tipo');
+        $categoria = $request->has('table_categoria') ? $request->input('table_categoria') : $request->input('categoria');
+        $search = $request->has('table_search') ? $request->input('table_search') : $request->input('search');
+        $amount = $request->has('table_amount') ? $request->input('table_amount') : $request->input('amount');
+        $from = $this->parseFilterDate($fromValue)?->max($cycleStart) ?? $cycleStart;
+        $to = $this->parseFilterDate($toValue)?->min($cycleEnd) ?? $cycleEnd;
 
         return MovimientoEfectivo::with('categoria')->where('user_id', $request->user()->id)
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = $request->string('search')->toString();
+            ->when($search !== null && $search !== '', function ($q) use ($search) {
                 $q->where(function ($query) use ($search) {
                     $query->where('descripcion', 'like', "%{$search}%")
                         ->orWhere('monto', 'like', "%{$search}%");
                 });
             })
-            ->when($request->filled('amount'), fn ($q) => $q->where('monto', 'like', '%'.$request->amount.'%'))
+            ->when($amount !== null && $amount !== '', fn ($q) => $q->where('monto', 'like', '%'.$amount.'%'))
             ->whereBetween('fecha', [$from->toDateString(), $to->toDateString()])
-            ->when($request->filled('tipo'), fn ($q) => $q->where('tipo', $request->tipo))
-            ->when($request->filled('categoria'), fn ($q) => $q->where('categoria_personal_id', $request->categoria))
+            ->when($tipo !== null && $tipo !== '', fn ($q) => $q->where('tipo', $tipo))
+            ->when($categoria !== null && $categoria !== '', fn ($q) => $q->where('categoria_personal_id', $categoria))
             ->orderBy(in_array($request->get('sort'), ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $request->get('sort') : 'fecha', $request->get('direction') === 'asc' ? 'asc' : 'desc');
     }
 
     public function index(Request $request)
     {
+        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         [$cycleStart, $cycleEnd] = $this->cycle($request->user(), $request->get('cycle'));
         $movimientos = $this->query($request)->paginate((int) $request->get('per_page', 10))->withQueryString();
-        $categorias = CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->orderBy('nombre')->get();
+        $categorias = CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get();
         $totals = $request->user()->movimientosEfectivo()
             ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0) ingresos")
             ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN monto ELSE 0 END), 0) egresos")
@@ -56,6 +64,8 @@ class MovimientoEfectivoController extends Controller
                 'html' => view('efectivo._table', compact('movimientos', 'isCurrentCycle', 'simbolo'))->render(),
                 'pagination' => $movimientos->links()->render(),
                 'balance' => number_format($balance, 2, '.', ''),
+                'ingresos' => number_format((float) $totals->ingresos, 2, '.', ''),
+                'egresos' => number_format((float) $totals->egresos, 2, '.', ''),
             ]);
         }
 
@@ -71,20 +81,34 @@ class MovimientoEfectivoController extends Controller
 
     public function create(Request $request)
     {
+        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         [$cycleStart, $cycleEnd] = $this->cycle($request->user());
 
-        return view('efectivo._form', ['categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
+        $compromiso = $request->filled('compromiso') ? $request->user()->compromisos()->whereKey($request->input('compromiso'))->where('estado', 'activo')->firstOrFail() : null;
+
+        return view('efectivo._form', ['compromiso' => $compromiso, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
     }
 
     public function store(Request $request)
     {
+        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         $data = $this->validated($request);
-        DB::transaction(function () use ($request, $data) {
+        $movimiento = null;
+        DB::transaction(function () use ($request, $data, &$movimiento) {
             $this->ensureBalance($request, $data['tipo'], (float) $data['monto']);
-            $request->user()->movimientosEfectivo()->create($data);
+            $movimiento = $request->user()->movimientosEfectivo()->create($data);
+            if (! empty($data['compromiso_id'])) {
+                $compromiso = Compromiso::whereKey($data['compromiso_id'])->lockForUpdate()->firstOrFail();
+                $saldo = max(0, (float) ($compromiso->saldo_pendiente ?? $compromiso->monto) - (float) $data['monto']);
+                $compromiso->update([
+                    'saldo_pendiente' => $saldo,
+                    'cuotas_pagadas' => $compromiso->cuotas_pagadas + 1,
+                    'estado' => $saldo <= 0 && ! $compromiso->recurrencia_indefinida ? 'pagado' : 'activo',
+                ]);
+            }
         });
 
-        return $this->success($request, 'Movimiento registrado correctamente.');
+        return $this->success($request, 'Movimiento registrado correctamente.', $movimiento);
     }
 
     public function edit(Request $request, MovimientoEfectivo $movimiento)
@@ -94,11 +118,12 @@ class MovimientoEfectivoController extends Controller
         [$cycleStart] = $this->cycle($request->user());
         abort_unless($movimiento->fecha->greaterThanOrEqualTo($cycleStart), 403);
 
-        return view('efectivo._form', ['movimiento' => $movimiento, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $this->cycle($request->user())[1]]);
+        return view('efectivo._form', ['movimiento' => $movimiento, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $this->cycle($request->user())[1]]);
     }
 
     public function update(Request $request, MovimientoEfectivo $movimiento)
     {
+        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         $this->own($request, $movimiento);
         abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
         $data = $this->validated($request);
@@ -110,7 +135,7 @@ class MovimientoEfectivoController extends Controller
             $movimiento->update($data);
         });
 
-        return $this->success($request, 'Movimiento actualizado correctamente.');
+        return $this->success($request, 'Movimiento actualizado correctamente.', $movimiento);
     }
 
     public function destroy(Request $request, MovimientoEfectivo $movimiento)
@@ -119,7 +144,11 @@ class MovimientoEfectivoController extends Controller
         abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
         $movimiento->delete();
 
-        return $this->success($request, 'Movimiento eliminado correctamente.');
+        $currentPage = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, (int) $request->input('per_page', 10));
+        $lastPage = max(1, (int) ceil($this->query($request)->count() / $perPage));
+
+        return $this->success($request, 'Movimiento eliminado correctamente.', null, min($currentPage, $lastPage));
     }
 
     public function export(Request $request)
@@ -141,7 +170,8 @@ class MovimientoEfectivoController extends Controller
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => ['required', 'date_format:d/m/Y', 'before_or_equal:today', 'after_or_equal:'.$cycleStart->format('d/m/Y'), 'before_or_equal:'.$cycleEnd->format('d/m/Y')],
             'tipo' => ['required', Rule::in(['ingreso', 'egreso'])],
-            'categoria_personal_id' => ['required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('activo', true))],
+            'categoria_personal_id' => ['required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->where('tipo', $request->input('tipo')))],
+            'compromiso_id' => ['nullable', 'integer', Rule::exists('compromisos', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('estado', 'activo'))],
         ], ['monto.regex' => 'El monto debe tener máximo dos decimales y ser positivo.']);
 
         $data['fecha'] = Carbon::createFromFormat('d/m/Y', $data['fecha'])->format('Y-m-d');
@@ -162,6 +192,13 @@ class MovimientoEfectivoController extends Controller
         } else {
             $previousEnd = $end->copy()->subMonthNoOverflow()->day(min($cutoff, $end->copy()->subMonthNoOverflow()->daysInMonth));
             $start = $previousEnd->addDay();
+        }
+
+        $initialStart = $user->movimientosEfectivo()
+            ->whereHas('categoria', fn ($q) => $q->where('nombre', 'Saldo inicial'))
+            ->oldest('fecha')->value('fecha');
+        if ($initialStart && Carbon::parse($initialStart, $timezone)->greaterThan($start) && Carbon::parse($initialStart, $timezone)->lte($today)) {
+            $start = Carbon::parse($initialStart, $timezone)->startOfDay();
         }
 
         if ($requestedStart && preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedStart)) {
@@ -201,10 +238,24 @@ class MovimientoEfectivoController extends Controller
         abort_unless($movimiento->user_id === $request->user()->id, 404);
     }
 
-    private function success(Request $request, string $message)
+    private function success(Request $request, string $message, ?MovimientoEfectivo $movimiento = null, ?int $page = null)
     {
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'message' => $message])
+            ? response()->json(array_filter([
+                'success' => true,
+                'message' => $message,
+                'highlight_id' => $movimiento?->id,
+                'redirect_to_page' => $page ?? ($movimiento ? $this->pageFor($request, $movimiento) : null),
+            ], static fn ($value) => $value !== null))
             : redirect()->route('efectivo.index')->with('success', $message);
+    }
+
+    private function pageFor(Request $request, MovimientoEfectivo $movimiento): int
+    {
+        $perPage = max(1, (int) $request->input('per_page', 10));
+        $ids = $this->query($request)->pluck('id')->map(static fn ($id) => (string) $id)->values();
+        $position = $ids->search((string) $movimiento->getKey(), true);
+
+        return $position === false ? 1 : (int) floor($position / $perPage) + 1;
     }
 }

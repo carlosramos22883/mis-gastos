@@ -19,7 +19,7 @@
         <input 
             type="{{ $type }}"
             id="{{ $id }}"
-            name="{{ $name }}"
+            @unless($attributes->has('x-bind:name')) name="{{ $name }}" @endunless
             x-model="inputValue"
             @focus="isFocused = true"
             @blur="isFocused = false"

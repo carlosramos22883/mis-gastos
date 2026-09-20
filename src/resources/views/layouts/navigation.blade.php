@@ -32,7 +32,7 @@
             {{ __('Inicio') }}
         </a>
 
-        @canany(['categorias.view', 'efectivo.view'])
+        @canany(['categorias.view', 'efectivo.view', 'compromisos.view'])
             <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
                 @canany(['categorias.view', 'categorias.create'])
                     <a href="{{ route('categorias.index') }}" @click="sidebarOpen = false"
@@ -46,6 +46,12 @@
                         {{ __('Efectivo') }}
                     </a>
                 @endcanany
+                @can('compromisos.view')
+                    <a href="{{ route('compromisos.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('compromisos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Compromisos') }}
+                    </a>
+                @endcan
             </div>
         @endcanany
 

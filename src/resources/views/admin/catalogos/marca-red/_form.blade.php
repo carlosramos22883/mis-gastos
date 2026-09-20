@@ -55,7 +55,7 @@
         </div>
         <p class="text-sm text-center text-gray-500 mt-2">Haz clic para subir/recortar logo</p>
 
-        <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" :value="isset($marcaRed) ? old('nombre', $marcaRed->nombre) : old('nombre')"
+        <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" maxlength="255" :value="isset($marcaRed) ? old('nombre', $marcaRed->nombre) : old('nombre')"
             :error="$errors->first('nombre')" required placeholder="Ej: Visa" />
 
         <!-- Checkbox Activo -->

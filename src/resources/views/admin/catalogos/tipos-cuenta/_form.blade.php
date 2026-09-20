@@ -15,8 +15,8 @@
         </button>
     </div>
 
-    <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" :value="isset($tipoCuenta) ? old('nombre', $tipoCuenta->nombre) : old('nombre')" :error="$errors->first('nombre')" required placeholder="Ej: Cuenta de Ahorro" />
-    <x-floating-input id="descripcion" name="descripcion" label="Descripción (Opcional)" type="text" :value="isset($tipoCuenta) ? old('descripcion', $tipoCuenta->descripcion) : old('descripcion')" :error="$errors->first('descripcion')" placeholder="Ej: Cuenta que genera intereses" />
+    <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" maxlength="255" :value="isset($tipoCuenta) ? old('nombre', $tipoCuenta->nombre) : old('nombre')" :error="$errors->first('nombre')" required placeholder="Ej: Cuenta de Ahorro" />
+    <x-floating-input id="descripcion" name="descripcion" label="Descripción (Opcional)" type="text" maxlength="500" :value="isset($tipoCuenta) ? old('descripcion', $tipoCuenta->descripcion) : old('descripcion')" :error="$errors->first('descripcion')" placeholder="Ej: Cuenta que genera intereses" />
 
     <!-- Checkbox Activo (Marcado por defecto al crear) -->
     <div class="flex items-center gap-2 mt-6">

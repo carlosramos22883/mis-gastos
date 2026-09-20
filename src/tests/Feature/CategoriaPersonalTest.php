@@ -37,4 +37,56 @@ class CategoriaPersonalTest extends TestCase
             'tipo' => 'egreso',
         ])->assertForbidden();
     }
+
+    public function test_create_and_update_return_the_page_for_the_active_sort(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        foreach (['categorias.view', 'categorias.create', 'categorias.edit'] as $permission) {
+            $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
+        }
+
+        foreach (range(1, 10) as $index) {
+            $user->categoriasPersonales()->create(['nombre' => 'm-'.$index, 'tipo' => 'egreso']);
+        }
+
+        $response = $this->actingAs($user)->postJson(route('categorias.store', [
+            'sort' => 'nombre',
+            'direction' => 'asc',
+            'per_page' => 10,
+        ]), [
+            'nombre' => 'zzzzzz',
+            'tipo' => 'egreso',
+            'color' => '#64748B',
+        ]);
+
+        $response->assertOk()->assertJsonPath('redirect_to_page', 2);
+        $categoria = $user->categoriasPersonales()->where('nombre', 'zzzzzz')->firstOrFail();
+
+        $this->actingAs($user)->putJson(route('categorias.update', $categoria), [
+            'sort' => 'nombre',
+            'direction' => 'asc',
+            'per_page' => 10,
+            'nombre' => 'aaaaaa',
+            'tipo' => 'egreso',
+            'color' => '#64748B',
+        ])->assertOk()->assertJsonPath('redirect_to_page', 1);
+    }
+
+    public function test_name_order_is_case_insensitive_for_pagination(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        foreach (['categorias.view', 'categorias.create'] as $permission) {
+            $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
+        }
+
+        $user->categoriasPersonales()->create(['nombre' => 'Comestibles', 'tipo' => 'egreso']);
+        $user->categoriasPersonales()->create(['nombre' => 'Deposito', 'tipo' => 'egreso']);
+        $user->categoriasPersonales()->create(['nombre' => 'aaaa', 'tipo' => 'egreso']);
+
+        $this->actingAs($user)->getJson(route('categorias.index', [
+            'sort' => 'nombre',
+            'direction' => 'asc',
+            'per_page' => 10,
+        ]))->assertOk()->assertJsonPath('html', fn ($html) => strpos($html, 'aaaa') < strpos($html, 'Comestibles'));
+    }
 }

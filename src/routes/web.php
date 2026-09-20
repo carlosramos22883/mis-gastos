@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\MovimientoEfectivoController;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialAuthController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +20,10 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
+    if (! auth()->user()->onboarding_completed) {
+        return redirect()->route('onboarding.create');
+    }
+
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -25,7 +31,29 @@ Route::middleware(['throttle:6,1'])->get('/verify-email/{id}/{hash}', VerifyEmai
     ->name('verification.verify');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/onboarding', [OnboardingController::class, 'create'])->name('onboarding.create');
+    Route::post('/onboarding/progress', [OnboardingController::class, 'progress'])->name('onboarding.progress');
+    Route::get('/onboarding/progress', [OnboardingController::class, 'progress'])->name('onboarding.progress.data');
+    Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::resource('compromisos', CompromisoController::class)->except([])->middleware([
+        'index' => 'can:compromisos.view',
+        'show' => 'can:compromisos.view',
+        'create' => 'can:compromisos.create',
+        'store' => 'can:compromisos.create',
+        'edit' => 'can:compromisos.edit',
+        'update' => 'can:compromisos.edit',
+        'destroy' => 'can:compromisos.delete',
+    ]);
+    Route::get('compromisos-export', [CompromisoController::class, 'export'])
+        ->middleware('can:compromisos.export')->name('compromisos.export');
+    Route::post('compromisos/{compromiso}/abonar', [CompromisoController::class, 'abonar'])
+        ->middleware('can:compromisos.edit')->name('compromisos.abonar');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Asumimos que profile.view lo tiene todos
+    Route::get('/notificaciones', function () {
+        $notificaciones = request()->user()->notifications()->latest()->paginate(20);
+        request()->user()->unreadNotifications->markAsRead();
+        return view('notificaciones.index', compact('notificaciones'));
+    })->name('notifications.index');
 
     // Protegemos la actualización con el permiso específico
     Route::patch('/profile', [ProfileController::class, 'update'])

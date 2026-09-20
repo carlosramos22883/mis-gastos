@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exports\RolesExport;
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
 use App\Traits\Exportable;
 use Illuminate\Http\Request;
@@ -12,12 +13,14 @@ use Spatie\Permission\Models\Role;
 class RoleManagementController extends Controller
 {
     use Exportable;
+    use HandlesTableNavigation;
 
     /**
      * Listar roles
      */
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = Role::with('permissions');
 
         // Búsqueda por nombre
@@ -114,6 +117,7 @@ class RoleManagementController extends Controller
                 'success' => true,
                 'message' => "Rol '{$role->name}' creado exitosamente.",
                 'role' => $role,
+                ...$this->tableNavigation($this->roleTableQuery($request), $request, $role->id),
             ], 200);
         }
 
@@ -144,6 +148,7 @@ class RoleManagementController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => "Rol '{$role->name}' actualizado exitosamente.",
+                ...$this->tableNavigation($this->roleTableQuery($request), $request, $role->id),
             ], 200);
         }
 
@@ -226,6 +231,21 @@ class RoleManagementController extends Controller
         }
 
         return $permissions;
+    }
+
+    private function roleTableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = Role::with('permissions');
+        if ($request->filled('search')) {
+            $query->where('name', 'like', "%{$request->search}%");
+        }
+        if ($request->filled('filter_permission')) {
+            $module = $request->filter_permission;
+            $query->whereHas('permissions', fn ($q) => $q->where('name', 'like', $module.'.%'));
+        }
+
+        return $query->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc'));
     }
 
     public function export(Request $request)

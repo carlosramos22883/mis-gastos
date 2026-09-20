@@ -51,6 +51,24 @@
             <!-- Botón de Modo Oscuro y Perfil -->
             <div class="flex items-center gap-4">
                 <x-dark-mode-toggle size="md" alignment="center" />
+                <x-dropdown align="top-end" width="80">
+                    <x-slot name="trigger">
+                        <button class="relative text-gray-500 dark:text-gray-300" aria-label="Notificaciones">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0" /></svg>
+                            @if(Auth::user()->unreadNotifications()->count())
+                                <span class="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] text-white">{{ Auth::user()->unreadNotifications()->count() }}</span>
+                            @endif
+                        </button>
+                    </x-slot>
+                    <x-slot name="content">
+                        @forelse(Auth::user()->notifications()->latest()->limit(5)->get() as $notification)
+                            <x-dropdown-link :href="route('notifications.index')">{{ $notification->data['message'] ?? 'Notificación' }}</x-dropdown-link>
+                        @empty
+                            <span class="block px-4 py-2 text-sm text-gray-500">No tienes notificaciones.</span>
+                        @endforelse
+                        <x-dropdown-link :href="route('notifications.index')">Ver todas</x-dropdown-link>
+                    </x-slot>
+                </x-dropdown>
 
                 <!-- Dropdown de Usuario -->
                 <div class="relative">

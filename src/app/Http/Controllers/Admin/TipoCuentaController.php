@@ -2,19 +2,23 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
 use App\Models\TipoCuenta;
 use Illuminate\Http\Request;
 
 class TipoCuentaController extends Controller
 {
+    use HandlesTableNavigation;
+
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = TipoCuenta::query();
 
         if ($request->filled('search')) {
             $query->where('nombre', 'like', "%{$request->search}%")
-                  ->orWhere('descripcion', 'like', "%{$request->search}%");
+                ->orWhere('descripcion', 'like', "%{$request->search}%");
         }
 
         $sortField = $request->get('sort', 'created_at');
@@ -48,11 +52,12 @@ class TipoCuentaController extends Controller
 
         $validated['activo'] = $request->has('activo');
 
-        TipoCuenta::create($validated);
+        $tipoCuenta = TipoCuenta::create($validated);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Tipo de cuenta creado exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Tipo de cuenta creado exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $tipoCuenta->id), 200);
         }
+
         return redirect()->back()->with('success', 'Tipo de cuenta creado exitosamente.');
     }
 
@@ -74,8 +79,9 @@ class TipoCuentaController extends Controller
         $tipoCuenta->update($validated);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Tipo de cuenta actualizado exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Tipo de cuenta actualizado exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $tipoCuenta->id), 200);
         }
+
         return redirect()->back()->with('success', 'Tipo de cuenta actualizado exitosamente.');
     }
 
@@ -84,8 +90,20 @@ class TipoCuentaController extends Controller
         $tipoCuenta->delete();
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Tipo de cuenta eliminado exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Tipo de cuenta eliminado exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request), 200);
         }
+
         return redirect()->back()->with('success', 'Tipo de cuenta eliminado exitosamente.');
+    }
+
+    private function tableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = TipoCuenta::query();
+        if ($request->filled('search')) {
+            $query->where(fn ($q) => $q->where('nombre', 'like', "%{$request->search}%")->orWhere('descripcion', 'like', "%{$request->search}%"));
+        }
+
+        return $query->orderBy($request->get('sort', 'created_at'), $request->get('direction', 'desc'));
     }
 }

@@ -60,11 +60,11 @@
                 @if($submitForm)
                 $el.closest('form').requestSubmit();
                 @else
-                $dispatch('change', val);
+                window.dispatchEvent(new CustomEvent('floating-select-change', { detail: { id: $refs.select.id, value: val } }));
                 @endif
             }
-        });">
-            <select id="{{ $id }}" name="{{ $name }}{{ $multiple ? '[]' : '' }}" x-ref="select"
+        }); window.tomSelects = window.tomSelects || {}; window.tomSelects['{{ $id }}'] = tom;">
+            <select id="{{ $id }}" @unless($attributes->has('x-bind:name')) name="{{ $name }}{{ $multiple ? '[]' : '' }}" @endunless x-ref="select"
                 {{ $multiple ? 'multiple' : '' }} {{ $required ? 'required' : '' }}
                 {{ $attributes->merge([
                     'class' =>

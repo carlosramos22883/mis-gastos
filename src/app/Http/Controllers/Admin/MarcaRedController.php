@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
 use App\Models\MarcaRed;
 use Illuminate\Http\Request;
@@ -9,8 +10,11 @@ use Illuminate\Support\Facades\Storage;
 
 class MarcaRedController extends Controller
 {
+    use HandlesTableNavigation;
+
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = MarcaRed::query();
 
         if ($request->filled('search')) {
@@ -51,7 +55,11 @@ class MarcaRedController extends Controller
             $validated['logo'] = $request->file('logo')->store('logos/marcaRed', 'public');
         }
 
-        MarcaRed::create($validated);
+        $marcaRed = MarcaRed::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Marca de la Red creada correctamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $marcaRed->id));
+        }
 
         return redirect()->back()->with('success', 'Marca de la Red creada correctamente.');
     }
@@ -79,6 +87,10 @@ class MarcaRedController extends Controller
 
         $marcaRed->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Marca de la Red actualizada correctamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $marcaRed->id));
+        }
+
         return redirect()->back()->with('success', 'Marca de la Red actualizada correctamente.');
     }
 
@@ -87,8 +99,20 @@ class MarcaRedController extends Controller
         $marcaRed->delete();
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Marca de red eliminada exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Marca de red eliminada exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request), 200);
         }
+
         return redirect()->back()->with('success', 'Marca de red eliminada exitosamente.');
+    }
+
+    private function tableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = MarcaRed::query();
+        if ($request->filled('search')) {
+            $query->where(fn ($q) => $q->where('nombre', 'like', "%{$request->search}%")->orWhere('color', 'like', "%{$request->search}%"));
+        }
+
+        return $query->orderBy($request->get('sort', 'created_at'), $request->get('direction', 'desc'));
     }
 }

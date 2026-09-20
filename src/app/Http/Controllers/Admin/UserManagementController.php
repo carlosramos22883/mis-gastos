@@ -2,26 +2,28 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\UsersExport;
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
+use App\Models\Moneda;
 use App\Models\User;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
-use App\Exports\UsersExport;
-use App\Traits\Exportable;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
-use App\Models\Moneda;
 
 class UserManagementController extends Controller
 {
     use Exportable;
+    use HandlesTableNavigation;
+
     /**
      * Listar usuarios (con búsqueda y paginación)
      */
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = User::query();
 
         // Búsqueda por nombre o email
@@ -73,6 +75,7 @@ class UserManagementController extends Controller
         if (request()->has('modal')) {
             return view('admin.usuarios._form', compact('roles'));
         }
+
         return view('admin.usuarios.create', compact('roles'));
     }
 
@@ -85,6 +88,7 @@ class UserManagementController extends Controller
         if (request()->has('modal')) {
             return view('admin.usuarios._form', compact('usuario', 'roles'));
         }
+
         return view('admin.usuarios.edit', compact('usuario', 'roles'));
     }
 
@@ -129,7 +133,8 @@ class UserManagementController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Usuario '{$user->name}' creado exitosamente. Se ha enviado un correo de verificación.",
-                'user' => $user
+                'user' => $user,
+                ...$this->tableNavigation($this->userTableQuery($request), $request, $user->id),
             ], 200);
         }
 
@@ -144,7 +149,7 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $usuario->id],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$usuario->id],
             'password' => [
                 'nullable',
                 'confirmed',
@@ -167,7 +172,7 @@ class UserManagementController extends Controller
             $usuario->sendEmailVerificationNotification();
         }
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $usuario->password = Hash::make($validated['password']);
         }
 
@@ -178,7 +183,8 @@ class UserManagementController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Usuario '{$usuario->name}' actualizado exitosamente. Se ha enviado un nuevo correo de verificación.",
-                'user' => $usuario
+                'user' => $usuario,
+                ...$this->tableNavigation($this->userTableQuery($request), $request, $usuario->id),
             ], 200);
         }
 
@@ -195,6 +201,7 @@ class UserManagementController extends Controller
             if (request()->wantsJson()) {
                 return response()->json(['message' => 'No puedes eliminar tu propia cuenta.'], 403);
             }
+
             return back()->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
@@ -215,7 +222,7 @@ class UserManagementController extends Controller
                 // Redirigir a la última página válida
                 return response()->json([
                     'message' => 'Usuario eliminado exitosamente.',
-                    'redirect_to_page' => $lastPage
+                    'redirect_to_page' => $lastPage,
                 ], 200);
             }
 
@@ -231,7 +238,7 @@ class UserManagementController extends Controller
      */
     public function export(Request $request)
     {
-        $query = \App\Models\User::with('roles');
+        $query = User::with('roles');
 
         // APLICAR LOS MISMOS FILTROS QUE EN INDEX
         if ($request->filled('search')) {
@@ -270,9 +277,24 @@ class UserManagementController extends Controller
                 'email' => 'Correo',
                 'roles' => 'Rol',
                 'email_verified_at' => 'Verificado',
-                'created_at' => 'Creado'
+                'created_at' => 'Creado',
             ],
             'usuarios'
         );
+    }
+
+    private function userTableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = User::query();
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
+        }
+        if ($request->filled('filter_role')) {
+            $query->role($request->filter_role);
+        }
+
+        return $query->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc'));
     }
 }

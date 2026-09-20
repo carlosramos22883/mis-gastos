@@ -49,7 +49,7 @@
         </div>
         <p class="text-xs text-center text-gray-500">Haz clic en el ícono para subir/recortar logo</p>
 
-        <x-floating-input id="nombre" name="nombre" label="Nombre del Banco" type="text"
+        <x-floating-input id="nombre" name="nombre" label="Nombre del Banco" type="text" maxlength="255"
             :value="isset($banco) ? old('nombre', $banco->nombre) : old('nombre')"
             :error="$errors->first('nombre')" required placeholder="Ej: Banco Industrial" />
 

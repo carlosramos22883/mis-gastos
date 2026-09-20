@@ -4,11 +4,14 @@
     <div class="max-w-7xl mx-auto space-y-4">
         @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
         <div class="grid gap-4 md:grid-cols-3">
-            @foreach ([['Saldo disponible', $balance, 'text-primary-600'], ['Total de ingresos', $ingresos, 'text-green-600'], ['Total de egresos', $egresos, 'text-red-600']] as [$label, $value, $color])
-                <div class="rounded-lg bg-white dark:bg-gray-800 p-5 shadow"><span
-                        class="text-sm text-gray-500">{{ $label }}</span><strong
-                        class="block text-3xl {{ $color }}">{{ $simbolo }}
-                        {{ number_format((float) $value, 2) }}</strong></div>
+            @foreach ([['Saldo disponible', $balance, 'text-primary-600', 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4h8v-8h-8zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2h6v4h-6z', 'balance'], ['Total de ingresos', $ingresos, 'text-green-600', 'M12 3v18m9-9H3', 'ingresos'], ['Total de egresos', $egresos, 'text-red-600', 'M5 12h14', 'egresos']] as [$label, $value, $color, $icon, $key])
+                <div class="rounded-lg bg-white dark:bg-gray-800 p-5 shadow" data-cash-card="{{ $key }}">
+                    <div class="flex items-center gap-3">
+                        <svg class="h-8 w-8 {{ $color }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $icon }}" /></svg>
+                        <div><span class="text-sm text-gray-500">{{ $label }}</span><strong
+                                class="block text-3xl {{ $color }}" data-cash-value data-cash-symbol="{{ $simbolo }}">{{ $simbolo }} {{ number_format((float) $value, 2) }}</strong></div>
+                    </div>
+                </div>
             @endforeach
         </div>
         <div class="flex items-center justify-between">
@@ -29,7 +32,7 @@
         <x-data-table :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
             :exportRoute="route('efectivo.export')" searchPlaceholder="Buscar descripción..." defaultSort="fecha">
             <x-slot:filters>
-                <x-floating-input id="amount" label="Monto" type="number" step="0.01" :value="request('amount')" />
+                <x-floating-money id="amount" label="Monto" :value="request('amount')" :symbol="$simbolo" />
                 <x-floating-date id="from" label="Desde" :value="request('from')" :min="$cycleStart" :max="$cycleEnd" />
                 <x-floating-date id="to" label="Hasta" :value="request('to')" :min="$cycleStart" :max="$cycleEnd" />
                 <x-floating-select id="tipo" label="Tipo" :options="['ingreso' => 'Ingreso', 'egreso' => 'Egreso']" :value="request('tipo')" />

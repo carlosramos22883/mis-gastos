@@ -2,20 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
 use App\Models\Moneda;
 use Illuminate\Http\Request;
 
 class MonedaController extends Controller
 {
+    use HandlesTableNavigation;
+
     public function index(Request $request)
     {
+        $this->tableRequest($request);
         $query = Moneda::query();
 
         if ($request->filled('search')) {
             $query->where('nombre', 'like', "%{$request->search}%")
-                  ->orWhere('codigo', 'like', "%{$request->search}%")
-                  ->orWhere('simbolo', 'like', "%{$request->search}%");
+                ->orWhere('codigo', 'like', "%{$request->search}%")
+                ->orWhere('simbolo', 'like', "%{$request->search}%");
         }
 
         $sortField = $request->get('sort', 'created_at');
@@ -50,11 +54,12 @@ class MonedaController extends Controller
 
         $validated['activo'] = $request->has('activo');
 
-        Moneda::create($validated);
+        $moneda = Moneda::create($validated);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Moneda creada exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Moneda creada exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $moneda->id), 200);
         }
+
         return redirect()->back()->with('success', 'Moneda creada exitosamente.');
     }
 
@@ -77,8 +82,9 @@ class MonedaController extends Controller
         $moneda->update($validated);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Moneda actualizada exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Moneda actualizada exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request, $moneda->id), 200);
         }
+
         return redirect()->back()->with('success', 'Moneda actualizada exitosamente.');
     }
 
@@ -87,8 +93,20 @@ class MonedaController extends Controller
         $moneda->delete();
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Moneda eliminada exitosamente.'], 200);
+            return response()->json(['success' => true, 'message' => 'Moneda eliminada exitosamente.'] + $this->tableNavigation($this->tableQuery($request), $request), 200);
         }
+
         return redirect()->back()->with('success', 'Moneda eliminada exitosamente.');
+    }
+
+    private function tableQuery(Request $request)
+    {
+        $this->tableRequest($request);
+        $query = Moneda::query();
+        if ($request->filled('search')) {
+            $query->where(fn ($q) => $q->where('nombre', 'like', "%{$request->search}%")->orWhere('codigo', 'like', "%{$request->search}%")->orWhere('simbolo', 'like', "%{$request->search}%"));
+        }
+
+        return $query->orderBy($request->get('sort', 'created_at'), $request->get('direction', 'desc'));
     }
 }

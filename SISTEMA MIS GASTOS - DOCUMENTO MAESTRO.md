@@ -63,13 +63,29 @@ Gestionados por el Administrador mediante modales AJAX, DataTables dinámicos y 
 ---  
   
 ## 5. MÓDULOS FUNCIONALES (Estado)  
-### 5.1 Perfil de Usuario (✅ Parcialmente Completado)  
+### 5.1 Perfil de Usuario (✅ Completado)  
 - Edición de nombre, email, contraseña.  
 - Subida y recorte de avatar con Croppie.  
-- *Pendiente:* Configuración de `moneda_preferida_id`, `fecha_corte_dia`, `zona_horaria`.  
+- Configuración de `moneda_preferida_id`, `fecha_corte_dia` y `zona_horaria`.
   
-### 5.2 a 5.8 (Efectivo, Compromisos, Cuentas, Tarjetas, Deudores, Grupos, Eventos)  
-- ⏳ **Pendiente de desarrollo.** (Ver Sección 12).  
+### 5.2 Categorías personales (✅ Completado)
+- CRUD aislado por usuario, colores, filtros, permisos, exportaciones y paginación AJAX.
+
+### 5.3 Efectivo (✅ Completado)
+- Ingresos/egresos, saldo, moneda preferida, ciclos de corte, validación de saldo, filtros, exportaciones y paginación AJAX.
+
+### 5.4 Compromisos (🔄 En progreso)
+- Registro de compromisos únicos o recurrentes, medio de pago, monto, fecha esperada y cancelación.
+- Integración inicial con el wizard para registrar cero, uno o varios compromisos.
+- El wizard ya permite configurar frecuencia semanal, quincenal o mensual, día de pago y finalización indefinida o por número de cuotas.
+- Los permisos `view`, `create`, `edit`, `delete` y `export` están disponibles para Administrador y Usuario.
+- Pendiente: generación automática de ocurrencias por ciclo, calendario completo de cuotas y aplicación de abonos a capital sobre cuotas futuras.
+- El cierre automático de ciclos y la generación inicial de ocurrencias ya cuentan con servicio y comando programado; requieren validación operativa con el scheduler del entorno.
+- Permisos `view`, `create`, `edit`, `delete` y `export` incluidos para Administrador y Usuario.
+- Pendiente: generación automática de ocurrencias, cuotas y conexión con cuentas/tarjetas.
+
+### 5.5 a 5.9 (Cuentas, Tarjetas, Deudores, Grupos y Eventos)
+- ⏳ **Pendiente de desarrollo.**
   
 ---  
   
@@ -87,27 +103,26 @@ Gestionados por el Administrador mediante modales AJAX, DataTables dinámicos y 
 - [x] Layout principal responsivo (Sidebar colapsable, Top bar, Dark/Light mode).  
 - [x] Componentes Blade reutilizables (`floating-input`, `data-table`, `modal`).  
 - [x] Licencia de propiedad intelectual configurada en el repositorio.  
+- [x] Validación frontend estandarizada, componentes monetario/fecha y tablas responsivas.
+- [x] Navegación inteligente y resaltado de registros en categorías, efectivo, usuarios y roles.
   
 ### 🔄 En Progreso  
-- [ ] Finalizar Perfil de Usuario (campos de configuración financiera).  
-- [ ] Wizard de inicio (primer login).  
+- [x] Extender la navegación inteligente a los CRUD administrativos restantes.
+- [ ] Wizard de inicio y configuración inicial (en progreso: cuatro ventanas con perfil/Croppie, configuración de cuenta, configuración financiera, saldo inicial y compromisos múltiples; faltan cuentas y tarjetas guiadas).
   
 ### ⏳ Pendiente (Orden de Prioridad)  
-1. Categorías de gastos (CRUD similar a catálogos, pero por usuario).  
-2. Módulo de efectivo (Ingresos/Egresos con validación de saldo).  
-3. Módulo de compromisos (Lógica de recurrentes y cuotas).  
-4. Módulo de cuentas bancarias y tarjetas de crédito.  
-5. Dashboard con gráficos y resumen financiero.  
-6. Grupos familiares y Eventos (división de gastos).  
-7. Reportes y Exportación (PDF, Excel).  
-8. Notificaciones automáticas (Email/Push).  
-9. Flujo de corte mensual.  
+1. Completar wizard con compromisos iniciales y cuentas/tarjetas cuando existan esos módulos.
+2. Completar módulo de compromisos (generación de recurrencias y cuotas).
+3. Módulo de cuentas bancarias y tarjetas de crédito.
+4. Dashboard con gráficos y resumen financiero.
+5. Grupos familiares y eventos (división de gastos).
+6. Notificaciones automáticas (Email/Push).
   
 ---  
   
 ## 13. PRÓXIMOS PASOS INMEDIATOS  
-1. Agregar campos `moneda_preferida`, `fecha_corte_dia` y `zona_horaria` a la tabla `users` y al formulario de perfil.  
-2. Iniciar el desarrollo del Wizard de configuración inicial para nuevos usuarios.  
+1. Completar recurrencias y cuotas del módulo de compromisos.
+2. Ampliar el wizard cuando estén disponibles cuentas y tarjetas.
   
 ---  
   
