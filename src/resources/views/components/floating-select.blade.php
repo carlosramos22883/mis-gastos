@@ -42,17 +42,25 @@
         return this.selectedValue !== null && this.selectedValue !== '' && this.selectedValue !== undefined;
     }
 }" class="relative w-full">
-    <div class="relative w-full flex items-center">
+    <div class="w-full flex items-center">
         {{-- SIEMPRE Tom Select, buscable o no --}}
         <div class="w-full" wire:ignore x-init="const tom = new TomSelect($refs.select, {
             create: false,
             maxItems: {{ $multiple ? 'null' : '1' }},
             allowEmptyOption: {{ $allowEmpty ? 'true' : 'false' }},
             placeholder: '',
+            render: {
+                option: (data, escape) => `<div class='flex items-center gap-2 py-1'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-6 w-6 rounded object-contain'>` : ''}<span>${escape(data.text)}</span></div>`,
+                item: (data, escape) => `<div class='flex items-center gap-2'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-5 w-5 rounded object-contain'>` : ''}<span>${escape(data.text)}</span></div>`
+            },
             dropdownParent: 'body',
             plugins: {{ json_encode($plugins) }},
-            @if (!$searchable) controlInput: null, @endif
-            @if (!$allowEmpty) onDelete: () => false, @endif
+            @if(!$searchable)
+            controlInput: null,
+            @endif
+            @if(!$allowEmpty)
+            onDelete: () => false,
+            @endif
             onFocus: () => { isFocused = true },
             onBlur: () => { isFocused = false },
             onChange: (val) => {
@@ -63,9 +71,12 @@
                 window.dispatchEvent(new CustomEvent('floating-select-change', { detail: { id: $refs.select.id, value: val } }));
                 @endif
             }
-        }); window.tomSelects = window.tomSelects || {}; window.tomSelects['{{ $id }}'] = tom;">
-            <select id="{{ $id }}" @unless($attributes->has('x-bind:name')) name="{{ $name }}{{ $multiple ? '[]' : '' }}" @endunless x-ref="select"
-                {{ $multiple ? 'multiple' : '' }} {{ $required ? 'required' : '' }}
+        });
+        window.tomSelects = window.tomSelects || {};
+        window.tomSelects['{{ $id }}'] = tom;">
+            <select id="{{ $id }}"
+                @unless ($attributes->has('x-bind:name')) name="{{ $name }}{{ $multiple ? '[]' : '' }}" @endunless
+                x-ref="select" {{ $multiple ? 'multiple' : '' }} {{ $required ? 'required' : '' }}
                 {{ $attributes->merge([
                     'class' =>
                         'block w-full text-xs text-gray-900 dark:text-white bg-white dark:bg-[#323d4d] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
@@ -74,13 +85,19 @@
                     <option value=""></option>
                 @endif
 
-                @foreach ($options as $val => $optLabel)
+                @foreach ($options as $val => $option)
+                    @php
+                        $optLabel = is_array($option) ? $option['label'] ?? '' : $option;
+                        $optLogo = is_array($option) ? $option['logo'] ?? null : null;
+                    @endphp
                     @php
                         $isSelected = $multiple
                             ? is_array($selectedValue) && in_array($val, $selectedValue)
                             : (string) $selectedValue === (string) $val;
                     @endphp
-                    <option value="{{ $val }}" {{ $isSelected ? 'selected' : '' }}>
+                    <option value="{{ $val }}"
+                        @if ($optLogo) data-logo="{{ $optLogo }}" @endif
+                        {{ $isSelected ? 'selected' : '' }}>
                         {{ $optLabel }}
                     </option>
                 @endforeach

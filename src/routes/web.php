@@ -8,11 +8,12 @@ use App\Http\Controllers\Admin\TipoCuentaController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
+use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\OnboardingController;
-use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\TarjetaCreditoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -48,10 +49,21 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:compromisos.export')->name('compromisos.export');
     Route::post('compromisos/{compromiso}/abonar', [CompromisoController::class, 'abonar'])
         ->middleware('can:compromisos.edit')->name('compromisos.abonar');
+    Route::resource('tarjetas', TarjetaCreditoController::class)->except('show')->middleware([
+        'index' => 'can:tarjetas.view',
+        'create' => 'can:tarjetas.create',
+        'store' => 'can:tarjetas.create',
+        'edit' => 'can:tarjetas.edit',
+        'update' => 'can:tarjetas.edit',
+        'destroy' => 'can:tarjetas.delete',
+    ]);
+    Route::get('tarjetas-export', [TarjetaCreditoController::class, 'export'])
+        ->middleware('can:tarjetas.export')->name('tarjetas.export');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Asumimos que profile.view lo tiene todos
     Route::get('/notificaciones', function () {
         $notificaciones = request()->user()->notifications()->latest()->paginate(20);
         request()->user()->unreadNotifications->markAsRead();
+
         return view('notificaciones.index', compact('notificaciones'));
     })->name('notifications.index');
 

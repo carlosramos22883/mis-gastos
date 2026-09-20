@@ -590,7 +590,8 @@ document.addEventListener('alpine:init', () => {
                             </svg>
                             ${messages[0]}
                         `;
-                        input.parentElement.appendChild(errorDiv);
+                        const errorContainer = input.closest('.relative.w-full') || input.parentElement;
+                        errorContainer.appendChild(errorDiv);
                     }
                 }
             }
