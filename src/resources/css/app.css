@@ -612,3 +612,7 @@ thead .sticky-col-right {
     z-index: 20;
     background-color: inherit;
 }
+/* Alpine: oculta elementos hasta que Alpine los inicializa */
+[x-cloak] {
+    display: none !important;
+}

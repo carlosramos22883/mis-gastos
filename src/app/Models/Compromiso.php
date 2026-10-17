@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Un pago concreto por realizar. Puede ser de una sola vez o una cuota generada
  * por un CompromisoRecurrente.
  */
-#[Fillable(['user_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
+#[Fillable(['user_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
 class Compromiso extends Model
 {
     /** Estados guardados en la base de datos. */
@@ -60,6 +60,16 @@ class Compromiso extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(CategoriaPersonal::class, 'categoria_personal_id');
+    }
+
+    public function tarjeta(): BelongsTo
+    {
+        return $this->belongsTo(TarjetaCredito::class, 'tarjeta_credito_id');
+    }
+
+    public function estadoCuenta(): BelongsTo
+    {
+        return $this->belongsTo(EstadoCuentaTarjeta::class, 'estado_cuenta_tarjeta_id');
     }
 
     public function movimientos(): HasMany

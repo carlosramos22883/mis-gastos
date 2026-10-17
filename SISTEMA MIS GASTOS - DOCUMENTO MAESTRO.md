@@ -214,23 +214,20 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Exportación de movimientos (CSV, Excel, PDF)
 - ⏳ API para móviles, transferencias desde tarjeta (avance) — con el módulo de tarjetas
 
-### 5.5 TARJETAS DE CRÉDITO 🔄
+### 5.5 TARJETAS DE CRÉDITO ✅ (web)
 
-**Estado actual:** CRUD básico (nombre, banco, marca, últimos 4 dígitos, límite, saldo actual, día de corte, día de pago, activo). Tablas `estados_cuenta_tarjeta` y `movimientos_tarjeta` creadas, sin lógica todavía.
+**Tablas:** `tarjetas_credito` (nombre, banco, marca, últimos 4 dígitos, color, límite, tasa, día de corte y de pago — 31 = último día —, `deuda_inicial`, fecha de registro), `movimientos_tarjeta`, `estados_cuenta_tarjeta`, `estado_cuenta_items`. Los compromisos se ligan con `tarjeta_credito_id` y `estado_cuenta_tarjeta_id`.
+**Lógica:** `TarjetaService`.
 
-**Campos objetivo:**
-- nombre/alias, marca_red_id, banco_id, número (opcional, encriptado), límite
-- día de corte, día límite de pago (editable por cada mes)
-- color, foto (opcional), tasa de interés (opcional)
-- disponible, saldo pendiente
-
-**Registro inicial:** si hay saldo pendiente, preguntar "¿Desea crear un compromiso automático con el saldo pendiente?". Al pagar ese compromiso, se suma al disponible.
-
-**Compras con tarjeta:** descripción, monto, fecha, usuario, comentario, tarjeta, es_en_cuotas, total_cuotas, tasa_cero. Cada compra resta del disponible.
-
-**Estado de cuenta automático:** en la fecha de corte se suman las compras del período y se crea un compromiso (descripción = alias de la tarjeta, valor = total, fecha = fecha límite de pago). Al pagarlo (efectivo o cuenta), se restaura el disponible.
-
-**Fecha límite variable:** se puede editar por mes (enero día 15, febrero día 20).
+- **Deuda** = estado de cuenta pendiente al registrarla + compras, avances y cargos − créditos − lo pagado en sus compromisos. **Disponible** = límite − deuda (se recupera solo al pagar)
+- **Registro:** se pide el disponible de hoy y, si existe, el estado de cuenta pendiente (monto y fecha límite) → compromiso. Lo usado sin facturar entra en el próximo corte
+- **Movimientos:** compra (de contado o **en cuotas a tasa cero**: descuenta el total y factura una cuota por corte; la última absorbe los centavos), cargo (intereses, seguro, comisión), crédito (devolución o promoción). Solo se editan mientras no se facturen
+- **Avance** (tarjeta → Chivo/efectivo): transferencia con la tarjeta como origen
+- **Corte automático:** genera el estado de cuenta con su detalle y un **compromiso de pago** con la fecha límite (editable por estado de cuenta; el compromiso la sigue). Corre al abrir tarjetas o compromisos y en el comando diario
+- **Mora:** en un estado vencido, "Registrar mora" crea un cargo y su propio compromiso (no entra en el siguiente corte)
+- **Pagar** un estado de cuenta desde efectivo o una cuenta **sin categoría** (no es un gasto nuevo: cada compra ya tiene la suya)
+- Una tarjeta con historial no se elimina: se desactiva
+- ⏳ API para móviles; foto de la tarjeta (opcional en la especificación)
 
 ### 5.6 DEUDORES ⏳
 
@@ -423,7 +420,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Efectivo | ✅ |
 | Wizard | 🔄 |
 | Compromisos | ✅ web (falta editar la regla de una serie y pagar con cuenta/tarjeta) |
-| Tarjetas de crédito | 🔄 (CRUD básico) |
+| Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
 
@@ -465,8 +462,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 2. **Móviles al día:** API ✅ — faltan las pantallas de Android e iOS (perfil, categorías, efectivo, compromisos)
 3. ~~Rediseño de compromisos~~ ✅ (17/10/2026)
 4. **Categorías del sistema** con iconos
-5. **Cuentas bancarias** (y pagar compromisos desde cuenta)
-6. **Tarjetas de crédito** completas (compras, cuotas, estado de cuenta automático)
+5. ~~Cuentas bancarias~~ ✅
+6. ~~Tarjetas de crédito~~ ✅
 7. **Wizard:** cuentas y tarjetas
 8. **Dashboard**
 9. Deudores → Grupos familiares → Eventos → Reportes → Notificaciones push

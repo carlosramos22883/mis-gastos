@@ -37,7 +37,8 @@ class PagoCompromisoRequest extends FormRequest
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$inicio->toDateString(), 'before_or_equal:'.$limite],
-            'categoria_personal_id' => ['required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
+            // El pago de una tarjeta no es un gasto nuevo (cada compra ya tiene su categoría)
+            'categoria_personal_id' => [$this->route('compromiso')?->tarjeta_credito_id ? 'nullable' : 'required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
                 ->where('user_id', $user->id)->where('activo', true)->where('tipo', 'egreso'))],
         ];
     }

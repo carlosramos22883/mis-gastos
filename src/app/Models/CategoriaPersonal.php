@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Color;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,10 +35,6 @@ class CategoriaPersonal extends Model
 
     public function textColor(): string
     {
-        $hex = ltrim($this->color ?: '#64748B', '#');
-        $rgb = array_map('hexdec', str_split($hex, 2));
-        $luminance = (0.299 * $rgb[0]) + (0.587 * $rgb[1]) + (0.114 * $rgb[2]);
-
-        return $luminance > 186 ? '#111827' : '#FFFFFF';
+        return Color::textoSobre($this->color);
     }
 }

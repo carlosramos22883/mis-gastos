@@ -1,29 +1,41 @@
+@php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
 <x-app-layout>
-    <x-slot name="header">Tarjetas de crédito</x-slot>
-    <div class="max-w-7xl mx-auto">
-        @php($headers = [
-            ['label' => 'Tarjeta', 'key' => 'nombre', 'sortable' => true],
-            ['label' => 'Banco', 'key' => 'banco_id', 'sortable' => false],
-            ['label' => 'Límite', 'key' => 'limite_credito', 'sortable' => true],
-            ['label' => 'Saldo actual', 'key' => 'saldo_actual', 'sortable' => true],
-            ['label' => 'Disponible', 'sortable' => false],
-            ['label' => 'Estado', 'key' => 'activo', 'sortable' => true],
-            ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right'],
-        ])
-        <x-data-table createPermission="tarjetas.create" exportPermission="tarjetas.export" :headers="$headers" :data="$tarjetas" :createRoute="route('tarjetas.create')" createModal="tarjeta-modal"
-            :exportRoute="route('tarjetas.export')" searchPlaceholder="Buscar tarjeta..." defaultSort="nombre" defaultDirection="asc">
-            <x-slot:filters>
-                <x-floating-select id="activo" label="Estado" :options="['1' => 'Activas', '0' => 'Inactivas']" :value="request('activo')" />
-            </x-slot:filters>
-            @include('tarjetas._table', ['tarjetas' => $tarjetas])
-        </x-data-table>
-    </div>
-    <x-modal name="tarjeta-modal" :show="false" maxWidth="2xl">
-        <div x-data="{ loading: false }"
-            x-on:load-tarjeta-modal-form.window="loading = true; $refs.formContainer.innerHTML = ''; fetch($event.detail).then(r => r.text()).then(html => { $refs.formContainer.innerHTML = html; loading = false; Alpine.initTree($refs.formContainer); }).catch(() => { $refs.formContainer.innerHTML = '<p class=\'p-6 text-center text-red-600\'>No se pudo cargar el formulario.</p>'; loading = false; })"
-            x-on:close-modal.window="if ($event.detail === 'tarjeta-modal') $refs.formContainer.innerHTML = ''" class="p-6">
-            <div x-show="loading" class="py-10 text-center">Cargando...</div>
-            <div x-show="!loading" x-ref="formContainer"></div>
+    <x-slot name="header"><h1>Tarjetas de crédito</h1></x-slot>
+    <div class="max-w-7xl mx-auto space-y-6" x-data x-on:refresh-table.window="$event.detail?.redirect ? window.location = $event.detail.redirect : window.location.reload()">
+        @php($activas = $tarjetas->where('activo', true))
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div class="flex flex-wrap gap-8">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Disponible total</p>
+                    <p class="text-3xl font-bold text-primary-600 dark:text-primary-400">{{ $simbolo }} {{ number_format($activas->sum('disponible'), 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Deuda total</p>
+                    <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ $simbolo }} {{ number_format($tarjetas->sum('deuda'), 2) }}</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                @can('tarjetas.export')
+                    <x-secondary-button type="button" onclick="window.location='{{ route('tarjetas.export', ['format' => 'xlsx']) }}'">Exportar</x-secondary-button>
+                @endcan
+                @can('tarjetas.create')
+                    <x-primary-button type="button" x-on:click="$dispatch('load-tarjeta-modal-form', '{{ route('tarjetas.create') }}'); $dispatch('open-modal', 'tarjeta-modal')">Nueva tarjeta</x-primary-button>
+                @endcan
+            </div>
         </div>
-    </x-modal>
+
+        @if ($tarjetas->isEmpty())
+            <div class="rounded-lg bg-white p-10 text-center shadow dark:bg-gray-800">
+                <p class="text-gray-600 dark:text-gray-300">Aún no tienes tarjetas registradas.</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Regístrala con su límite, su disponible de hoy y, si lo tienes, el estado de cuenta pendiente de pago.</p>
+            </div>
+        @else
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ($tarjetas as $tarjeta)
+                    @include('tarjetas._tarjeta', ['enlace' => true])
+                @endforeach
+            </div>
+        @endif
+    </div>
+    <x-ajax-modal name="tarjeta" />
 </x-app-layout>

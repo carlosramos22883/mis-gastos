@@ -17,14 +17,15 @@ class TarjetasCreditoExport implements FromCollection, WithHeadings
             $tarjeta->banco?->nombre ?? 'Sin banco',
             $tarjeta->marcaRed?->nombre ?? 'Sin marca',
             $tarjeta->ultimos_digitos ? '**** '.$tarjeta->ultimos_digitos : '—',
-            $tarjeta->limite_credito,
-            $tarjeta->saldo_actual,
+            number_format((float) $tarjeta->limite_credito, 2, '.', ''),
+            number_format((float) $tarjeta->deuda, 2, '.', ''),
+            number_format((float) $tarjeta->disponible, 2, '.', ''),
             $tarjeta->activo ? 'Activa' : 'Inactiva',
         ]);
     }
 
     public function headings(): array
     {
-        return ['Nombre', 'Banco', 'Marca', 'Últimos dígitos', 'Límite de crédito', 'Saldo actual', 'Estado'];
+        return ['Nombre', 'Banco', 'Marca', 'Últimos dígitos', 'Límite de crédito', 'Deuda', 'Disponible', 'Estado'];
     }
 }

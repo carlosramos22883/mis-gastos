@@ -6,6 +6,7 @@ use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
 use App\Models\MovimientoCuenta;
+use App\Models\MovimientoTarjeta;
 use Illuminate\Validation\ValidationException;
 
 class CategoriaPersonalService
@@ -21,6 +22,7 @@ class CategoriaPersonalService
     {
         $enUso = $categoria->movimientos()->exists()
             || MovimientoCuenta::where('categoria_personal_id', $categoria->id)->exists()
+            || MovimientoTarjeta::where('categoria_personal_id', $categoria->id)->exists()
             || Compromiso::where('categoria_personal_id', $categoria->id)->exists()
             || CompromisoRecurrente::where('categoria_personal_id', $categoria->id)->exists();
 

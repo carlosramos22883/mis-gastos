@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Http\Requests\Concerns\NormalizaFechas;
+use Carbon\Carbon;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/** Compra (al contado o en cuotas a tasa cero), cargo o crédito de una tarjeta. */
+class MovimientoTarjetaRequest extends FormRequest
+{
+    use NormalizaFechas;
+
+    public function authorize(): bool
+    {
+        return true; // los permisos se verifican en la ruta (can:tarjetas.*)
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizarFechas('fecha');
+        if ($this->input('tipo') !== 'compra' || (int) $this->input('cuotas') <= 1) {
+            $this->merge(['cuotas' => null]);
+        }
+    }
+
+    public function rules(): array
+    {
+        $user = $this->user();
+
+        return [
+            'tipo' => ['required', Rule::in(['compra', 'cargo', 'credito'])],
+            'descripcion' => ['required', 'string', 'max:255'],
+            'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'fecha' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.Carbon::now($user->zona_horaria ?: config('app.timezone'))->toDateString()],
+            'cuotas' => ['nullable', 'integer', 'between:2,60'],
+            'categoria_personal_id' => ['nullable', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
+                ->where('user_id', $user->id)->where('activo', true)->where('tipo', 'egreso'))],
+            'comentario' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'monto.regex' => 'El monto debe tener máximo dos decimales y ser positivo.',
+            'fecha.before_or_equal' => 'La fecha no puede ser futura.',
+        ];
+    }
+}

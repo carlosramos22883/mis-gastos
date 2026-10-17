@@ -10,8 +10,10 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\EstadoCuentaController;
 use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
+use App\Http\Controllers\MovimientoTarjetaController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PagoCompromisoController;
 use App\Http\Controllers\ProfileController;
@@ -76,13 +78,26 @@ Route::middleware('auth')->group(function () {
 
     Route::get('compromisos-export', [CompromisoController::class, 'export'])
         ->middleware('can:compromisos.export')->name('compromisos.export');
-    Route::resource('tarjetas', TarjetaCreditoController::class)->except('show')
-        ->middlewareFor('index', 'can:tarjetas.view')
+    Route::resource('tarjetas', TarjetaCreditoController::class)
+        ->middlewareFor(['index', 'show'], 'can:tarjetas.view')
         ->middlewareFor(['create', 'store'], 'can:tarjetas.create')
         ->middlewareFor(['edit', 'update'], 'can:tarjetas.edit')
         ->middlewareFor('destroy', 'can:tarjetas.delete');
     Route::get('tarjetas-export', [TarjetaCreditoController::class, 'export'])
         ->middleware('can:tarjetas.export')->name('tarjetas.export');
+    Route::prefix('tarjetas/{tarjeta}/movimientos')->name('tarjetas.movimientos.')->controller(MovimientoTarjetaController::class)->group(function () {
+        Route::get('create', 'create')->middleware('can:tarjetas.create')->name('create');
+        Route::post('/', 'store')->middleware('can:tarjetas.create')->name('store');
+        Route::get('{movimiento}/edit', 'edit')->middleware('can:tarjetas.edit')->name('edit');
+        Route::put('{movimiento}', 'update')->middleware('can:tarjetas.edit')->name('update');
+        Route::delete('{movimiento}', 'destroy')->middleware('can:tarjetas.delete')->name('destroy');
+    });
+    Route::prefix('estados-cuenta/{estado}')->name('estados-cuenta.')->controller(EstadoCuentaController::class)->group(function () {
+        Route::get('/', 'show')->middleware('can:tarjetas.view')->name('show');
+        Route::patch('fecha-limite', 'fechaLimite')->middleware('can:tarjetas.edit')->name('fecha-limite');
+        Route::get('mora', 'moraForm')->middleware('can:tarjetas.create')->name('mora.create');
+        Route::post('mora', 'mora')->middleware('can:tarjetas.create')->name('mora.store');
+    });
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Asumimos que profile.view lo tiene todos
     Route::get('/notificaciones', function () {
         $notificaciones = request()->user()->notifications()->latest()->paginate(20);

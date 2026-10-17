@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Notifications\CommitmentDueNotification;
 use App\Services\CicloEfectivoService;
 use App\Services\CompromisoService;
+use App\Services\TarjetaService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -16,6 +17,7 @@ Artisan::command('efectivo:cerrar-ciclos', function () {
     User::where('onboarding_completed', true)->each(function (User $user) {
         app(CicloEfectivoService::class)->closeIfNeeded($user);
         app(CompromisoService::class)->sincronizar($user);
+        app(TarjetaService::class)->generarPendientes($user);
     });
     $this->info('Ciclos procesados.');
 })->purpose('Cierra ciclos de efectivo y genera compromisos recurrentes');

@@ -16,7 +16,9 @@
     <x-floating-money id="monto" label="Monto" :symbol="$simbolo" :value="$compromiso->saldo_pendiente" required />
     <x-floating-date id="fecha" label="Fecha" :value="now(auth()->user()->zona_horaria)" :min="$cycleStart" :max="min(now(auth()->user()->zona_horaria), $cycleEnd)" required />
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$compromiso->descripcion" required />
-    <x-floating-select id="categoria_personal_id" label="Categoría" :options="$categorias" :value="$compromiso->categoria_personal_id" required />
+    @unless ($compromiso->tarjeta_credito_id)
+        <x-floating-select id="categoria_personal_id" label="Categoría" :options="$categorias" :value="$compromiso->categoria_personal_id" required />
+    @endunless
     <div class="flex justify-end gap-3">
         <x-secondary-button type="button" x-on:click="$dispatch('close-modal', 'pago-modal')">Cancelar</x-secondary-button>
         <x-primary-button type="submit" x-bind:disabled="loading">Registrar pago</x-primary-button>

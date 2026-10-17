@@ -7,6 +7,7 @@ use App\Http\Requests\CompromisoRequest;
 use App\Http\Resources\CompromisoResource;
 use App\Models\Compromiso;
 use App\Services\CompromisoService;
+use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -25,6 +26,7 @@ class CompromisoController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        app(TarjetaService::class)->generarPendientes($user);
         $this->compromisos->sincronizar($user);
         [, $inicio, $fin] = $this->compromisos->fechas($user);
 

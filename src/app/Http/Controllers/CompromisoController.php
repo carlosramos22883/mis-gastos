@@ -8,6 +8,7 @@ use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Services\CicloEfectivoService;
 use App\Services\CompromisoService;
+use App\Services\TarjetaService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class CompromisoController extends Controller
 
     public function index(Request $request)
     {
+        app(TarjetaService::class)->generarPendientes($request->user());
         $this->compromisos->sincronizar($request->user());
         [$hoy, $inicio] = $this->fechas($request);
         $compromisos = $this->query($request)->paginate($request->integer('per_page', 10))->withQueryString();

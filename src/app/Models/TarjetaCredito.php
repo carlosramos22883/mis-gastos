@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Support\Color;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'banco_id', 'marca_red_id', 'nombre', 'ultimos_digitos', 'limite_credito', 'saldo_actual', 'dia_corte', 'dia_pago', 'activo'])]
+/**
+ * Tarjeta de crédito. La deuda y el disponible se calculan en TarjetaService a partir de
+ * sus movimientos y de lo pagado en sus compromisos (estados de cuenta).
+ */
+#[Fillable(['user_id', 'banco_id', 'marca_red_id', 'nombre', 'ultimos_digitos', 'color', 'limite_credito', 'tasa_interes', 'deuda_inicial', 'dia_corte', 'dia_pago', 'fecha_registro', 'activo'])]
 class TarjetaCredito extends Model
 {
     protected $table = 'tarjetas_credito';
@@ -16,7 +21,11 @@ class TarjetaCredito extends Model
     {
         return [
             'limite_credito' => 'decimal:2',
-            'saldo_actual' => 'decimal:2',
+            'tasa_interes' => 'decimal:2',
+            'deuda_inicial' => 'decimal:2',
+            'dia_corte' => 'integer',
+            'dia_pago' => 'integer',
+            'fecha_registro' => 'date',
             'activo' => 'boolean',
         ];
     }
@@ -46,8 +55,13 @@ class TarjetaCredito extends Model
         return $this->hasMany(EstadoCuentaTarjeta::class);
     }
 
-    public function disponible(): float
+    public function compromisos(): HasMany
     {
-        return max(0, (float) $this->limite_credito - (float) $this->saldo_actual);
+        return $this->hasMany(Compromiso::class);
+    }
+
+    public function textColor(): string
+    {
+        return Color::textoSobre($this->color, '#1E293B');
     }
 }
