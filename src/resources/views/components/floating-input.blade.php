@@ -25,7 +25,7 @@
             @blur="isFocused = false"
             placeholder=" "
             {{ $attributes->merge([
-                'class' => 'block w-full '.($prefix ? 'pl-9 pr-4' : 'px-4').' py-2.5 text-xs text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+                'class' => 'block w-full h-[42px] '.($prefix ? 'pl-9 pr-4' : 'px-4').' py-2.5 text-xs text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
             ]) }}
         >
         
@@ -35,7 +35,7 @@
             :class="{
                 'absolute pointer-events-none transition-all duration-200 left-2.5 px-1 z-20': true,
                 '-top-2.5 text-xs font-normal bg-white dark:bg-gray-800': isFocused || (inputValue !== null && inputValue !== ''),
-                'top-3 text-xs text-gray-500 dark:text-gray-400 bg-transparent': !isFocused && (inputValue === null || inputValue === ''),
+                'top-[13px] text-xs text-gray-500 dark:text-gray-400 bg-transparent': !isFocused && (inputValue === null || inputValue === ''),
                 'text-primary-600 dark:text-primary-400': isFocused,
                 'text-gray-500 dark:text-gray-400': !isFocused && (inputValue !== null && inputValue !== '')
             }"

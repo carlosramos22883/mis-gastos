@@ -8,6 +8,7 @@ use App\Models\Compromiso;
 use App\Models\MovimientoEfectivo;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
+use App\Services\CompromisoService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -75,9 +76,11 @@ class MovimientoEfectivoController extends Controller
 
         $currentCycle = $this->cycle($request->user());
         $isCurrentCycle = $cycleStart->equalTo($currentCycle[0]);
-        $previousCycle = $cycleStart->copy()->subMonth()->format('Y-m-d');
+        $firstDate = $this->firstCashDate($request->user());
+        $previousCycle = $firstDate && $cycleStart->lte($firstDate) ? null : $cycleStart->copy()->subDay()->format('Y-m-d');
+        $nextCycle = $isCurrentCycle ? null : $cycleEnd->copy()->addDay()->format('Y-m-d');
 
-        return view('efectivo.index', compact('movimientos', 'categorias', 'balance', 'ingresos', 'egresos', 'cycleStart', 'cycleEnd', 'isCurrentCycle', 'previousCycle'));
+        return view('efectivo.index', compact('movimientos', 'categorias', 'balance', 'ingresos', 'egresos', 'cycleStart', 'cycleEnd', 'isCurrentCycle', 'previousCycle', 'nextCycle'));
     }
 
     public function create(Request $request)
@@ -85,7 +88,7 @@ class MovimientoEfectivoController extends Controller
         app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         [$cycleStart, $cycleEnd] = $this->cycle($request->user());
 
-        $compromiso = $request->filled('compromiso') ? $request->user()->compromisos()->whereKey($request->input('compromiso'))->where('estado', 'activo')->firstOrFail() : null;
+        $compromiso = $request->filled('compromiso') ? $request->user()->compromisos()->whereKey($request->input('compromiso'))->where('estado', Compromiso::PENDIENTE)->firstOrFail() : null;
 
         return view('efectivo._form', ['compromiso' => $compromiso, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
     }
@@ -97,24 +100,15 @@ class MovimientoEfectivoController extends Controller
         $movimiento = null;
         DB::transaction(function () use ($request, $data, &$movimiento) {
             $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto']);
-            $compromiso = null;
             if (! empty($data['compromiso_id'])) {
-                $compromiso = Compromiso::whereKey($data['compromiso_id'])->lockForUpdate()->firstOrFail();
-                $pendiente = (float) ($compromiso->saldo_pendiente ?? $compromiso->monto);
-                if ((float) $data['monto'] > $pendiente) {
-                    throw ValidationException::withMessages(['monto' => 'El pago supera el saldo pendiente del compromiso.']);
+                if ($data['tipo'] !== 'egreso') {
+                    throw ValidationException::withMessages(['tipo' => 'El pago de un compromiso debe ser un egreso.']);
                 }
+                $compromiso = Compromiso::findOrFail($data['compromiso_id']);
+                $this->abonar($compromiso, (float) $data['monto']);
+                $data['compromiso_cuota'] = $compromiso->numero_cuota;
             }
             $movimiento = $request->user()->movimientosEfectivo()->create($data);
-            if ($compromiso) {
-                $saldo = round($pendiente - (float) $data['monto'], 2);
-                $compromiso->update([
-                    'saldo_pendiente' => $saldo,
-                    // Un abono parcial no completa una cuota; solo cuenta cuando el saldo queda en cero.
-                    'cuotas_pagadas' => $compromiso->cuotas_pagadas + ($saldo <= 0 ? 1 : 0),
-                    'estado' => $saldo <= 0 && ! $compromiso->recurrencia_indefinida ? 'pagado' : 'activo',
-                ]);
-            }
         });
 
         return $this->success($request, 'Movimiento registrado correctamente.', $movimiento);
@@ -125,7 +119,7 @@ class MovimientoEfectivoController extends Controller
         $this->own($request, $movimiento);
 
         [$cycleStart] = $this->cycle($request->user());
-        abort_unless($movimiento->fecha->greaterThanOrEqualTo($cycleStart), 403);
+        abort_unless($movimiento->fecha->toDateString() >= $cycleStart->toDateString(), 403);
 
         return view('efectivo._form', ['movimiento' => $movimiento, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $this->cycle($request->user())[1]]);
     }
@@ -134,10 +128,17 @@ class MovimientoEfectivoController extends Controller
     {
         app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         $this->own($request, $movimiento);
-        abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
+        abort_unless($movimiento->fecha->toDateString() >= $this->cycle($request->user())[0]->toDateString(), 403);
         $data = $this->validated($request);
+        unset($data['compromiso_id']);
         DB::transaction(function () use ($request, $data, $movimiento) {
             $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto'], $movimiento->id);
+            if ($movimiento->compromiso) {
+                if ($data['tipo'] !== 'egreso') {
+                    throw ValidationException::withMessages(['tipo' => 'El pago de un compromiso debe ser un egreso.']);
+                }
+                $this->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
+            }
             $movimiento->update($data);
         });
 
@@ -147,11 +148,17 @@ class MovimientoEfectivoController extends Controller
     public function destroy(Request $request, MovimientoEfectivo $movimiento)
     {
         $this->own($request, $movimiento);
-        abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
+        abort_unless($movimiento->fecha->toDateString() >= $this->cycle($request->user())[0]->toDateString(), 403);
         if ($movimiento->tipo === 'ingreso') {
             $this->ensureBalance($request, 0, $movimiento->id, 'No puedes eliminar este ingreso: el efectivo quedaría en negativo.');
         }
-        $movimiento->delete();
+        DB::transaction(function () use ($movimiento) {
+            // Si era el pago de un compromiso, ese monto vuelve a quedar pendiente
+            if ($movimiento->compromiso) {
+                $this->abonar($movimiento->compromiso, -(float) $movimiento->monto);
+            }
+            $movimiento->delete();
+        });
 
         $currentPage = max(1, (int) $request->input('page', 1));
         $perPage = max(1, (int) $request->input('per_page', 10));
@@ -180,7 +187,7 @@ class MovimientoEfectivoController extends Controller
             'fecha' => ['required', 'date_format:d/m/Y', 'before_or_equal:today', 'after_or_equal:'.$cycleStart->format('d/m/Y'), 'before_or_equal:'.$cycleEnd->format('d/m/Y')],
             'tipo' => ['required', Rule::in(['ingreso', 'egreso'])],
             'categoria_personal_id' => ['required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->where('tipo', $request->input('tipo')))],
-            'compromiso_id' => ['nullable', 'integer', Rule::exists('compromisos', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('estado', 'activo'))],
+            'compromiso_id' => ['nullable', 'integer', Rule::exists('compromisos', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('estado', Compromiso::PENDIENTE))],
         ], ['monto.regex' => 'El monto debe tener máximo dos decimales y ser positivo.']);
 
         $data['fecha'] = Carbon::createFromFormat('d/m/Y', $data['fecha'])->format('Y-m-d');
@@ -192,22 +199,31 @@ class MovimientoEfectivoController extends Controller
     {
         $timezone = $user->zona_horaria ?: config('app.timezone');
         $today = Carbon::now($timezone)->startOfDay();
-        [$start, $end] = $this->ciclos()->cycleFor($user, $today);
+        $date = $today;
 
-        $initialStart = $user->movimientosEfectivo()
-            ->whereHas('categoria', fn ($q) => $q->where('nombre', 'Saldo inicial'))
-            ->oldest('fecha')->value('fecha');
-        if ($initialStart && Carbon::parse($initialStart, $timezone)->greaterThan($start) && Carbon::parse($initialStart, $timezone)->lte($today)) {
-            $start = Carbon::parse($initialStart, $timezone)->startOfDay();
-        }
-
+        // Cualquier fecha del ciclo solicitado sirve: se resuelve con la regla de corte del usuario
         if ($requestedStart && preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedStart)) {
-            $start = Carbon::createFromFormat('Y-m-d', $requestedStart, $timezone)->startOfDay();
-            abort_if($start->greaterThan($this->cycle($user)[0]), 404);
-            $end = $start->copy()->addMonthNoOverflow()->subDay();
+            $date = Carbon::createFromFormat('Y-m-d', $requestedStart, $timezone)->startOfDay();
+            abort_if($date->greaterThan($today), 404);
+        }
+        [$start, $end] = $this->ciclos()->cycleFor($user, $date);
+
+        // El primer ciclo empieza el día en que se registró el saldo inicial
+        $initialStart = $this->firstCashDate($user);
+        if ($initialStart && $initialStart->greaterThan($start) && $initialStart->lte($end)) {
+            $start = $initialStart;
         }
 
         return [$start, $end];
+    }
+
+    private function firstCashDate(User $user): ?Carbon
+    {
+        $fecha = $user->movimientosEfectivo()
+            ->whereHas('categoria', fn ($q) => $q->where('nombre', CicloEfectivoService::CATEGORIA_SALDO_INICIAL))
+            ->min('fecha');
+
+        return $fecha ? Carbon::parse($fecha, $user->zona_horaria ?: config('app.timezone'))->startOfDay() : null;
     }
 
     private function parseFilterDate(?string $value): ?Carbon
@@ -234,6 +250,15 @@ class MovimientoEfectivoController extends Controller
     {
         if (round($this->ciclos()->balance($request->user(), null, $exceptId) + $delta, 2) < 0) {
             throw ValidationException::withMessages(['monto' => $message]);
+        }
+    }
+
+    private function abonar(Compromiso $compromiso, float $monto): void
+    {
+        try {
+            app(CompromisoService::class)->aplicarAbono($compromiso, $monto);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['monto' => $e->getMessage()]);
         }
     }
 

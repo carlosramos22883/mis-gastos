@@ -29,6 +29,7 @@ document.addEventListener('alpine:init', () => {
         paginationHtml: '',
         loading: false,
         hasFilters: false,
+        activeFilterCount: 0,
         isProcessing: false,
 
         init() {
@@ -239,16 +240,19 @@ document.addEventListener('alpine:init', () => {
             if (!form) return;
 
             const formData = new FormData(form);
-            let active = false;
+            const activeKeys = new Set();
 
             for (let [key, value] of formData.entries()) {
                 if (['page', 'per_page', 'sort', 'direction', '_token'].includes(key)) continue;
+                if (form.querySelector(`[data-keep][name="${key}"]`)) continue; // contexto (ej. ciclo), no es un filtro
                 if (value && value.trim() !== '') {
-                    active = true;
-                    break;
+                    // Los campos de fecha envían "x" y "x_display": cuentan como un solo filtro
+                    activeKeys.add(key.replace(/_display$/, ''));
                 }
             }
-            this.hasFilters = active;
+            this.hasFilters = activeKeys.size > 0;
+            activeKeys.delete('search');
+            this.activeFilterCount = activeKeys.size;
         },
 
         clearFilters() {
@@ -379,43 +383,78 @@ document.addEventListener('alpine:init', () => {
 
 
 window.deleteItem = function (id, name, url) {
-    showConfirm('¿Eliminar?', `¿Estás seguro de eliminar a "${name}"?`, async () => {
-        try {
-            const formData = new FormData();
-            formData.append('_method', 'DELETE');
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+    showConfirm('¿Eliminar?', `¿Estás seguro de eliminar a "${name}"?`, () => performDelete(url));
+};
 
-            // Obtener la página actual de la URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentPage = urlParams.get('page') || '1';
-            const perPage = urlParams.get('per_page') || '10';
-
-            // Agregar página y per_page a la URL
-            const deleteUrl = new URL(url, window.location.origin);
-            deleteUrl.searchParams.set('page', currentPage);
-            deleteUrl.searchParams.set('per_page', perPage);
-
-            const response = await fetch(deleteUrl.toString(), {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                await showAlert('success', '¡Éxito!', data.message || 'Registro eliminado correctamente.');
-                window.dispatchEvent(new CustomEvent('refresh-table', {
-                    detail: { ...data, redirect_to_page: data.redirect_to_page || currentPage }
-                }));
-            } else {
-                const data = await response.json();
-                showAlert('error', 'Error', data.message || 'No se pudo eliminar.');
-            }
-        } catch (error) {
-            showAlert('error', 'Error de conexión', 'No se pudo comunicar con el servidor.');
+// Cancela un compromiso. Si pertenece a una serie activa, pregunta si cancelar solo este pago o también los siguientes.
+window.cancelCommitment = function (name, url, isSeries) {
+    if (!isSeries) {
+        showConfirm('¿Cancelar compromiso?', `Se cancelará "${name}".`, () => performDelete(url));
+        return;
+    }
+    Swal.fire({
+        icon: 'warning',
+        title: '¿Cancelar compromiso?',
+        text: `"${name}" se repite. ¿Qué deseas cancelar?`,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Solo este pago',
+        denyButtonText: 'Este y los siguientes',
+        cancelButtonText: 'Volver',
+        timer: 0,
+        customClass: {
+            confirmButton: 'swal-btn-danger',
+            denyButton: 'swal-btn-danger',
+            cancelButton: 'swal-btn-secondary',
+            actions: 'swal-actions',
+        },
+    }).then((result) => {
+        if (result.isConfirmed) {
+            performDelete(url);
+        } else if (result.isDenied) {
+            const seriesUrl = new URL(url, window.location.origin);
+            seriesUrl.searchParams.set('alcance', 'serie');
+            performDelete(seriesUrl.toString());
         }
     });
 };
+
+async function performDelete(url) {
+    try {
+        const formData = new FormData();
+        formData.append('_method', 'DELETE');
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+        // Obtener la página actual de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPage = urlParams.get('page') || '1';
+        const perPage = urlParams.get('per_page') || '10';
+
+        // Agregar página y per_page a la URL
+        const deleteUrl = new URL(url, window.location.origin);
+        deleteUrl.searchParams.set('page', currentPage);
+        deleteUrl.searchParams.set('per_page', perPage);
+
+        const response = await fetch(deleteUrl.toString(), {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            await showAlert('success', '¡Éxito!', data.message || 'Registro eliminado correctamente.');
+            window.dispatchEvent(new CustomEvent('refresh-table', {
+                detail: { ...data, redirect_to_page: data.redirect_to_page || currentPage }
+            }));
+        } else {
+            const data = await response.json();
+            showAlert('error', 'Error', data.message || 'No se pudo eliminar.');
+        }
+    } catch (error) {
+        showAlert('error', 'Error de conexión', 'No se pudo comunicar con el servidor.');
+    }
+}
 
 // Función para exportar datos con los filtros actuales
 window.exportData = function (format) {

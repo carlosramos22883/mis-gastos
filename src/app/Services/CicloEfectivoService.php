@@ -71,53 +71,11 @@ class CicloEfectivoService
                     ]);
                 }
 
-                $this->generateRecurringCommitments($user, $nextStart);
                 [, $cycleEnd] = $this->cycleFor($user, $nextStart);
             }
+
+            app(CompromisoService::class)->sincronizar($user, $this->cycleFor($user, $today)[1]);
         });
-    }
-
-    private function generateRecurringCommitments(User $user, Carbon $cycleStart): void
-    {
-        foreach ($user->compromisos()->where('estado', 'activo')->where('recurrencia_tipo', 'recurrente')->get() as $commitment) {
-            if ($commitment->recurrencia_ocurrencias !== null && $commitment->cuotas_pagadas >= $commitment->recurrencia_ocurrencias) {
-                continue;
-            }
-
-            $date = $this->nextDate($commitment, $cycleStart);
-            if ($date->greaterThan($cycleStart)) {
-                continue;
-            }
-
-            $exists = $user->compromisos()->where('descripcion', $commitment->descripcion)
-                ->whereDate('fecha_esperada', $date)->where('recurrencia_tipo', 'unica')->exists();
-            if (! $exists) {
-                $user->compromisos()->create([
-                    'descripcion' => $commitment->descripcion,
-                    'monto' => $commitment->monto,
-                    'saldo_pendiente' => $commitment->monto,
-                    'fecha_esperada' => $date,
-                    'medio_pago' => $commitment->medio_pago,
-                    'recurrencia_tipo' => 'unica',
-                    'estado' => 'activo',
-                ]);
-            }
-            $commitment->update(['fecha_esperada' => $date]);
-        }
-    }
-
-    private function nextDate($commitment, Carbon $cycleStart): Carbon
-    {
-        if (! $commitment->fecha_esperada) {
-            return $cycleStart->copy();
-        }
-        $date = Carbon::parse($commitment->fecha_esperada);
-
-        return match ($commitment->recurrencia_unidad) {
-            'semanal' => $date->copy()->addWeek(),
-            'quincenal' => $date->copy()->addDays(15),
-            default => $date->copy()->addMonthNoOverflow(),
-        };
     }
 
     private function cutoffDate(Carbon $month, int $cutoff): Carbon

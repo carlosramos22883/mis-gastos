@@ -110,7 +110,7 @@
                 'absolute pointer-events-none transition-all duration-200 left-2.5 px-1 z-20': true,
                 '-top-2.5 text-xs font-normal bg-white dark:bg-[#323d4d] text-gray-700 dark:text-gray-300': isFocused ||
                     hasValue,
-                'top-2.5 text-xs text-gray-500 dark:text-gray-400 bg-transparent': !isFocused && !hasValue,
+                'top-[13px] text-xs text-gray-500 dark:text-gray-400 bg-transparent': !isFocused && !hasValue,
                 'text-primary-600 dark:text-primary-400': isFocused
             }">
             {{ $label }}

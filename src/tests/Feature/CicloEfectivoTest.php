@@ -131,18 +131,69 @@ class CicloEfectivoTest extends TestCase
             'monto' => 15,
             'saldo_pendiente' => 15,
             'medio_pago' => 'efectivo',
-            'recurrencia_tipo' => 'unica',
+            'estado' => 'pendiente',
         ]);
 
         $this->egreso($user, 10, '2026-09-01', ['compromiso_id' => $compromiso->id])->assertSessionHasNoErrors();
         $compromiso->refresh();
-        $this->assertSame(['5.00', 0, 'activo'], [$compromiso->saldo_pendiente, $compromiso->cuotas_pagadas, $compromiso->estado]);
+        $this->assertSame(['5.00', 'pendiente'], [$compromiso->saldo_pendiente, $compromiso->estado]);
 
         $this->egreso($user, 6, '2026-09-01', ['compromiso_id' => $compromiso->id])->assertSessionHasErrors('monto');
 
         $this->egreso($user, 5, '2026-09-01', ['compromiso_id' => $compromiso->id])->assertSessionHasNoErrors();
         $compromiso->refresh();
-        $this->assertSame(['0.00', 1, 'pagado'], [$compromiso->saldo_pendiente, $compromiso->cuotas_pagadas, $compromiso->estado]);
+        $this->assertSame(['0.00', 'pagado'], [$compromiso->saldo_pendiente, $compromiso->estado]);
         $this->assertSame(85.0, app(CicloEfectivoService::class)->balance($user));
+    }
+
+    public function test_first_day_movement_is_editable_in_non_utc_timezone(): void
+    {
+        $user = $this->user(31, '2026-10-01', 10);
+        $user->update(['zona_horaria' => 'America/El_Salvador']);
+        Carbon::setTestNow('2026-10-17 10:00:00');
+        $ingreso = $user->movimientosEfectivo()->create([
+            'categoria_personal_id' => $user->categoriasPersonales()->create(['nombre' => 'Regalo', 'tipo' => 'ingreso'])->id,
+            'descripcion' => 'Regalo', 'monto' => 5, 'fecha' => '2026-10-01', 'tipo' => 'ingreso',
+        ]);
+
+        $this->actingAs($user)->get(route('efectivo.edit', $ingreso))->assertOk();
+    }
+
+    public function test_navigates_between_cycles_using_cutoff_rule(): void
+    {
+        $user = $this->user(30, '2027-01-10', 50);
+        Carbon::setTestNow('2027-03-15 10:00:00');
+        app(CicloEfectivoService::class)->closeIfNeeded($user);
+
+        // Ciclo actual: 1 al 30 de marzo (febrero termina el 28, así que marzo arranca el 1)
+        $actual = $this->actingAs($user)->get(route('efectivo.index'))->assertOk();
+        $actual->assertSeeInOrder(['del 01/03/2027 al', '30/03/2027'], false)->assertSee('cycle=2027-02-28', false)->assertDontSee('Ciclo siguiente');
+
+        // Ciclo anterior: 31 de enero al 28 de febrero
+        $this->actingAs($user)->get(route('efectivo.index', ['cycle' => '2027-02-28']))->assertOk()
+            ->assertSeeInOrder(['del 31/01/2027 al', '28/02/2027'], false)
+            ->assertSee('cycle=2027-01-30', false)
+            ->assertSee('cycle=2027-03-01', false)
+            ->assertSee('name="cycle" value="2027-02-28"', false);
+
+        // El primer ciclo empieza con el saldo inicial y ya no ofrece "anterior"
+        $this->actingAs($user)->get(route('efectivo.index', ['cycle' => '2027-01-30']))->assertOk()
+            ->assertSeeInOrder(['del 10/01/2027 al', '30/01/2027'], false)
+            ->assertDontSee('Ciclo anterior');
+
+        // Un ciclo futuro no existe
+        $this->actingAs($user)->get(route('efectivo.index', ['cycle' => '2027-04-15']))->assertNotFound();
+    }
+
+    public function test_ajax_table_keeps_requested_cycle(): void
+    {
+        $user = $this->user(31, '2026-09-01', 10);
+        Carbon::setTestNow('2026-10-05 10:00:00');
+        app(CicloEfectivoService::class)->closeIfNeeded($user);
+
+        $html = $this->actingAs($user)->getJson(route('efectivo.index', ['cycle' => '2026-09-15']))->assertOk()->json('html');
+
+        $this->assertStringContainsString('01/09/2026', $html);
+        $this->assertStringNotContainsString('01/10/2026', $html);
     }
 }

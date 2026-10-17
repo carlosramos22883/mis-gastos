@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompromisoRecurrente;
 use App\Models\Moneda;
+use App\Services\CompromisoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +70,7 @@ class OnboardingController extends Controller
             'avatar_base64' => ['nullable', 'string'],
             'compromisos' => ['nullable', 'array'],
             'compromisos.*.descripcion' => ['required', 'string', 'max:255'],
-            'compromisos.*.monto' => ['required', 'numeric', 'min:0'],
+            'compromisos.*.monto' => ['required', 'numeric', 'gt:0'],
             'compromisos.*.fecha_esperada' => ['required_if:compromisos.*.recurrencia_tipo,unica', 'nullable', 'date'],
             'compromisos.*.medio_pago' => ['required', 'in:efectivo,tarjeta,transferencia,por_definir'],
             'compromisos.*.recurrencia_tipo' => ['required', 'in:unica,recurrente'],
@@ -77,7 +79,7 @@ class OnboardingController extends Controller
             'compromisos.*.dia_semana' => ['nullable', 'integer', 'between:0,6'],
             'compromisos.*.dia_secundario' => ['nullable', 'integer', 'between:1,31'],
             'compromisos.*.finalizacion' => ['nullable', 'in:indefinido,cuotas'],
-            'compromisos.*.cuotas' => ['nullable', 'integer', 'min:1'],
+            'compromisos.*.cuotas' => ['nullable', 'integer', 'min:1', 'required_if:compromisos.*.finalizacion,cuotas'],
         ]);
 
         DB::transaction(function () use ($request, $validated) {
@@ -106,19 +108,23 @@ class OnboardingController extends Controller
                     'tipo' => 'ingreso',
                 ]);
             }
+            $servicio = app(CompromisoService::class);
             foreach ($validated['compromisos'] ?? [] as $compromiso) {
-                $compromiso['recurrencia_tipo'] = $compromiso['recurrencia_tipo'] ?? 'unica';
-                $compromiso['recurrencia_unidad'] = $compromiso['frecuencia'] ?? null;
-                $compromiso['recurrencia_intervalo'] = $compromiso['dia_pago'] ?? null;
-                $compromiso['recurrencia_dia_semana'] = $compromiso['dia_semana'] ?? null;
-                $compromiso['recurrencia_dia_secundario'] = $compromiso['dia_secundario'] ?? null;
-                $compromiso['recurrencia_indefinida'] = ($compromiso['finalizacion'] ?? 'indefinido') === 'indefinido';
-                $compromiso['recurrencia_ocurrencias'] = $compromiso['cuotas'] ?? null;
-                unset($compromiso['frecuencia']);
-                unset($compromiso['dia_pago']);
-                unset($compromiso['dia_semana'], $compromiso['dia_secundario'], $compromiso['finalizacion'], $compromiso['cuotas']);
-                $compromiso['saldo_pendiente'] = $compromiso['monto'];
-                $user->compromisos()->create($compromiso);
+                $comun = collect($compromiso)->only(['descripcion', 'monto', 'medio_pago'])->all();
+                if (($compromiso['recurrencia_tipo'] ?? 'unica') === 'unica') {
+                    $servicio->crearUnico($user, $comun + ['fecha_esperada' => $compromiso['fecha_esperada'] ?? null]);
+
+                    continue;
+                }
+                $frecuencia = $compromiso['frecuencia'];
+                $servicio->crearRecurrente($user, $comun + [
+                    'frecuencia' => $frecuencia,
+                    'dia_semana' => $frecuencia === 'semanal' ? ($compromiso['dia_semana'] ?? 1) : null,
+                    'dia_pago' => $frecuencia === 'semanal' ? null : ($compromiso['dia_pago'] ?? 1),
+                    'dia_pago_2' => $frecuencia === 'quincenal' ? ($compromiso['dia_secundario'] ?? CompromisoRecurrente::ULTIMO_DIA) : null,
+                    'fecha_inicio' => $initialDate,
+                    'total_cuotas' => ($compromiso['finalizacion'] ?? 'indefinido') === 'cuotas' ? ($compromiso['cuotas'] ?? null) : null,
+                ]);
             }
         });
 

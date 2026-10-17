@@ -4,7 +4,7 @@
     <div class="max-w-7xl mx-auto space-y-4">
         @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
         <div class="grid gap-4 md:grid-cols-3">
-            @foreach ([['Saldo disponible', $balance, 'text-primary-600', 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4h8v-8h-8zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2h6v4h-6z', 'balance'], ['Total de ingresos', $ingresos, 'text-green-600', 'M12 3v18m9-9H3', 'ingresos'], ['Total de egresos', $egresos, 'text-red-600', 'M5 12h14', 'egresos']] as [$label, $value, $color, $icon, $key])
+            @foreach ([['Saldo disponible', $balance, 'text-primary-600 dark:text-primary-400', 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4h8v-8h-8zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2h6v4h-6z', 'balance'], ['Total de ingresos', $ingresos, 'text-green-600 dark:text-green-400', 'M12 3v18m9-9H3', 'ingresos'], ['Total de egresos', $egresos, 'text-red-600 dark:text-red-400', 'M5 12h14', 'egresos']] as [$label, $value, $color, $icon, $key])
                 <div class="rounded-lg bg-white dark:bg-gray-800 p-5 shadow" data-cash-card="{{ $key }}">
                     <div class="flex items-center gap-3">
                         <svg class="h-8 w-8 {{ $color }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $icon }}" /></svg>
@@ -14,22 +14,25 @@
                 </div>
             @endforeach
         </div>
-        <div class="flex items-center justify-between">
-            <div class="flex gap-2">
-                <a class="text-sm text-primary-600 hover:underline"
-                    href="{{ route('efectivo.index', array_merge(request()->query(), ['cycle' => $previousCycle])) }}">Ciclo
-                    anterior</a>
+        @php($cycleLink = fn ($cycle) => route('efectivo.index', array_filter(['cycle' => $cycle, 'per_page' => request('per_page')])))
+        <nav class="flex flex-wrap items-center justify-between gap-2 text-sm" aria-label="Navegación entre ciclos">
+            <div class="flex items-center gap-4">
+                @if ($previousCycle)
+                    <a class="text-primary-600 dark:text-primary-400 hover:underline" href="{{ $cycleLink($previousCycle) }}">&larr; Ciclo anterior</a>
+                @endif
+                @if ($nextCycle)
+                    <a class="text-primary-600 dark:text-primary-400 hover:underline" href="{{ $cycleLink($nextCycle) }}">Ciclo siguiente &rarr;</a>
+                @endif
                 @unless ($isCurrentCycle)
-                    <a class="text-sm text-primary-600 hover:underline" href="{{ route('efectivo.index') }}">Ciclo
-                        actual</a>
+                    <a class="text-primary-600 dark:text-primary-400 hover:underline" href="{{ $cycleLink(null) }}">Ir al ciclo actual</a>
                 @endunless
             </div>
             @unless ($isCurrentCycle)
-                <span class="text-xs text-gray-500">Ciclo cerrado: solo consulta</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Ciclo cerrado: solo consulta</span>
             @endunless
-        </div>
+        </nav>
         @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
-        <x-data-table :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
+        <x-data-table filterCount="5" :keep="['cycle']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
             :exportRoute="route('efectivo.export')" searchPlaceholder="Buscar descripción..." defaultSort="fecha">
             <x-slot:filters>
                 <x-floating-money id="amount" label="Monto" :value="request('amount')" :symbol="$simbolo" />

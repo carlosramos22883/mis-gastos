@@ -47,7 +47,7 @@
             x-on:close-modal.window="if ($event.detail === 'marca-red-modal') { html = ''; loading = false; if ($refs.formContainer) $refs.formContainer.innerHTML = ''; }"
             class="p-6 focus:outline-none">
             <div x-show="loading" class="flex justify-center items-center py-12">
-                <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                <svg class="animate-spin h-8 w-8 text-primary-600 dark:text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none"
                     viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                         stroke-width="4"></circle>

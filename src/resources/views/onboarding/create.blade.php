@@ -1,7 +1,7 @@
 <x-guest-layout>
     <div class="mx-auto max-w-2xl rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800" x-data="onboardingWizard()">
         <div class="mb-8 text-center">
-            <p class="text-sm font-medium text-primary-600">Paso <span x-text="step"></span> de 4</p>
+            <p class="text-sm font-medium text-primary-600 dark:text-primary-400">Paso <span x-text="step"></span> de 4</p>
             <h1 class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">Configura tu cuenta</h1>
         </div>
 
@@ -69,16 +69,13 @@
                             <div x-show="item.frecuencia === 'semanal'">
                                 <x-floating-select id="compromiso_dia_semana" label="Día de la semana" :options="[0=>'Domingo',1=>'Lunes',2=>'Martes',3=>'Miércoles',4=>'Jueves',5=>'Viernes',6=>'Sábado']" x-bind:name="`compromisos[${index}][dia_semana]`" x-model="item.dia_semana" />
                             </div>
+                            @php($diasMes = collect(range(1, 30))->mapWithKeys(fn ($d) => [$d => "Día {$d}"])->put(31, 'Último día del mes')->all())
                             <div x-show="item.frecuencia === 'quincenal'" class="grid grid-cols-2 gap-3">
-                                <x-floating-input id="compromiso_dia_pago" label="Primer día (1-31)" type="number" min="1" max="31" x-bind:name="`compromisos[${index}][dia_pago]`" x-model="item.dia_pago" x-on:input="item.dia_secundario = Math.min(31, Number(item.dia_pago || 1) + 15)" />
-                                <div>
-                                    <span class="block text-xs text-gray-500">Segundo día calculado</span>
-                                    <p class="mt-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 dark:border-gray-600 dark:text-gray-200" x-text="item.dia_secundario"></p>
-                                    <input type="hidden" x-bind:name="`compromisos[${index}][dia_secundario]`" x-model="item.dia_secundario">
-                                </div>
+                                <x-floating-select id="compromiso_dia_pago" label="Primer día" :options="$diasMes" x-bind:name="`compromisos[${index}][dia_pago]`" x-model="item.dia_pago" />
+                                <x-floating-select id="compromiso_dia_secundario" label="Segundo día" :options="$diasMes" x-bind:name="`compromisos[${index}][dia_secundario]`" x-model="item.dia_secundario" />
                             </div>
                             <div x-show="item.frecuencia === 'mensual'">
-                                <x-floating-input id="compromiso_dia_pago_mensual" label="Día del mes (1-31)" type="number" min="1" max="31" x-bind:name="`compromisos[${index}][dia_pago]`" x-model="item.dia_pago" />
+                                <x-floating-select id="compromiso_dia_pago_mensual" label="Día del mes" :options="$diasMes" x-bind:name="`compromisos[${index}][dia_pago]`" x-model="item.dia_pago" />
                             </div>
                             <x-floating-select id="compromiso_finalizacion" label="Finalización" :options="['indefinido'=>'Indefinido','cuotas'=>'Número de cuotas']" x-bind:name="`compromisos[${index}][finalizacion]`" x-model="item.finalizacion" />
                             <div x-show="item.finalizacion === 'cuotas'">
@@ -108,7 +105,7 @@
             return {
                 step: 1,
                 compromisos: [],
-                addCommitment() { this.compromisos.push({ key: Date.now() + Math.random(), descripcion: '', monto: '0.00', fecha_esperada: '', medio_pago: 'por_definir', recurrencia_tipo: 'unica', frecuencia: 'mensual', dia_pago: 1, dia_semana: 1, dia_secundario: 16, finalizacion: 'indefinido', cuotas: '' }); },
+                addCommitment() { this.compromisos.push({ key: Date.now() + Math.random(), descripcion: '', monto: '0.00', fecha_esperada: '', medio_pago: 'por_definir', recurrencia_tipo: 'unica', frecuencia: 'mensual', dia_pago: 15, dia_semana: 1, dia_secundario: 31, finalizacion: 'indefinido', cuotas: '' }); },
                 removeCommitment(index) { this.compromisos.splice(index, 1); },
                 async nextStep(target) {
                     const formData = new FormData(this.$root.querySelector('form'));

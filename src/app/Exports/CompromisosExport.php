@@ -18,11 +18,20 @@ class CompromisosExport implements FromCollection, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['ID', 'Descripción', 'Monto', 'Fecha esperada', 'Medio de pago', 'Estado'];
+        return ['Descripción', 'Categoría', 'Monto', 'Pendiente', 'Fecha de pago', 'Cuota', 'Medio de pago', 'Estado'];
     }
 
     public function map($item): array
     {
-        return [$item->id, $item->descripcion, number_format((float) $item->monto, 2, '.', ''), $item->fecha_esperada?->format('d/m/Y'), $item->medio_pago, $item->estado];
+        return [
+            $item->descripcion,
+            $item->categoria?->nombre,
+            number_format((float) $item->monto, 2, '.', ''),
+            number_format((float) $item->saldo_pendiente, 2, '.', ''),
+            $item->fecha_esperada?->format('d/m/Y'),
+            $item->numero_cuota ? $item->numero_cuota.($item->total_cuotas ? '/'.$item->total_cuotas : '') : null,
+            $item->medio_pago,
+            $item->estado_visual ?? $item->estado,
+        ];
     }
 }

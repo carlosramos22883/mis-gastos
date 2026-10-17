@@ -1,5 +1,5 @@
 # SISTEMA MIS GASTOS - DOCUMENTO MAESTRO
-**Última actualización:** 17 de octubre, 2026
+**Última actualización:** 18 de octubre, 2026
 
 > Leyenda de estado: ✅ Completado · 🔄 En progreso · ⏳ Pendiente
 
@@ -136,31 +136,29 @@ Implementado en `CicloEfectivoService::balance()`.
 
 ### 5.3 COMPROMISOS 🔄
 
-**Estado actual (implementado):**
-- CRUD de compromisos únicos y recurrentes (semanal, quincenal, mensual), medio de pago, fecha esperada
-- Pago total o parcial desde "Pagar con efectivo" (crea el egreso y descuenta el saldo pendiente; no permite pagar más que el pendiente)
-- Cancelar compromiso (estado `cancelado`)
-- Generación de ocurrencias en el corte (comando `efectivo:cerrar-ciclos`)
-- Recordatorios diarios de compromisos vencidos (comando `compromisos:notificar-pendientes`)
-- La fecha esperada puede ser de cualquier ciclo futuro
+**Modelo implementado (padre → hijos):**
+- **`compromisos_recurrentes`** (la regla, no se paga): categoría, descripción, comentario, monto, medio de pago, frecuencia, `dia_semana` (semanal), `dia_pago` / `dia_pago_2` (mensual / quincenal; **31 = último día del mes**), `fecha_inicio`, `fecha_fin` o `total_cuotas`, `cuotas_generadas`, `generado_hasta`, `activo`.
+- **`compromisos`** (cada pago concreto): `compromiso_recurrente_id` (null si es de una sola vez), categoría, descripción, comentario, `monto`, `saldo_pendiente`, `fecha_esperada` (opcional), `ciclo_inicio` (ciclo al que pertenece), `numero_cuota`, `total_cuotas`, medio de pago, `estado` (`pendiente`, `pagado`, `cancelado`).
+- Lógica en `CompromisoService`: `crearUnico`, `crearRecurrente`, `sincronizar` (genera los pagos hasta el fin del ciclo; es idempotente y corre al abrir Compromisos, en el corte y en el comando diario), `aplicarAbono`, `cancelar`.
 
-**Campos objetivo:**
-- id, descripción, valor_total, valor_pendiente, categoría_id, comentario
-- fecha_estimada_pago (opcional), ciclo/mes al que pertenece
-- usuario_id, fecha de creación
-- tipo_pago (efectivo, tarjeta, cuenta_bancaria)
-- estado, compromiso_padre_id, es_recurrente, frecuencia, fecha_fin
-- numero_cuota, total_cuotas
-- tarjeta_id, cuenta_id
+**Implementado ✅:**
+- Una sola vez (con o sin fecha; si la fecha cae en otro ciclo, pertenece a ese ciclo) y recurrentes semanal, quincenal (dos días fijos) y mensual
+- Fin indefinido, en una fecha o tras N cuotas; la serie se desactiva sola al terminar
+- Estados visuales con color: Pendiente, Parcial, Vencido, Antiguo, Pagado, Cancelado (`Compromiso::estadoVisual()` y el scope del mismo nombre)
+- Lo no pagado de ciclos anteriores aparece como **Antiguo** en el ciclo actual (no se copia)
+- Filtros por período (ciclo actual / próximos / todos) y estado
+- Pago total o parcial con efectivo desde la lista o el detalle; no permite pagar más que el pendiente
+- Editar o eliminar el egreso de un pago recalcula el saldo del compromiso
+- Detalle con historial de abonos
+- Editar un pago no cambia el resto de la serie
+- Cancelar "solo este pago" o "este y los siguientes" (los pagados o con abonos se conservan)
+- Categoría opcional (será obligatoria cuando existan las categorías del sistema)
 
-**Pendiente (rediseño):**
-- ⏳ Modelo **padre/hijo**: el padre define la regla; cada ciclo se genera un hijo. Hoy el padre recurrente nunca suma cuotas, por lo que los compromisos con número de cuotas no terminan solos.
-- ⏳ Categoría del compromiso
-- ⏳ Estados completos (ver abajo); hoy solo existen `activo`, `pagado`, `cancelado`
-- ⏳ Histórico de cada abono (hoy se ven como egresos ligados con `compromiso_id`)
-- ⏳ Borrar solo el compromiso del mes o toda la serie
-- ⏳ El campo `recurrencia_intervalo` guarda en realidad el **día de pago**: renombrarlo en el rediseño
-- ⏳ Préstamos y mora de tarjeta
+**Pendiente ⏳:**
+- Editar la regla de una serie (por ejemplo, subir el monto de los meses siguientes); hoy se cancela y se crea otra
+- Pagar con cuenta bancaria o tarjeta (cuando existan esos módulos)
+- Préstamos y mora de tarjeta
+- Endpoints de API y pantallas móviles
 
 **Tipos de compromisos:**
 
@@ -419,7 +417,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | 🔄 (falta rediseño padre/hijo, estados, categoría) |
+| Compromisos | ✅ web (falta editar la regla de una serie y pagar con cuenta/tarjeta) |
 | Tarjetas de crédito | 🔄 (CRUD básico) |
 | Cuentas, Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
 
@@ -446,16 +444,16 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 37 tests automáticos (auth, perfil, categorías, efectivo, ciclos y pagos de compromisos)
+- 46 tests automáticos (auth, perfil, categorías, efectivo, ciclos, compromisos recurrentes, estados y pagos)
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
 ---
 
 ## 13. PRÓXIMOS PASOS (en orden)
 
-1. **Mover lógica a servicios:** efectivo (✅ ciclos y saldo), compromisos, categorías
+1. **Mover lógica a servicios:** efectivo ✅, compromisos ✅, categorías
 2. **API + móviles al día:** perfil, catálogos, categorías y efectivo en Android e iOS
-3. **Rediseño de compromisos:** padre/hijo, estados, categoría, histórico de abonos, borrado de serie
+3. ~~Rediseño de compromisos~~ ✅ (18/10/2026)
 4. **Categorías del sistema** con iconos
 5. **Cuentas bancarias** (y pagar compromisos desde cuenta)
 6. **Tarjetas de crédito** completas (compras, cuotas, estado de cuenta automático)

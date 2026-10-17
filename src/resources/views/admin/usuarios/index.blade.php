@@ -22,7 +22,7 @@
 
                 <!-- Slot de Filtros Personalizados -->
                 <x-slot:filters>
-                    <div class="w-full sm:w-48">
+                    <div>
                         <x-floating-select id="filter_role" name="filter_role" label="Filtrar por rol" :options="$roles->pluck('name', 'name')->toArray()"
                             :value="request('filter_role')" :searchable="true" />
                     </div>
@@ -153,7 +153,7 @@
 
             <!-- Spinner de Carga -->
             <div x-show="loading" class="flex justify-center items-center py-12">
-                <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                <svg class="animate-spin h-8 w-8 text-primary-600 dark:text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none"
                     viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                         stroke-width="4"></circle>

@@ -11,6 +11,9 @@
     'grosorIconos' => 2,
     'defaultSort' => 'created_at',
     'defaultDirection' => 'desc',
+    'filterCount' => 1,
+    // Parámetros de la URL que deben conservarse en las peticiones AJAX (ej. el ciclo consultado)
+    'keep' => [],
 ])
 
 @php
@@ -21,6 +24,19 @@
     $excludedParams = ['page', 'per_page', 'sort', 'direction', '_token'];
     $actualFilters = array_filter(request()->except($excludedParams), fn($value) => $value !== null && $value !== '');
     $hasFilters = !empty($actualFilters);
+
+    // Filtros del panel (sin contar la búsqueda) para el contador del botón "Filtros"
+    $activeFilterKeys = array_unique(array_map(fn ($key) => preg_replace('/_display$/', '', $key), array_keys($actualFilters)));
+    $activeFilterCount = count(array_diff($activeFilterKeys, ['search', 'cycle', 'highlight']));
+
+    // Hasta 2 filtros caben en la misma línea que la búsqueda; con 3 o más van en un panel plegable
+    $filterCount = max(1, (int) $filterCount);
+    $inlineFilters = $filterCount <= 2;
+    $inlineGridClass = $filterCount === 1 ? 'sm:grid-cols-1' : 'sm:grid-cols-2';
+    $filterGridClass = [
+        3 => 'lg:grid-cols-3',
+        4 => 'lg:grid-cols-4',
+    ][$filterCount] ?? 'lg:grid-cols-3 xl:grid-cols-5';
 @endphp
 
 <!-- 1. Contenedor principal con x-data -->
@@ -32,7 +48,7 @@
     <div x-show="loading"
         class="absolute inset-0 bg-white/60 dark:bg-gray-800/60 z-20 flex items-center justify-center backdrop-blur-sm transition-opacity"
         style="display: none;">
-        <svg class="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+        <svg class="animate-spin h-8 w-8 text-primary-600 dark:text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
             </circle>
@@ -50,6 +66,11 @@
             <input type="hidden" name="sort" value="{{ request('sort', $defaultSort) }}">
             <input type="hidden" name="direction" value="{{ request('direction', $defaultDirection) }}">
             <input type="hidden" name="page" value="{{ request('page', 1) }}">
+            @foreach ($keep as $param)
+                @if (request()->filled($param))
+                    <input type="hidden" name="{{ $param }}" value="{{ request($param) }}" data-keep>
+                @endif
+            @endforeach
 
             <!-- Fila 1: Registros por página y Botones de Exportación -->
             <div class="flex justify-between items-start gap-2 overflow-x-auto pt-4 pb-2 pl-1">
@@ -71,7 +92,7 @@
 
                         <!-- CSV -->
                         <x-primary-button type="button" onclick="exportData('csv')" title="Exportar a CSV"
-                            class="py-2.5 px-3">
+                            class="h-[42px] py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -81,7 +102,7 @@
 
                         <!-- Excel -->
                         <x-secondary-button type="button" onclick="exportData('xlsx')" title="Exportar a Excel"
-                            class="py-2.5 px-3">
+                            class="h-[42px] py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -91,7 +112,7 @@
 
                         <!-- PDF -->
                         <x-danger-button type="button" onclick="exportData('pdf')" title="Exportar a PDF"
-                            class="py-2.5 px-3">
+                            class="h-[42px] py-2.5 px-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="{{ $grosorIconos }}">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -104,28 +125,44 @@
                 @endif
             </div>
 
-            <!-- Fila 2: Búsqueda, Filtros y Botones de Acción -->
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-3">
-
-                <!-- Contenedor flexible para el input de búsqueda y los filtros adicionales -->
-                <div class="flex flex-1 flex-wrap gap-3 items-end w-full">
+            <!-- Fila 2: Búsqueda y Botones de Acción; los filtros van en un panel plegable -->
+            <div x-data="{ showFilters: {{ $activeFilterCount > 0 ? 'true' : 'false' }} }" class="flex flex-col gap-4">
+                <div class="flex flex-col lg:flex-row lg:items-end gap-3">
                     <!-- Input de búsqueda -->
-                    <div class="flex-1 min-w-[200px]">
+                    <div class="flex-1 min-w-0">
                         <x-floating-input id="search" name="search" label="{{ $searchPlaceholder }}"
                             :value="request('search')" />
                     </div>
 
-                    <!-- Filtros Personalizados -->
-                    @if (isset($filters))
-                        {{ $filters }}
+                    @if (isset($filters) && $inlineFilters)
+                        <!-- Filtros en línea (1 o 2) -->
+                        <div class="grid grid-cols-1 {{ $inlineGridClass }} gap-3 lg:flex lg:[&>*]:w-52">
+                            {{ $filters }}
+                        </div>
                     @endif
-                </div>
 
                 <!-- Botones de acción derecha -->
                 <div class="flex gap-2 shrink-0 flex-wrap">
 
+                    @if (isset($filters) && ! $inlineFilters)
+                        <!-- Botón Filtros (muestra/oculta el panel) -->
+                        <x-secondary-button type="button" x-on:click="showFilters = !showFilters"
+                            class="h-[42px] py-2.5 px-3 gap-1.5 relative" title="Mostrar u ocultar filtros"
+                            x-bind:aria-expanded="showFilters.toString()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                stroke-width="{{ $grosorIconos }}">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4z" />
+                            </svg>
+                            <span class="hidden sm:inline normal-case tracking-normal">Filtros</span>
+                            <span x-show="activeFilterCount > 0" x-text="activeFilterCount"
+                                @if ($activeFilterCount === 0) style="display: none;" @endif
+                                class="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-600 text-white text-[10px] font-semibold flex items-center justify-center">{{ $activeFilterCount }}</span>
+                        </x-secondary-button>
+                    @endif
+
                     <!-- Botón Buscar -->
-                    <x-primary-button type="submit" class="py-2.5 px-3" title="Buscar">
+                    <x-primary-button type="submit" class="h-[42px] py-2.5 px-3" title="Buscar">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             stroke-width="{{ $grosorIconos }}">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -135,7 +172,7 @@
 
                     <!-- Botón Limpiar -->
                     <x-secondary-button type="button" x-show="hasFilters" x-on:click.prevent="clearFilters()"
-                        class="py-2.5 px-3" title="Limpiar todos los filtros" style="display: none;">
+                        class="h-[42px] py-2.5 px-3" title="Limpiar todos los filtros" style="display: none;">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             stroke-width="{{ $grosorIconos }}">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -146,7 +183,7 @@
                     @if ($createRoute && (!$createPermission || auth()->user()->can($createPermission)))
                         @if ($createModal)
                             <!-- 4. Usamos x-on:click.prevent en lugar de @click.prevent -->
-                            <x-primary-button x-data="" type="button"
+                            <x-primary-button x-data="" type="button" class="h-[42px] px-3"
                                 x-on:click.prevent="$dispatch('load-{{ $createModal }}-form', '{{ $createRoute }}?modal=1'); $dispatch('open-modal', '{{ $createModal }}')"
                                 title="Crear nuevo registro">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -155,7 +192,7 @@
                                 </svg>
                             </x-primary-button>
                         @else
-                            <x-primary-button type="button" onclick="window.location.href='{{ $createRoute }}'"
+                            <x-primary-button type="button" class="h-[42px] px-3" onclick="window.location.href='{{ $createRoute }}'"
                                 title="Crear nuevo registro">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     stroke-width="{{ $grosorIconos }}">
@@ -165,6 +202,16 @@
                         @endif
                     @endif
                 </div>
+                </div>
+
+                @if (isset($filters) && ! $inlineFilters)
+                    <!-- Panel de filtros: columnas en pantallas grandes, apilados en móvil -->
+                    <div x-show="showFilters" x-collapse @if ($activeFilterCount === 0) style="display: none;" @endif>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 {{ $filterGridClass }} gap-x-3 gap-y-5 pt-3">
+                            {{ $filters }}
+                        </div>
+                    </div>
+                @endif
             </div>
 
         </form>
