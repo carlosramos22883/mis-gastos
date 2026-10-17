@@ -199,15 +199,20 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 
 **Al pagarse**, el compromiso se convierte en egreso de efectivo, de cuenta bancaria o de tarjeta.
 
-### 5.4 CUENTAS BANCARIAS ⏳
+### 5.4 CUENTAS BANCARIAS Y BILLETERAS ✅ (web)
 
-**Campos:** id, nombre/alias, banco_id, número de cuenta (opcional, encriptado), tipo_cuenta_id, monto_inicial, usuario_id, grupo_familiar_id (null si es individual), activo
+**Tablas:** `cuentas` (nombre, banco opcional, tipo de cuenta, número **encriptado**, color, saldo inicial, fecha inicial, activo), `movimientos_cuenta` y `transferencias`.
+**Lógica:** `CuentaService` y `TransferenciaService`.
 
-- **Ingresos:** suman al monto. Ejemplo: cuenta en $0, ingreso de $10 → $10
-- **Egresos:** no pueden superar el monto actual
-- **Transferencias:** dos movimientos (egreso en origen + ingreso en destino), tipo "transferencia". Pueden ser entre cuentas propias, del grupo familiar o de cuenta a efectivo (retiro)
-- **Pago de compromisos** desde la cuenta
-- **Corte:** se guarda el monto final, que es el inicial del siguiente ciclo
+- Tipos de cuenta incluyen **"Billetera digital"** (Chivo, Niu…)
+- **Saldo** = saldo inicial + ingresos − egresos; nunca puede quedar en negativo
+- **Corte:** el "saldo al iniciar el ciclo" y el "saldo al corte" se calculan al vuelo (sin filas de arrastre)
+- Movimientos propios (ingreso/egreso con categoría), editables solo en el ciclo actual
+- **Transferencias** entre efectivo y cuentas ("Metí al banco", "Saqué de la Chivo", de cuenta a cuenta): un registro crea la salida y la entrada; se eliminan juntas (si el destino no queda en negativo)
+- **Pagar compromisos** desde efectivo o desde cualquier cuenta con un solo botón "Pagar"; el historial de abonos muestra el origen
+- Una cuenta con movimientos no se elimina: se desactiva
+- Exportación de movimientos (CSV, Excel, PDF)
+- ⏳ API para móviles, transferencias desde tarjeta (avance) — con el módulo de tarjetas
 
 ### 5.5 TARJETAS DE CRÉDITO 🔄
 
@@ -419,7 +424,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Wizard | 🔄 |
 | Compromisos | ✅ web (falta editar la regla de una serie y pagar con cuenta/tarjeta) |
 | Tarjetas de crédito | 🔄 (CRUD básico) |
-| Cuentas, Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
+| Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
+| Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
 
 ### API (para móviles)
 | Endpoint | Estado |

@@ -216,6 +216,16 @@ class CompromisoService
         ]);
     }
 
+    /** Igual que aplicarAbono(), pero informa el error como validación del campo "monto". */
+    public function abonar(Compromiso $compromiso, float $monto): void
+    {
+        try {
+            $this->aplicarAbono($compromiso, $monto);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['monto' => $e->getMessage()]);
+        }
+    }
+
     /**
      * Cancela un pago. Con $serie = true también cancela los pagos futuros sin abonos
      * y desactiva la regla; los pagados o con abonos se conservan.

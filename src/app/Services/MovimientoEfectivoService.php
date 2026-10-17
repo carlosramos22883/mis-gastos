@@ -31,7 +31,7 @@ class MovimientoEfectivoService
             if (! empty($data['compromiso_id'])) {
                 $this->exigirEgreso($data);
                 $compromiso = Compromiso::findOrFail($data['compromiso_id']);
-                $this->abonar($compromiso, (float) $data['monto']);
+                $this->compromisos->abonar($compromiso, (float) $data['monto']);
                 $data['compromiso_cuota'] = $compromiso->numero_cuota;
             }
 
@@ -49,7 +49,7 @@ class MovimientoEfectivoService
             $this->asegurarSaldo($movimiento->user, $this->efecto($data), $movimiento->id);
             if ($movimiento->compromiso) {
                 $this->exigirEgreso($data);
-                $this->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
+                $this->compromisos->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
             }
             $movimiento->update($data);
 
@@ -67,18 +67,20 @@ class MovimientoEfectivoService
         DB::transaction(function () use ($movimiento) {
             // Si era el pago de un compromiso, ese monto vuelve a quedar pendiente
             if ($movimiento->compromiso) {
-                $this->abonar($movimiento->compromiso, -(float) $movimiento->monto);
+                $this->compromisos->abonar($movimiento->compromiso, -(float) $movimiento->monto);
             }
             $movimiento->delete();
         });
     }
 
-    /** Solo se editan movimientos del ciclo actual; el saldo arrastrado lo genera el corte. */
+    /** Solo se editan movimientos propios del ciclo actual (no el saldo arrastrado ni los de transferencias). */
     public function esEditable(MovimientoEfectivo $movimiento, ?Carbon $inicioCicloActual = null): bool
     {
         $inicio = $inicioCicloActual ?? $this->ciclos->cicloConsultado($movimiento->user)[0];
 
-        return ! $movimiento->es_saldo_arrastrado && $movimiento->fecha->toDateString() >= $inicio->toDateString();
+        // Los movimientos de una transferencia se editan o eliminan desde la transferencia
+        return ! $movimiento->es_saldo_arrastrado && ! $movimiento->transferencia_id
+            && $movimiento->fecha->toDateString() >= $inicio->toDateString();
     }
 
     /**
@@ -93,7 +95,7 @@ class MovimientoEfectivoService
         $monto = $filtros['monto'] ?? null;
         $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $filtros['sort'] : 'fecha';
 
-        return MovimientoEfectivo::with('categoria')->where('user_id', $user->id)
+        return MovimientoEfectivo::with('categoria', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')->where('user_id', $user->id)
             ->when($search !== null && $search !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('descripcion', 'like', "%{$search}%")->orWhere('monto', 'like', "%{$search}%")))
             ->when($monto !== null && $monto !== '', fn ($q) => $q->where('monto', 'like', '%'.$monto.'%'))
@@ -142,15 +144,6 @@ class MovimientoEfectivoService
     {
         if ($data['tipo'] !== 'egreso') {
             throw ValidationException::withMessages(['tipo' => 'El pago de un compromiso debe ser un egreso.']);
-        }
-    }
-
-    private function abonar(Compromiso $compromiso, float $monto): void
-    {
-        try {
-            $this->compromisos->aplicarAbono($compromiso, $monto);
-        } catch (\InvalidArgumentException $e) {
-            throw ValidationException::withMessages(['monto' => $e->getMessage()]);
         }
     }
 }

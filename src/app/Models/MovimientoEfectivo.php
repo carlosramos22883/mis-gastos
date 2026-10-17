@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo', 'es_saldo_arrastrado'])]
+#[Fillable(['user_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo', 'es_saldo_arrastrado', 'transferencia_id'])]
 class MovimientoEfectivo extends Model
 {
     use HasFactory;
@@ -38,5 +38,10 @@ class MovimientoEfectivo extends Model
     public function signedAmount(): float
     {
         return $this->tipo === 'ingreso' ? (float) $this->monto : -(float) $this->monto;
+    }
+
+    public function transferencia(): BelongsTo
+    {
+        return $this->belongsTo(Transferencia::class);
     }
 }

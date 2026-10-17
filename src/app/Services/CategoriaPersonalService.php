@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
+use App\Models\MovimientoCuenta;
 use Illuminate\Validation\ValidationException;
 
 class CategoriaPersonalService
@@ -19,6 +20,7 @@ class CategoriaPersonalService
     public function eliminar(CategoriaPersonal $categoria): void
     {
         $enUso = $categoria->movimientos()->exists()
+            || MovimientoCuenta::where('categoria_personal_id', $categoria->id)->exists()
             || Compromiso::where('categoria_personal_id', $categoria->id)->exists()
             || CompromisoRecurrente::where('categoria_personal_id', $categoria->id)->exists();
 

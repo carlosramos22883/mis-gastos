@@ -49,7 +49,10 @@ class CompromisoController extends Controller
         $this->own($request, $compromiso);
         [$hoy, $inicio] = $this->fechas($request);
         $compromiso->load('categoria', 'recurrente');
-        $pagos = $compromiso->movimientos()->where('tipo', 'egreso')->latest('fecha')->latest('id')->get();
+        // Abonos desde efectivo y desde cuentas, del más reciente al más antiguo
+        $pagos = $compromiso->movimientos()->where('tipo', 'egreso')->get()
+            ->concat($compromiso->movimientosCuenta()->with('cuenta')->where('tipo', 'egreso')->get())
+            ->sortByDesc(fn ($m) => $m->fecha->toDateString().'-'.$m->created_at)->values();
 
         return view('compromisos.show', compact('compromiso', 'pagos', 'hoy', 'inicio'));
     }

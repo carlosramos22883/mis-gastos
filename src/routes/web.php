@@ -9,11 +9,15 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\CompromisoController;
+use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PagoCompromisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TarjetaCreditoController;
+use App\Http\Controllers\TransferenciaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -41,6 +45,35 @@ Route::middleware('auth')->group(function () {
         ->middlewareFor(['create', 'store'], 'can:compromisos.create')
         ->middlewareFor(['edit', 'update'], 'can:compromisos.edit')
         ->middlewareFor('destroy', 'can:compromisos.delete');
+    Route::get('compromisos/{compromiso}/pagar', [PagoCompromisoController::class, 'create'])
+        ->middleware('can:compromisos.view')->name('compromisos.pagar');
+    Route::post('compromisos/{compromiso}/pagar', [PagoCompromisoController::class, 'store'])
+        ->middleware('can:compromisos.view')->name('compromisos.pagar.store');
+
+    // Cuentas bancarias y billeteras
+    Route::resource('cuentas', CuentaController::class)
+        ->middlewareFor(['index', 'show'], 'can:cuentas.view')
+        ->middlewareFor(['create', 'store'], 'can:cuentas.create')
+        ->middlewareFor(['edit', 'update'], 'can:cuentas.edit')
+        ->middlewareFor('destroy', 'can:cuentas.delete');
+    Route::get('cuentas/{cuenta}/export', [CuentaController::class, 'export'])
+        ->middleware('can:cuentas.export')->name('cuentas.export');
+    Route::prefix('cuentas/{cuenta}/movimientos')->name('cuentas.movimientos.')->controller(MovimientoCuentaController::class)->group(function () {
+        Route::get('create', 'create')->middleware('can:cuentas.create')->name('create');
+        Route::post('/', 'store')->middleware('can:cuentas.create')->name('store');
+        Route::get('{movimiento}/edit', 'edit')->middleware('can:cuentas.edit')->name('edit');
+        Route::put('{movimiento}', 'update')->middleware('can:cuentas.edit')->name('update');
+        Route::delete('{movimiento}', 'destroy')->middleware('can:cuentas.delete')->name('destroy');
+    });
+
+    // Transferencias entre efectivo y cuentas (y avances de tarjeta)
+    Route::get('transferencias/create', [TransferenciaController::class, 'create'])
+        ->middleware('can:cuentas.create')->name('transferencias.create');
+    Route::post('transferencias', [TransferenciaController::class, 'store'])
+        ->middleware('can:cuentas.create')->name('transferencias.store');
+    Route::delete('transferencias/{transferencia}', [TransferenciaController::class, 'destroy'])
+        ->middleware('can:cuentas.delete')->name('transferencias.destroy');
+
     Route::get('compromisos-export', [CompromisoController::class, 'export'])
         ->middleware('can:compromisos.export')->name('compromisos.export');
     Route::resource('tarjetas', TarjetaCreditoController::class)->except('show')

@@ -16,9 +16,9 @@
             <div class="flex gap-2">
                 <x-secondary-button type="button" onclick="window.location='{{ route('compromisos.index') }}'">Volver</x-secondary-button>
                 @if ($compromiso->estado === \App\Models\Compromiso::PENDIENTE)
-                    @can('efectivo.create')
-                        <x-primary-button type="button" x-on:click="$dispatch('load-efectivo-modal-form', '{{ route('efectivo.create', ['compromiso' => $compromiso->id]) }}&modal=1'); $dispatch('open-modal', 'efectivo-modal')">Pagar con efectivo</x-primary-button>
-                    @endcan
+                    @canany(['efectivo.create', 'cuentas.create'])
+                        <x-primary-button type="button" x-on:click="$dispatch('load-pago-modal-form', '{{ route('compromisos.pagar', $compromiso) }}'); $dispatch('open-modal', 'pago-modal')">Pagar</x-primary-button>
+                    @endcanany
                 @endif
             </div>
         </div>
@@ -47,7 +47,7 @@
                         <tr class="border-t border-gray-200 dark:border-gray-700">
                             <td class="px-6 py-4">{{ $pago->fecha->format('d/m/Y') }}</td>
                             <td class="px-6 py-4">{{ $pago->descripcion }}</td>
-                            <td class="px-6 py-4">Efectivo</td>
+                            <td class="px-6 py-4">{{ $pago instanceof \App\Models\MovimientoCuenta ? $pago->cuenta->nombre : 'Efectivo' }}</td>
                             <td class="px-6 py-4 text-right">{{ $simbolo }} {{ number_format((float) $pago->monto, 2) }}</td>
                         </tr>
                     @empty

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalizaFechas;
 use App\Models\Compromiso;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
@@ -11,6 +12,8 @@ use Illuminate\Validation\Rule;
 /** Validación de movimientos de efectivo para web y API. Acepta la fecha como d/m/Y o Y-m-d. */
 class MovimientoEfectivoRequest extends FormRequest
 {
+    use NormalizaFechas;
+
     public function authorize(): bool
     {
         return true; // los permisos se verifican en la ruta (can:efectivo.*)
@@ -18,14 +21,7 @@ class MovimientoEfectivoRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $fecha = (string) $this->input('fecha');
-        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha)) {
-            try {
-                $this->merge(['fecha' => Carbon::createFromFormat('!d/m/Y', $fecha)->format('Y-m-d')]);
-            } catch (\Throwable) {
-                // se queda como vino y la regla de formato lo rechaza
-            }
-        }
+        $this->normalizarFechas('fecha');
     }
 
     public function rules(): array

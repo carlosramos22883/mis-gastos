@@ -13,6 +13,7 @@ class TipoCuentaSeeder extends Seeder
             ['nombre' => 'Cuenta de Ahorro', 'descripcion' => 'Cuenta que genera intereses', 'activo' => true],
             ['nombre' => 'Cuenta Planillera', 'descripcion' => 'Cuenta para depósito de salario', 'activo' => true],
             ['nombre' => 'Cuenta Corriente', 'descripcion' => 'Cuenta con chequera y mayor movimiento', 'activo' => true],
+            ['nombre' => 'Billetera digital', 'descripcion' => 'Chivo, Niu, Tigo Money y similares', 'activo' => true],
         ];
 
         foreach ($tipos as $tipo) {

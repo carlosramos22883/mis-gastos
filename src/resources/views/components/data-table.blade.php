@@ -60,7 +60,7 @@
 
     <!-- Header: Todo envuelto en un solo formulario -->
     <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-        <form id="data-table-form" method="GET" action="{{ url()->current() }}" class="flex flex-col gap-4">
+        <form id="data-table-form" method="GET" action="{{ url()->current() }}" @if ($exportRoute) data-export-url="{{ $exportRoute }}" @endif class="flex flex-col gap-4">
 
             {{-- Inputs ocultos para mantener el ordenamiento --}}
             <input type="hidden" name="sort" value="{{ request('sort', $defaultSort) }}">

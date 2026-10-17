@@ -22,6 +22,7 @@ class Permisos
         'marcas-red' => 'Marcas de red',
         'categorias' => 'Categorías',
         'efectivo' => 'Efectivo',
+        'cuentas' => 'Cuentas y billeteras',
         'compromisos' => 'Compromisos',
         'tarjetas' => 'Tarjetas de crédito',
     ];

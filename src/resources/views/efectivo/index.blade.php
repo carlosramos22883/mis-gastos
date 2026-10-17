@@ -27,9 +27,15 @@
                     <a class="text-primary-600 dark:text-primary-400 hover:underline" href="{{ $cycleLink(null) }}">Ir al ciclo actual</a>
                 @endunless
             </div>
-            @unless ($isCurrentCycle)
+            @if ($isCurrentCycle)
+                @can('cuentas.create')
+                    @if (auth()->user()->cuentas()->where('activo', true)->exists())
+                        <x-secondary-button type="button" x-data x-on:click="$dispatch('load-transferencia-modal-form', '{{ route('transferencias.create') }}'); $dispatch('open-modal', 'transferencia-modal')">Transferir a una cuenta</x-secondary-button>
+                    @endif
+                @endcan
+            @else
                 <span class="text-xs text-gray-500 dark:text-gray-400">Ciclo cerrado: solo consulta</span>
-            @endunless
+            @endif
         </nav>
         @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
         <x-data-table createPermission="efectivo.create" exportPermission="efectivo.export" filterCount="5" :keep="['cycle']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
@@ -57,4 +63,5 @@
             <div x-show="!loading" x-ref="formContainer"></div>
         </div>
     </x-modal>
+    <x-ajax-modal name="transferencia" />
 </x-app-layout>

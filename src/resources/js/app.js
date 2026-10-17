@@ -462,7 +462,8 @@ window.exportData = function (format) {
     if (!form) return;
 
     // Construir URL base de exportación
-    const exportUrl = new URL(form.action);
+    // La ruta de exportación viene del componente (exportRoute); "actual + /export" queda como respaldo
+    const exportUrl = new URL(form.dataset.exportUrl || `${window.location.pathname}/export`, window.location.origin);
 
     // Obtener todos los valores del formulario
     const formData = new FormData(form);
@@ -479,8 +480,6 @@ window.exportData = function (format) {
 
     // Reemplazar la ruta base con la ruta de exportación
     // (asumiendo que la exportación está en la misma ruta base)
-    const currentPath = window.location.pathname;
-    exportUrl.pathname = currentPath + '/export';
 
     // Abrir la exportación en una nueva pestaña
     window.open(exportUrl.toString(), '_blank');

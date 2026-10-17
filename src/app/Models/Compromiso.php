@@ -67,6 +67,11 @@ class Compromiso extends Model
         return $this->hasMany(MovimientoEfectivo::class);
     }
 
+    public function movimientosCuenta(): HasMany
+    {
+        return $this->hasMany(MovimientoCuenta::class);
+    }
+
     public function montoPagado(): float
     {
         return round((float) $this->monto - (float) $this->saldo_pendiente, 2);
