@@ -10,7 +10,7 @@
             ['label' => 'Estado', 'key' => 'activo', 'sortable' => true],
             ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right'],
         ])
-        <x-data-table :headers="$headers" :data="$tarjetas" :createRoute="route('tarjetas.create')" createModal="tarjeta-modal"
+        <x-data-table createPermission="tarjetas.create" exportPermission="tarjetas.export" :headers="$headers" :data="$tarjetas" :createRoute="route('tarjetas.create')" createModal="tarjeta-modal"
             :exportRoute="route('tarjetas.export')" searchPlaceholder="Buscar tarjeta..." defaultSort="nombre" defaultDirection="asc">
             <x-slot:filters>
                 <x-floating-select id="activo" label="Estado" :options="['1' => 'Activas', '0' => 'Inactivas']" :value="request('activo')" />

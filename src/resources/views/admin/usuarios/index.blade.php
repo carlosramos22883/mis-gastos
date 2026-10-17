@@ -17,7 +17,7 @@
             @endphp
 
             <x-data-table :headers="$headers" :data="$users" :createRoute="route('admin.usuarios.create')" createPermission="users.create"
-                createModal="user-modal" exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.view"
+                createModal="user-modal" exportRoute="{{ route('admin.usuarios.export') }}" exportPermission="users.export"
                 searchPlaceholder="Buscar por nombre o correo..." defaultSort="name" defaultDirection="asc">
 
                 <!-- Slot de Filtros Personalizados -->

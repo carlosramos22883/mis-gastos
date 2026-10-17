@@ -28,12 +28,14 @@ class RoleAndPermissionSeeder extends Seeder
             'users.create',
             'users.edit',
             'users.delete',
+            'users.export',
 
             // Gestión de Roles y Permisos (NUEVOS)
             'roles.view',
             'roles.create',
             'roles.edit',
             'roles.delete',
+            'roles.export',
 
             // Gestión de monedas
             'monedas.view',
@@ -62,10 +64,12 @@ class RoleAndPermissionSeeder extends Seeder
             'categorias.create',
             'categorias.edit',
             'categorias.delete',
+            'categorias.export',
             'efectivo.view',
             'efectivo.create',
             'efectivo.edit',
             'efectivo.delete',
+            'efectivo.export',
             'compromisos.view',
             'compromisos.create',
             'compromisos.edit',
@@ -92,8 +96,8 @@ class RoleAndPermissionSeeder extends Seeder
             'profile.view',
             'profile.update',
             'profile.avatar.update',
-            'profile.password.update', 'categorias.view', 'categorias.create', 'categorias.edit', 'categorias.delete',
-            'efectivo.view', 'efectivo.create', 'efectivo.edit', 'efectivo.delete',
+            'profile.password.update', 'categorias.view', 'categorias.create', 'categorias.edit', 'categorias.delete', 'categorias.export',
+            'efectivo.view', 'efectivo.create', 'efectivo.edit', 'efectivo.delete', 'efectivo.export',
             'compromisos.view', 'compromisos.create', 'compromisos.edit', 'compromisos.delete', 'compromisos.export',
             'tarjetas.view', 'tarjetas.create', 'tarjetas.edit', 'tarjetas.delete', 'tarjetas.export',
         ]);

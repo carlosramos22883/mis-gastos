@@ -70,7 +70,7 @@ Route::middleware('auth')->group(function () {
         ->name('profile.destroy');
 
     Route::get('categorias/export', [CategoriaPersonalController::class, 'export'])
-        ->middleware('can:categorias.view')->name('categorias.export');
+        ->middleware('can:categorias.export')->name('categorias.export');
     Route::get('categorias', [CategoriaPersonalController::class, 'index'])
         ->middleware('can:categorias.view')->name('categorias.index');
     Route::get('categorias/create', [CategoriaPersonalController::class, 'create'])
@@ -84,7 +84,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('categorias/{categoria}', [CategoriaPersonalController::class, 'destroy'])
         ->middleware('can:categorias.delete')->name('categorias.destroy');
     Route::get('efectivo/export', [MovimientoEfectivoController::class, 'export'])
-        ->middleware('can:efectivo.view')->name('efectivo.export');
+        ->middleware('can:efectivo.export')->name('efectivo.export');
     Route::get('efectivo', [MovimientoEfectivoController::class, 'index'])
         ->middleware('can:efectivo.view')->name('efectivo.index');
     Route::get('efectivo/create', [MovimientoEfectivoController::class, 'create'])
@@ -99,75 +99,47 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:efectivo.delete')->name('efectivo.destroy');
 });
 
-// Rutas de Configuración del Sistema (Solo para usuarios con permisos)
+// Rutas de Configuración del Sistema: cada acción exige su propio permiso ("ver" da acceso a la pantalla)
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')->group(function () {
 
-    // Exportación de usuarios
-    Route::get('usuarios/export', [UserManagementController::class, 'export'])
-        ->name('usuarios.export');
-
     // Gestión de Usuarios
-    Route::resource('usuarios', UserManagementController::class)
-        ->middleware('can:users.view');
-
-    // Exportación de roles
-    Route::get('roles/export', [RoleManagementController::class, 'export'])
-        ->name('roles.export');
+    Route::get('usuarios/export', [UserManagementController::class, 'export'])
+        ->middleware('can:users.export')->name('usuarios.export');
+    Route::resource('usuarios', UserManagementController::class)->except('show')
+        ->middlewareFor('index', 'can:users.view')
+        ->middlewareFor(['create', 'store'], 'can:users.create')
+        ->middlewareFor(['edit', 'update'], 'can:users.edit')
+        ->middlewareFor('destroy', 'can:users.delete');
 
     // Gestión de Roles y Permisos
-    Route::resource('roles', RoleManagementController::class)
-        ->middleware('can:roles.view');
+    Route::get('roles/export', [RoleManagementController::class, 'export'])
+        ->middleware('can:roles.export')->name('roles.export');
+    Route::resource('roles', RoleManagementController::class)->except('show')
+        ->middlewareFor('index', 'can:roles.view')
+        ->middlewareFor(['create', 'store'], 'can:roles.create')
+        ->middlewareFor(['edit', 'update'], 'can:roles.edit')
+        ->middlewareFor('destroy', 'can:roles.delete');
 
     // ============================================
     // CATÁLOGOS DEL SISTEMA
     // ============================================
-    Route::prefix('catalogos')->name('catalogos.')->group(function () {  // ← Cambia aquí
+    Route::prefix('catalogos')->name('catalogos.')->group(function () {
+        $catalogos = [
+            // [ruta, controlador, parámetro, prefijo del permiso]
+            ['monedas', MonedaController::class, 'moneda', 'monedas'],
+            ['bancos', BancoController::class, 'banco', 'bancos'],
+            ['tipos-cuenta', TipoCuentaController::class, 'tipoCuenta', 'tipos_cuenta'],
+            ['marcas-red', MarcaRedController::class, 'marcaRed', 'marcas-red'],
+        ];
 
-        /* // Monedas
-         Route::resource('monedas', \App\Http\Controllers\Admin\MonedaController::class)->except(['show']);
-
-         // Bancos
-         Route::resource('bancos', \App\Http\Controllers\Admin\BancoController::class)->except(['show']);
-
-         // Tipos de Cuenta
-         Route::resource('tipos-cuenta', \App\Http\Controllers\Admin\TipoCuentaController::class)->except(['show']);
-
-         // Marcas de Red
-         Route::resource('marca-red', \App\Http\Controllers\Admin\MarcaRedController::class)->except(['show']);
-*/
-
-        // --- MONEDAS ---
-        Route::get('monedas', [MonedaController::class, 'index'])->name('monedas.index');
-        Route::get('monedas/create', [MonedaController::class, 'create'])->name('monedas.create');
-        Route::post('monedas', [MonedaController::class, 'store'])->name('monedas.store');
-        Route::get('monedas/{moneda}/edit', [MonedaController::class, 'edit'])->name('monedas.edit');
-        Route::put('monedas/{moneda}', [MonedaController::class, 'update'])->name('monedas.update');
-        Route::delete('monedas/{moneda}', [MonedaController::class, 'destroy'])->name('monedas.destroy');
-
-        // --- BANCOS ---
-        Route::get('bancos', [BancoController::class, 'index'])->name('bancos.index');
-        Route::get('bancos/create', [BancoController::class, 'create'])->name('bancos.create');
-        Route::post('bancos', [BancoController::class, 'store'])->name('bancos.store');
-        Route::get('bancos/{banco}/edit', [BancoController::class, 'edit'])->name('bancos.edit');
-        Route::put('bancos/{banco}', [BancoController::class, 'update'])->name('bancos.update');
-        Route::delete('bancos/{banco}', [BancoController::class, 'destroy'])->name('bancos.destroy');
-
-        // --- TIPOS DE CUENTA ---
-        Route::get('tipos-cuenta', [TipoCuentaController::class, 'index'])->name('tipos-cuenta.index');
-        Route::get('tipos-cuenta/create', [TipoCuentaController::class, 'create'])->name('tipos-cuenta.create');
-        Route::post('tipos-cuenta', [TipoCuentaController::class, 'store'])->name('tipos-cuenta.store');
-        Route::get('tipos-cuenta/{tipoCuenta}/edit', [TipoCuentaController::class, 'edit'])->name('tipos-cuenta.edit');
-        Route::put('tipos-cuenta/{tipoCuenta}', [TipoCuentaController::class, 'update'])->name('tipos-cuenta.update');
-        Route::delete('tipos-cuenta/{tipoCuenta}', [TipoCuentaController::class, 'destroy'])->name('tipos-cuenta.destroy');
-
-        // --- MARCAS DE RED ---
-        Route::get('marcas-red', [MarcaRedController::class, 'index'])->name('marcas-red.index');
-        Route::get('marcas-red/create', [MarcaRedController::class, 'create'])->name('marcas-red.create');
-        Route::post('marcas-red', [MarcaRedController::class, 'store'])->name('marcas-red.store');
-        Route::get('marcas-red/{marcaRed}/edit', [MarcaRedController::class, 'edit'])->name('marcas-red.edit');
-        Route::put('marcas-red/{marcaRed}', [MarcaRedController::class, 'update'])->name('marcas-red.update');
-        Route::delete('marcas-red/{marcaRed}', [MarcaRedController::class, 'destroy'])->name('marcas-red.destroy');
-
+        foreach ($catalogos as [$uri, $controller, $param, $permiso]) {
+            Route::get($uri, [$controller, 'index'])->name("{$uri}.index")->middleware("can:{$permiso}.view");
+            Route::get("{$uri}/create", [$controller, 'create'])->name("{$uri}.create")->middleware("can:{$permiso}.create");
+            Route::post($uri, [$controller, 'store'])->name("{$uri}.store")->middleware("can:{$permiso}.create");
+            Route::get("{$uri}/{{$param}}/edit", [$controller, 'edit'])->name("{$uri}.edit")->middleware("can:{$permiso}.edit");
+            Route::put("{$uri}/{{$param}}", [$controller, 'update'])->name("{$uri}.update")->middleware("can:{$permiso}.edit");
+            Route::delete("{$uri}/{{$param}}", [$controller, 'destroy'])->name("{$uri}.destroy")->middleware("can:{$permiso}.delete");
+        }
     });
 });
 

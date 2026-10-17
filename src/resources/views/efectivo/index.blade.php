@@ -32,7 +32,7 @@
             @endunless
         </nav>
         @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
-        <x-data-table filterCount="5" :keep="['cycle']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
+        <x-data-table createPermission="efectivo.create" exportPermission="efectivo.export" filterCount="5" :keep="['cycle']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
             :exportRoute="route('efectivo.export')" searchPlaceholder="Buscar descripción..." defaultSort="fecha">
             <x-slot:filters>
                 <x-floating-money id="amount" label="Monto" :value="request('amount')" :symbol="$simbolo" />

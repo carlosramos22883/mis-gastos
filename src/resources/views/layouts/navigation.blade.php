@@ -34,13 +34,13 @@
 
         @canany(['categorias.view', 'efectivo.view', 'compromisos.view', 'tarjetas.view'])
             <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                @canany(['categorias.view', 'categorias.create'])
+                @canany(['categorias.view'])
                     <a href="{{ route('categorias.index') }}" @click="sidebarOpen = false"
                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('categorias.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                         {{ __('Categorías') }}
                     </a>
                 @endcanany
-                @canany(['efectivo.view', 'efectivo.create'])
+                @canany(['efectivo.view'])
                     <a href="{{ route('efectivo.index') }}" @click="sidebarOpen = false"
                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('efectivo.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                         {{ __('Efectivo') }}
@@ -62,8 +62,7 @@
         @endcanany
 
         <!-- Configuración -->
-        @canany(['users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit',
-            'roles.delete'])
+        @canany(['users.view', 'roles.view'])
             <div x-data="{ openConfig: {{ request()->routeIs('admin.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="openConfig = !openConfig"
                     class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -83,7 +82,7 @@
                 </button>
 
                 <div x-show="openConfig" x-collapse class="pl-11 space-y-1">
-                    @canany(['users.view', 'users.create', 'users.edit', 'users.delete'])
+                    @canany(['users.view'])
                         <a href="{{ route('admin.usuarios.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.usuarios.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,7 +93,7 @@
                         </a>
                     @endcanany
 
-                    @canany(['roles.view', 'roles.create', 'roles.edit', 'roles.delete'])
+                    @canany(['roles.view'])
                         <a href="{{ route('admin.roles.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.roles.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,8 +107,7 @@
             </div>
         @endcanany
 
-        @canany(['monedas.view', 'monedas.create', 'bancos.view', 'bancos.create', 'tipos_cuenta.view',
-            'marcas-red.view'])
+        @canany(['monedas.view', 'bancos.view', 'tipos_cuenta.view', 'marcas-red.view'])
             <div x-data="{ openCatalogos: {{ request()->routeIs('admin.catalogos.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="openCatalogos = !openCatalogos"
                     class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -127,7 +125,7 @@
                 </button>
 
                 <div x-show="openCatalogos" x-collapse class="pl-11 space-y-1">
-                    @canany(['bancos.view', 'bancos.create', 'bancos.edit', 'bancos.delete'])
+                    @canany(['bancos.view'])
                         <a href="{{ route('admin.catalogos.bancos.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.bancos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +136,7 @@
                         </a>
                     @endcanany
 
-                    @canany(['marcas-red.view', 'marcas-red.create', 'marcas-red.edit', 'marcas-red.delete'])
+                    @canany(['marcas-red.view'])
                         <a href="{{ route('admin.catalogos.marcas-red.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.marcas-red.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,7 +147,7 @@
                         </a>
                     @endcanany
 
-                    @canany(['monedas.view', 'monedas.create', 'monedas.edit', 'monedas.delete'])
+                    @canany(['monedas.view'])
                         <a href="{{ route('admin.catalogos.monedas.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.monedas.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +158,7 @@
                         </a>
                     @endcanany
 
-                    @canany(['tipos_cuenta.view', 'tipos_cuenta.create', 'tipos_cuenta.edit', 'tipos_cuenta.delete'])
+                    @canany(['tipos_cuenta.view'])
                         <a href="{{ route('admin.catalogos.tipos-cuenta.index') }}" @click="sidebarOpen = false"
                             class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors {{ request()->routeIs('admin.catalogos.tipos-cuenta.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

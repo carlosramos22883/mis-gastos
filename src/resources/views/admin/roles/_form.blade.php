@@ -37,12 +37,12 @@
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Permisos del rol <span
                 class="text-red-500">*</span></label>
+        <p class="-mt-2 mb-3 text-xs text-gray-500 dark:text-gray-400">Marca primero <strong>Ver</strong>: sin acceso a la pantalla, los demás permisos del módulo no se pueden asignar.</p>
         <div
             class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
             @foreach ($permissions as $module => $modulePermissions)
                 <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                    <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3 capitalize">{{ ucfirst($module) }}
-                    </h3>
+                    <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">{{ \App\Support\Permisos::etiquetaModulo($module) }}</h3>
                     <div class="space-y-2">
                         @foreach ($modulePermissions as $permission)
                             <label class="flex items-center cursor-pointer">
@@ -51,9 +51,13 @@
                                     data-permission-action="{{ explode('.', $permission->name, 2)[1] ?? '' }}"
                                     x-on:change="permissionChanged($event)"
                                     {{ in_array($permission->name, old('permissions', isset($role) ? $role->permissions->pluck('name')->toArray() : [])) ? 'checked' : '' }}
-                                    class="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500">
-                                <span
-                                    class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ str_replace('.', ' - ', $permission->name) }}</span>
+                                    class="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                                @if (\App\Support\Permisos::accion($permission->name) === 'view')
+                                    <span class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">Ver
+                                        <span class="font-normal text-xs text-gray-500 dark:text-gray-400">(acceso a la pantalla y al menú)</span></span>
+                                @else
+                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ \App\Support\Permisos::etiquetaAccion($permission->name) }}</span>
+                                @endif
                             </label>
                         @endforeach
                     </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Permisos;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 use Spatie\Permission\Models\Role;
@@ -57,7 +58,7 @@ class RoleController extends Controller
 
         $role = Role::create(['name' => $validated['name']]);
         if (! empty($validated['permissions'])) {
-            $role->syncPermissions($this->normalizePermissions($validated['permissions']));
+            $role->syncPermissions(Permisos::normalizar($validated['permissions']));
         }
 
         return response()->json(['message' => 'Rol creado.', 'role' => $role->load('permissions')], 201);
@@ -84,31 +85,9 @@ class RoleController extends Controller
         ]);
 
         $role->update(['name' => $validated['name']]);
-        $role->syncPermissions($this->normalizePermissions($validated['permissions'] ?? []));
+        $role->syncPermissions(Permisos::normalizar($validated['permissions'] ?? []));
 
         return response()->json(['message' => 'Rol actualizado.', 'role' => $role->fresh()->load('permissions')]);
-    }
-
-    private function normalizePermissions(array $permissions): array
-    {
-        $permissions = array_values(array_unique($permissions));
-        $modules = [];
-
-        foreach ($permissions as $permission) {
-            [$module] = explode('.', $permission, 2);
-            $modules[$module] = true;
-        }
-
-        foreach (array_keys($modules) as $module) {
-            if (! in_array("{$module}.view", $permissions, true)) {
-                $permissions = array_values(array_filter(
-                    $permissions,
-                    fn (string $permission): bool => ! str_starts_with($permission, "{$module}.")
-                ));
-            }
-        }
-
-        return $permissions;
     }
 
     #[OA\Delete(

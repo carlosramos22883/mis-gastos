@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\RolesExport;
 use App\Http\Controllers\Concerns\HandlesTableNavigation;
 use App\Http\Controllers\Controller;
+use App\Support\Permisos;
 use App\Traits\Exportable;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RoleManagementController extends Controller
@@ -69,7 +69,7 @@ class RoleManagementController extends Controller
      */
     public function create()
     {
-        $permissions = Permission::all()->groupBy(fn ($p) => explode('.', $p->name)[0]);
+        $permissions = Permisos::agrupados();
         if (request()->has('modal')) {
             return view('admin.roles._form', compact('permissions'));
         }
@@ -82,7 +82,7 @@ class RoleManagementController extends Controller
      */
     public function edit(Role $role)
     {
-        $permissions = Permission::all()->groupBy(fn ($p) => explode('.', $p->name)[0]);
+        $permissions = Permisos::agrupados();
         if (request()->has('modal')) {
             return view('admin.roles._form', compact('role', 'permissions'));
         }
@@ -110,7 +110,7 @@ class RoleManagementController extends Controller
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
-        $role->syncPermissions($this->normalizePermissions($validated['permissions']));
+        $role->syncPermissions(Permisos::normalizar($validated['permissions']));
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
@@ -143,7 +143,7 @@ class RoleManagementController extends Controller
         ]);
 
         $role->update(['name' => $validated['name']]);
-        $role->syncPermissions($this->normalizePermissions($validated['permissions']));
+        $role->syncPermissions(Permisos::normalizar($validated['permissions']));
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -209,28 +209,6 @@ class RoleManagementController extends Controller
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'Rol eliminado exitosamente.');
-    }
-
-    private function normalizePermissions(array $permissions): array
-    {
-        $permissions = array_values(array_unique($permissions));
-        $modules = [];
-
-        foreach ($permissions as $permission) {
-            [$module] = explode('.', $permission, 2);
-            $modules[$module] = true;
-        }
-
-        foreach (array_keys($modules) as $module) {
-            if (! in_array("{$module}.view", $permissions, true)) {
-                $permissions = array_values(array_filter(
-                    $permissions,
-                    fn (string $permission): bool => ! str_starts_with($permission, "{$module}.")
-                ));
-            }
-        }
-
-        return $permissions;
     }
 
     private function roleTableQuery(Request $request)

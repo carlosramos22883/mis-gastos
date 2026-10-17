@@ -2,7 +2,7 @@
     <x-slot name="header">Categorías personales</x-slot>
     <div class="max-w-7xl mx-auto">
         @php($headers = [['label' => 'Nombre', 'key' => 'nombre', 'sortable' => true], ['label' => 'Color', 'key' => 'color', 'sortable' => false], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Estado', 'key' => 'activo', 'sortable' => true], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
-        <x-data-table filterCount="2" :headers="$headers" :data="$categorias" :createRoute="route('categorias.create')" createModal="categoria-modal"
+        <x-data-table createPermission="categorias.create" exportPermission="categorias.export" filterCount="2" :headers="$headers" :data="$categorias" :createRoute="route('categorias.create')" createModal="categoria-modal"
             :exportRoute="route('categorias.export')" searchPlaceholder="Buscar por nombre..." defaultSort="nombre" defaultDirection="asc">
             <x-slot:filters>
                 <x-floating-select id="tipo" label="Tipo" :options="['ingreso' => 'Ingreso', 'egreso' => 'Egreso']" :value="request('tipo')" />
