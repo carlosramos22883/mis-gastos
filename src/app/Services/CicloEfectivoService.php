@@ -30,6 +30,45 @@ class CicloEfectivoService
     }
 
     /**
+     * Ciclo que se consulta en pantalla: el actual o el que contiene $fecha (Y-m-d).
+     * El primer ciclo arranca el día del saldo inicial. Devuelve null si $fecha es futura o inválida.
+     *
+     * @return array{0: Carbon, 1: Carbon}|null
+     */
+    public function cicloConsultado(User $user, ?string $fecha = null): ?array
+    {
+        $hoy = Carbon::now($this->timezone($user))->startOfDay();
+        $date = $hoy;
+        if ($fecha !== null && $fecha !== '') {
+            if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+                return null;
+            }
+            $date = Carbon::createFromFormat('Y-m-d', $fecha, $this->timezone($user))->startOfDay();
+            if ($date->greaterThan($hoy)) {
+                return null;
+            }
+        }
+
+        [$start, $end] = $this->cycleFor($user, $date);
+        $inicial = $this->primeraFecha($user);
+        if ($inicial && $inicial->greaterThan($start) && $inicial->lte($end)) {
+            $start = $inicial;
+        }
+
+        return [$start, $end];
+    }
+
+    /** Fecha del saldo inicial (primer día con efectivo registrado). */
+    public function primeraFecha(User $user): ?Carbon
+    {
+        $fecha = $user->movimientosEfectivo()
+            ->whereHas('categoria', fn ($q) => $q->where('nombre', self::CATEGORIA_SALDO_INICIAL))
+            ->min('fecha');
+
+        return $fecha ? Carbon::parse($fecha, $this->timezone($user))->startOfDay() : null;
+    }
+
+    /**
      * Efectivo real del usuario. Excluye los saldos arrastrados por el corte,
      * que solo informan el saldo con el que abre cada ciclo.
      */

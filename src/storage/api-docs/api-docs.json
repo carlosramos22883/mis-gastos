@@ -632,6 +632,409 @@
                 }
             }
         },
+        "/api/catalogos": {
+            "get": {
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Monedas, bancos, tipos de cuenta y marcas de red activos",
+                "operationId": "f450d26c5031a51a64bc7dfdf8ccfd09",
+                "responses": {
+                    "200": {
+                        "description": "Catálogos"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/categorias": {
+            "get": {
+                "tags": [
+                    "Categorías"
+                ],
+                "summary": "Listar categorías del usuario",
+                "operationId": "684188b8d25abcad5e1c8a786226c02b",
+                "parameters": [
+                    {
+                        "name": "tipo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ingreso",
+                                "egreso"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "activo",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de categorías"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Categorías"
+                ],
+                "summary": "Crear categoría",
+                "operationId": "240f085d72cd493a2f869e93edc2c132",
+                "responses": {
+                    "201": {
+                        "description": "Creada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/categorias/{id}": {
+            "put": {
+                "tags": [
+                    "Categorías"
+                ],
+                "summary": "Actualizar categoría",
+                "operationId": "8124c319ebe2032b571b923486a66a77",
+                "responses": {
+                    "200": {
+                        "description": "Actualizada"
+                    },
+                    "403": {
+                        "description": "Categoría del sistema"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Categorías"
+                ],
+                "summary": "Eliminar categoría (si no tiene registros)",
+                "operationId": "266668bb5896ce68b7848fb39bf8107e",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "En uso: desactivarla"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compromisos": {
+            "get": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Listar compromisos",
+                "operationId": "8c306e7a673bc93567a578aa2f2e659b",
+                "parameters": [
+                    {
+                        "name": "periodo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "actual",
+                            "enum": [
+                                "actual",
+                                "proximos",
+                                "todos"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pendiente",
+                                "parcial",
+                                "vencido",
+                                "antiguo",
+                                "pagado",
+                                "cancelado"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Crear compromiso",
+                "description": "recurrencia_tipo=recurrente crea una serie (frecuencia, dia_pago, dia_pago_2, dia_semana, fecha_inicio, finalizacion, fecha_fin, total_cuotas). dia_pago=31 significa \"último día del mes\".",
+                "operationId": "a593266b6fcff2f71fb88edabc892cf9",
+                "responses": {
+                    "201": {
+                        "description": "Creado: el compromiso o, si es recurrente, su primer pago (o null si aún no corresponde)"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compromisos/{id}": {
+            "get": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Detalle con historial de abonos",
+                "operationId": "4f42b8e885be753452199381f2ecbc43",
+                "responses": {
+                    "200": {
+                        "description": "Compromiso"
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Editar un pago pendiente (no su serie)",
+                "operationId": "1ef13d92f3b84ad9f7a38d7e4eecdee5",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "403": {
+                        "description": "No está pendiente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Cancelar compromiso",
+                "description": "alcance=serie cancela también los pagos siguientes sin abonos y desactiva la regla.",
+                "operationId": "74a9bff2d31497c99db0d6ea4b379baf",
+                "parameters": [
+                    {
+                        "name": "alcance",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "pago",
+                            "enum": [
+                                "pago",
+                                "serie"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Cancelado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/efectivo": {
+            "get": {
+                "tags": [
+                    "Efectivo"
+                ],
+                "summary": "Movimientos de un ciclo con su resumen",
+                "description": "Sin \"ciclo\" devuelve el ciclo actual. \"ciclo\" acepta cualquier fecha (Y-m-d) dentro del ciclo deseado.",
+                "operationId": "1cca93ecc12e37452223a85029a4bb7d",
+                "parameters": [
+                    {
+                        "name": "ciclo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "tipo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ingreso",
+                                "egreso"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "categoria",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data + ciclo + resumen + meta de paginación"
+                    },
+                    "404": {
+                        "description": "Ciclo futuro o inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Efectivo"
+                ],
+                "summary": "Registrar ingreso o egreso",
+                "description": "Con \"compromiso_id\" el egreso se aplica como pago (total o parcial) de ese compromiso.",
+                "operationId": "0f4d7b33dbec37a54c240757a6145ace",
+                "responses": {
+                    "201": {
+                        "description": "Registrado"
+                    },
+                    "422": {
+                        "description": "Validación (ej. el egreso supera el saldo)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/efectivo/{id}": {
+            "put": {
+                "tags": [
+                    "Efectivo"
+                ],
+                "summary": "Actualizar movimiento del ciclo actual",
+                "operationId": "9184c28ec443c232e2074868975e2e14",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "403": {
+                        "description": "De un ciclo cerrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Efectivo"
+                ],
+                "summary": "Eliminar movimiento del ciclo actual",
+                "operationId": "c5f6ee544af89c14b196eea7a2d6c4ee",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "422": {
+                        "description": "El efectivo quedaría en negativo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/profile/avatar": {
             "patch": {
                 "tags": [
@@ -875,6 +1278,22 @@
         {
             "name": "Admin - Usuarios",
             "description": "Gestión de usuarios del sistema (Requiere rol Administrador)"
+        },
+        {
+            "name": "Catálogos",
+            "description": "Catálogos activos para llenar selectores en las apps"
+        },
+        {
+            "name": "Categorías",
+            "description": "Categorías personales de ingresos y egresos"
+        },
+        {
+            "name": "Compromisos",
+            "description": "Pagos programados: de una sola vez o recurrentes"
+        },
+        {
+            "name": "Efectivo",
+            "description": "Ingresos y egresos de efectivo por ciclo"
         },
         {
             "name": "Perfil",

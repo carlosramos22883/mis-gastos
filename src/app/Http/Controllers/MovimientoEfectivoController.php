@@ -3,18 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exports\MovimientosEfectivoExport;
+use App\Http\Requests\MovimientoEfectivoRequest;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\MovimientoEfectivo;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
-use App\Services\CompromisoService;
+use App\Services\MovimientoEfectivoService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class MovimientoEfectivoController extends Controller
 {
@@ -22,28 +20,20 @@ class MovimientoEfectivoController extends Controller
 
     private function query(Request $request)
     {
+        // El formulario de la tabla manda los filtros con prefijo "table_" cuando viene de un modal
+        $filtro = fn (string $nombre) => $request->has('table_'.$nombre) ? $request->input('table_'.$nombre) : $request->input($nombre);
         [$cycleStart, $cycleEnd] = $this->cycle($request->user(), $request->get('cycle'));
-        $fromValue = $request->has('table_from') ? $request->input('table_from') : $request->input('from');
-        $toValue = $request->has('table_to') ? $request->input('table_to') : $request->input('to');
-        $tipo = $request->has('table_tipo') ? $request->input('table_tipo') : $request->input('tipo');
-        $categoria = $request->has('table_categoria') ? $request->input('table_categoria') : $request->input('categoria');
-        $search = $request->has('table_search') ? $request->input('table_search') : $request->input('search');
-        $amount = $request->has('table_amount') ? $request->input('table_amount') : $request->input('amount');
-        $from = $this->parseFilterDate($fromValue)?->max($cycleStart) ?? $cycleStart;
-        $to = $this->parseFilterDate($toValue)?->min($cycleEnd) ?? $cycleEnd;
 
-        return MovimientoEfectivo::with('categoria')->where('user_id', $request->user()->id)
-            ->when($search !== null && $search !== '', function ($q) use ($search) {
-                $q->where(function ($query) use ($search) {
-                    $query->where('descripcion', 'like', "%{$search}%")
-                        ->orWhere('monto', 'like', "%{$search}%");
-                });
-            })
-            ->when($amount !== null && $amount !== '', fn ($q) => $q->where('monto', 'like', '%'.$amount.'%'))
-            ->whereBetween('fecha', [$from->toDateString(), $to->toDateString()])
-            ->when($tipo !== null && $tipo !== '', fn ($q) => $q->where('tipo', $tipo))
-            ->when($categoria !== null && $categoria !== '', fn ($q) => $q->where('categoria_personal_id', $categoria))
-            ->orderBy(in_array($request->get('sort'), ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $request->get('sort') : 'fecha', $request->get('direction') === 'asc' ? 'asc' : 'desc');
+        return $this->movimientos()->consultar($request->user(), $cycleStart, $cycleEnd, [
+            'search' => $filtro('search'),
+            'monto' => $filtro('amount'),
+            'desde' => $this->parseFilterDate($filtro('from')),
+            'hasta' => $this->parseFilterDate($filtro('to')),
+            'tipo' => $filtro('tipo'),
+            'categoria' => $filtro('categoria'),
+            'sort' => $request->get('sort'),
+            'direction' => $request->get('direction'),
+        ]);
     }
 
     public function index(Request $request)
@@ -51,13 +41,8 @@ class MovimientoEfectivoController extends Controller
         app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         [$cycleStart, $cycleEnd] = $this->cycle($request->user(), $request->get('cycle'));
         $movimientos = $this->query($request)->paginate((int) $request->get('per_page', 10))->withQueryString();
-        $categorias = CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get();
-        $totals = $request->user()->movimientosEfectivo()
-            ->whereBetween('fecha', [$cycleStart->toDateString(), $cycleEnd->toDateString()])
-            ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0) ingresos")
-            ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN monto ELSE 0 END), 0) egresos")
-            ->first();
-        $balance = $this->ciclos()->balance($request->user(), $cycleEnd);
+        $categorias = $this->categorias($request);
+        ['ingresos' => $ingresos, 'egresos' => $egresos, 'saldo' => $balance] = $this->movimientos()->resumen($request->user(), $cycleStart, $cycleEnd);
         if ($request->ajax() || $request->wantsJson()) {
             $isCurrentCycle = $cycleStart->equalTo($this->cycle($request->user())[0]);
             $simbolo = $request->user()->monedaPreferida?->simbolo ?? '$';
@@ -66,17 +51,14 @@ class MovimientoEfectivoController extends Controller
                 'html' => view('efectivo._table', compact('movimientos', 'isCurrentCycle', 'simbolo'))->render(),
                 'pagination' => $movimientos->links()->render(),
                 'balance' => number_format($balance, 2, '.', ''),
-                'ingresos' => number_format((float) $totals->ingresos, 2, '.', ''),
-                'egresos' => number_format((float) $totals->egresos, 2, '.', ''),
+                'ingresos' => number_format($ingresos, 2, '.', ''),
+                'egresos' => number_format($egresos, 2, '.', ''),
             ]);
         }
 
-        $ingresos = (float) $totals->ingresos;
-        $egresos = (float) $totals->egresos;
-
         $currentCycle = $this->cycle($request->user());
         $isCurrentCycle = $cycleStart->equalTo($currentCycle[0]);
-        $firstDate = $this->firstCashDate($request->user());
+        $firstDate = $this->ciclos()->primeraFecha($request->user());
         $previousCycle = $firstDate && $cycleStart->lte($firstDate) ? null : $cycleStart->copy()->subDay()->format('Y-m-d');
         $nextCycle = $isCurrentCycle ? null : $cycleEnd->copy()->addDay()->format('Y-m-d');
 
@@ -90,26 +72,12 @@ class MovimientoEfectivoController extends Controller
 
         $compromiso = $request->filled('compromiso') ? $request->user()->compromisos()->whereKey($request->input('compromiso'))->where('estado', Compromiso::PENDIENTE)->firstOrFail() : null;
 
-        return view('efectivo._form', ['compromiso' => $compromiso, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
+        return view('efectivo._form', ['compromiso' => $compromiso, 'categorias' => $this->categorias($request), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
     }
 
-    public function store(Request $request)
+    public function store(MovimientoEfectivoRequest $request)
     {
-        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
-        $data = $this->validated($request);
-        $movimiento = null;
-        DB::transaction(function () use ($request, $data, &$movimiento) {
-            $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto']);
-            if (! empty($data['compromiso_id'])) {
-                if ($data['tipo'] !== 'egreso') {
-                    throw ValidationException::withMessages(['tipo' => 'El pago de un compromiso debe ser un egreso.']);
-                }
-                $compromiso = Compromiso::findOrFail($data['compromiso_id']);
-                $this->abonar($compromiso, (float) $data['monto']);
-                $data['compromiso_cuota'] = $compromiso->numero_cuota;
-            }
-            $movimiento = $request->user()->movimientosEfectivo()->create($data);
-        });
+        $movimiento = $this->movimientos()->registrar($request->user(), $request->validated());
 
         return $this->success($request, 'Movimiento registrado correctamente.', $movimiento);
     }
@@ -117,30 +85,16 @@ class MovimientoEfectivoController extends Controller
     public function edit(Request $request, MovimientoEfectivo $movimiento)
     {
         $this->own($request, $movimiento);
+        abort_unless($this->movimientos()->esEditable($movimiento), 403);
+        [$cycleStart, $cycleEnd] = $this->cycle($request->user());
 
-        [$cycleStart] = $this->cycle($request->user());
-        abort_unless($movimiento->fecha->toDateString() >= $cycleStart->toDateString(), 403);
-
-        return view('efectivo._form', ['movimiento' => $movimiento, 'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get(), 'cycleStart' => $cycleStart, 'cycleEnd' => $this->cycle($request->user())[1]]);
+        return view('efectivo._form', ['movimiento' => $movimiento, 'categorias' => $this->categorias($request), 'cycleStart' => $cycleStart, 'cycleEnd' => $cycleEnd]);
     }
 
-    public function update(Request $request, MovimientoEfectivo $movimiento)
+    public function update(MovimientoEfectivoRequest $request, MovimientoEfectivo $movimiento)
     {
-        app(CicloEfectivoService::class)->closeIfNeeded($request->user());
         $this->own($request, $movimiento);
-        abort_unless($movimiento->fecha->toDateString() >= $this->cycle($request->user())[0]->toDateString(), 403);
-        $data = $this->validated($request);
-        unset($data['compromiso_id']);
-        DB::transaction(function () use ($request, $data, $movimiento) {
-            $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto'], $movimiento->id);
-            if ($movimiento->compromiso) {
-                if ($data['tipo'] !== 'egreso') {
-                    throw ValidationException::withMessages(['tipo' => 'El pago de un compromiso debe ser un egreso.']);
-                }
-                $this->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
-            }
-            $movimiento->update($data);
-        });
+        $this->movimientos()->actualizar($movimiento, $request->validated());
 
         return $this->success($request, 'Movimiento actualizado correctamente.', $movimiento);
     }
@@ -148,17 +102,7 @@ class MovimientoEfectivoController extends Controller
     public function destroy(Request $request, MovimientoEfectivo $movimiento)
     {
         $this->own($request, $movimiento);
-        abort_unless($movimiento->fecha->toDateString() >= $this->cycle($request->user())[0]->toDateString(), 403);
-        if ($movimiento->tipo === 'ingreso') {
-            $this->ensureBalance($request, 0, $movimiento->id, 'No puedes eliminar este ingreso: el efectivo quedaría en negativo.');
-        }
-        DB::transaction(function () use ($movimiento) {
-            // Si era el pago de un compromiso, ese monto vuelve a quedar pendiente
-            if ($movimiento->compromiso) {
-                $this->abonar($movimiento->compromiso, -(float) $movimiento->monto);
-            }
-            $movimiento->delete();
-        });
+        $this->movimientos()->eliminar($movimiento);
 
         $currentPage = max(1, (int) $request->input('page', 1));
         $perPage = max(1, (int) $request->input('per_page', 10));
@@ -172,58 +116,15 @@ class MovimientoEfectivoController extends Controller
         return $this->handleExport($request, $this->query($request)->get(), MovimientosEfectivoExport::class, 'Movimientos de efectivo', ['id' => 'ID', 'descripcion' => 'Descripción', 'monto' => 'Monto', 'fecha' => 'Fecha', 'tipo' => 'Tipo'], 'efectivo');
     }
 
-    private function validated(Request $request): array
-    {
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->input('fecha'))) {
-            $request->merge([
-                'fecha' => Carbon::createFromFormat('Y-m-d', $request->input('fecha'))->format('d/m/Y'),
-            ]);
-        }
-
-        [$cycleStart, $cycleEnd] = $this->cycle($request->user());
-        $data = $request->validate([
-            'descripcion' => ['required', 'string', 'max:255'],
-            'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
-            'fecha' => ['required', 'date_format:d/m/Y', 'before_or_equal:today', 'after_or_equal:'.$cycleStart->format('d/m/Y'), 'before_or_equal:'.$cycleEnd->format('d/m/Y')],
-            'tipo' => ['required', Rule::in(['ingreso', 'egreso'])],
-            'categoria_personal_id' => ['required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->where('tipo', $request->input('tipo')))],
-            'compromiso_id' => ['nullable', 'integer', Rule::exists('compromisos', 'id')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('estado', Compromiso::PENDIENTE))],
-        ], ['monto.regex' => 'El monto debe tener máximo dos decimales y ser positivo.']);
-
-        $data['fecha'] = Carbon::createFromFormat('d/m/Y', $data['fecha'])->format('Y-m-d');
-
-        return $data;
-    }
-
     private function cycle(User $user, ?string $requestedStart = null): array
     {
-        $timezone = $user->zona_horaria ?: config('app.timezone');
-        $today = Carbon::now($timezone)->startOfDay();
-        $date = $today;
-
-        // Cualquier fecha del ciclo solicitado sirve: se resuelve con la regla de corte del usuario
-        if ($requestedStart && preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedStart)) {
-            $date = Carbon::createFromFormat('Y-m-d', $requestedStart, $timezone)->startOfDay();
-            abort_if($date->greaterThan($today), 404);
-        }
-        [$start, $end] = $this->ciclos()->cycleFor($user, $date);
-
-        // El primer ciclo empieza el día en que se registró el saldo inicial
-        $initialStart = $this->firstCashDate($user);
-        if ($initialStart && $initialStart->greaterThan($start) && $initialStart->lte($end)) {
-            $start = $initialStart;
-        }
-
-        return [$start, $end];
+        return $this->ciclos()->cicloConsultado($user, $requestedStart) ?? abort(404);
     }
 
-    private function firstCashDate(User $user): ?Carbon
+    private function categorias(Request $request)
     {
-        $fecha = $user->movimientosEfectivo()
-            ->whereHas('categoria', fn ($q) => $q->where('nombre', CicloEfectivoService::CATEGORIA_SALDO_INICIAL))
-            ->min('fecha');
-
-        return $fecha ? Carbon::parse($fecha, $user->zona_horaria ?: config('app.timezone'))->startOfDay() : null;
+        return CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)
+            ->where('nombre', '!=', CicloEfectivoService::CATEGORIA_SALDO_INICIAL)->orderBy('nombre')->get();
     }
 
     private function parseFilterDate(?string $value): ?Carbon
@@ -242,36 +143,19 @@ class MovimientoEfectivoController extends Controller
         return null;
     }
 
-    /**
-     * Valida que el efectivo no quede en negativo tras aplicar $delta
-     * (excluyendo, si se indica, el movimiento que se está editando o eliminando).
-     */
-    private function ensureBalance(Request $request, float $delta, ?int $exceptId = null, string $message = 'El egreso supera el saldo disponible.'): void
-    {
-        if (round($this->ciclos()->balance($request->user(), null, $exceptId) + $delta, 2) < 0) {
-            throw ValidationException::withMessages(['monto' => $message]);
-        }
-    }
-
-    private function abonar(Compromiso $compromiso, float $monto): void
-    {
-        try {
-            app(CompromisoService::class)->aplicarAbono($compromiso, $monto);
-        } catch (\InvalidArgumentException $e) {
-            throw ValidationException::withMessages(['monto' => $e->getMessage()]);
-        }
-    }
-
     private function ciclos(): CicloEfectivoService
     {
         return app(CicloEfectivoService::class);
     }
 
+    private function movimientos(): MovimientoEfectivoService
+    {
+        return app(MovimientoEfectivoService::class);
+    }
+
     private function own(Request $request, MovimientoEfectivo $movimiento): void
     {
         abort_unless($movimiento->user_id === $request->user()->id, 404);
-        // El saldo arrastrado lo genera el corte; editarlo descuadraría el histórico.
-        abort_if($movimiento->es_saldo_arrastrado, 403);
     }
 
     private function success(Request $request, string $message, ?MovimientoEfectivo $movimiento = null, ?int $page = null)

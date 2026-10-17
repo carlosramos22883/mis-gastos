@@ -6,11 +6,46 @@ use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CompromisoService
 {
     public function __construct(private readonly CicloEfectivoService $ciclos) {}
+
+    /**
+     * Lista de compromisos con filtros: search, estado (visual), periodo (actual|proximos|todos),
+     * sort y direction. "actual" incluye lo pendiente de ciclos anteriores (Antiguo).
+     */
+    public function consultar(User $user, array $filtros = []): Builder
+    {
+        [$hoy, $inicio, $fin] = $this->fechas($user);
+        $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'saldo_pendiente', 'fecha_esperada'], true) ? $filtros['sort'] : 'fecha_esperada';
+        $direction = ($filtros['direction'] ?? null) === 'desc' ? 'desc' : 'asc';
+        $periodo = ($filtros['periodo'] ?? null) ?: 'actual';
+        $search = $filtros['search'] ?? null;
+        $estado = $filtros['estado'] ?? null;
+
+        return Compromiso::query()->where('user_id', $user->id)->with('categoria', 'recurrente')
+            ->when($search, fn ($q) => $q->where('descripcion', 'like', '%'.$search.'%'))
+            ->when($estado, fn ($q) => $q->estadoVisual($estado, $hoy, $inicio))
+            ->when($periodo === 'actual', fn ($q) => $q
+                ->whereDate('ciclo_inicio', '<=', $fin->toDateString())
+                ->where(fn ($q) => $q->whereDate('ciclo_inicio', '>=', $inicio->toDateString())->orWhere('estado', Compromiso::PENDIENTE)))
+            ->when($periodo === 'proximos', fn ($q) => $q->whereDate('ciclo_inicio', '>', $fin->toDateString()))
+            ->orderByRaw('fecha_esperada IS NULL')
+            ->orderBy($sort, $direction)
+            ->orderBy('id');
+    }
+
+    /** @return array{0: Carbon, 1: Carbon, 2: Carbon} hoy, inicio y fin del ciclo actual del usuario */
+    public function fechas(User $user): array
+    {
+        [$inicio, $fin] = $this->ciclos->cycleFor($user);
+
+        return [$this->hoy($user), $inicio, $fin];
+    }
 
     /** Crea un compromiso de una sola vez. */
     public function crearUnico(User $user, array $data): Compromiso
@@ -135,6 +170,26 @@ class CompromisoService
         }
 
         return $fechas;
+    }
+
+    /**
+     * Edita un pago pendiente (no su serie). El nuevo monto no puede ser menor a lo ya abonado.
+     */
+    public function actualizarPago(Compromiso $compromiso, array $data): Compromiso
+    {
+        abort_unless($compromiso->estado === Compromiso::PENDIENTE, 403, 'Solo se pueden editar compromisos pendientes.');
+        $pagado = $compromiso->montoPagado();
+        if ((float) $data['monto'] < $pagado) {
+            throw ValidationException::withMessages(['monto' => 'El monto no puede ser menor a lo ya pagado ('.number_format($pagado, 2).').']);
+        }
+
+        $fecha = isset($data['fecha_esperada']) ? Carbon::parse($data['fecha_esperada']) : null;
+        $compromiso->update(array_merge($data, [
+            'saldo_pendiente' => round((float) $data['monto'] - $pagado, 2),
+            'ciclo_inicio' => $fecha ? $this->ciclos->cycleFor($compromiso->user, $fecha)[0] : $compromiso->ciclo_inicio,
+        ]));
+
+        return $compromiso;
     }
 
     /**

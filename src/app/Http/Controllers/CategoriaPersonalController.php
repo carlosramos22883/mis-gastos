@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Exports\CategoriasPersonalesExport;
+use App\Http\Requests\CategoriaPersonalRequest;
 use App\Models\CategoriaPersonal;
+use App\Services\CategoriaPersonalService;
 use App\Traits\Exportable;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CategoriaPersonalController extends Controller
 {
@@ -53,38 +54,34 @@ class CategoriaPersonalController extends Controller
         return view('categorias._form');
     }
 
-    public function store(Request $request)
+    public function store(CategoriaPersonalRequest $request)
     {
-        $data = $this->validated($request);
-        $categoria = $request->user()->categoriasPersonales()->create($data);
+        $categoria = $request->user()->categoriasPersonales()->create($request->validated());
 
         return $this->success($request, 'Categoría creada correctamente.', $categoria);
     }
 
     public function edit(Request $request, CategoriaPersonal $categoria)
     {
-        abort_unless($categoria->user_id === $request->user()->id, 404);
-        abort_if($categoria->nombre === 'Saldo inicial', 403);
+        $this->own($request, $categoria);
 
         return view('categorias._form', compact('categoria'));
     }
 
-    public function update(Request $request, CategoriaPersonal $categoria)
+    public function update(CategoriaPersonalRequest $request, CategoriaPersonal $categoria)
     {
-        abort_unless($categoria->user_id === $request->user()->id, 404);
-        abort_if($categoria->nombre === 'Saldo inicial', 403);
-        $categoria->update($this->validated($request, $categoria));
+        $this->own($request, $categoria);
+        $categoria->update($request->validated());
 
         return $this->success($request, 'Categoría actualizada correctamente.', $categoria);
     }
 
     public function destroy(Request $request, CategoriaPersonal $categoria)
     {
-        abort_unless($categoria->user_id === $request->user()->id, 404);
-        abort_if($categoria->nombre === 'Saldo inicial', 403);
+        $this->own($request, $categoria);
         $currentPage = max(1, (int) $request->input('page', 1));
         $perPage = max(1, (int) $request->input('per_page', 10));
-        $categoria->delete();
+        app(CategoriaPersonalService::class)->eliminar($categoria);
         $lastPage = max(1, (int) ceil($this->query($request)->count() / $perPage));
 
         return $this->success($request, 'Categoría eliminada correctamente.', null, min($currentPage, $lastPage));
@@ -95,14 +92,10 @@ class CategoriaPersonalController extends Controller
         return $this->handleExport($request, $this->query($request)->get(), CategoriasPersonalesExport::class, 'Categorías personales', ['id' => 'ID', 'nombre' => 'Nombre', 'tipo' => 'Tipo', 'color' => 'Color', 'activo' => 'Activa'], 'categorias');
     }
 
-    private function validated(Request $request, ?CategoriaPersonal $categoria = null): array
+    private function own(Request $request, CategoriaPersonal $categoria): void
     {
-        return $request->validate([
-            'nombre' => ['required', 'string', 'max:100', Rule::notIn(['Saldo inicial']), Rule::unique('categorias_personales')->where(fn ($q) => $q->where('user_id', $request->user()->id)->where('tipo', $request->input('tipo', 'egreso')))->ignore($categoria?->id)],
-            'tipo' => ['required', Rule::in(['ingreso', 'egreso'])],
-            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'activo' => ['nullable', 'boolean'],
-        ], [], ['nombre' => 'Nombre', 'tipo' => 'Tipo', 'color' => 'Color']);
+        abort_unless($categoria->user_id === $request->user()->id, 404);
+        abort_unless(app(CategoriaPersonalService::class)->esEditable($categoria), 403);
     }
 
     private function success(Request $request, string $message, ?CategoriaPersonal $categoria = null, ?int $page = null)

@@ -1,5 +1,5 @@
 # SISTEMA MIS GASTOS - DOCUMENTO MAESTRO
-**Última actualización:** 18 de octubre, 2026
+**Última actualización:** 17 de octubre, 2026
 
 > Leyenda de estado: ✅ Completado · 🔄 En progreso · ⏳ Pendiente
 
@@ -427,7 +427,11 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Auth (registro, login, Google, olvido/reset, logout, usuario) | ✅ |
 | Perfil y avatar | ✅ |
 | Admin usuarios y roles | ✅ |
-| Catálogos, categorías, efectivo, compromisos… | ⏳ |
+| `GET /api/catalogos` (monedas, bancos, tipos de cuenta, marcas de red activos) | ✅ |
+| `/api/categorias` (listar, crear, editar, eliminar si no está en uso) | ✅ |
+| `/api/efectivo` (por ciclo con resumen y navegación; crear, editar, eliminar; pagar compromisos con `compromiso_id`) | ✅ |
+| `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
+| Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
 | Pantalla | Estado |
@@ -444,16 +448,16 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 46 tests automáticos (auth, perfil, categorías, efectivo, ciclos, compromisos recurrentes, estados y pagos)
+- 56 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, permisos)
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
 ---
 
 ## 13. PRÓXIMOS PASOS (en orden)
 
-1. **Mover lógica a servicios:** efectivo ✅, compromisos ✅, categorías
-2. **API + móviles al día:** perfil, catálogos, categorías y efectivo en Android e iOS
-3. ~~Rediseño de compromisos~~ ✅ (18/10/2026)
+1. ~~Mover lógica a servicios~~ ✅ (efectivo, compromisos, categorías; validación compartida en `app/Http/Requests`)
+2. **Móviles al día:** API ✅ — faltan las pantallas de Android e iOS (perfil, categorías, efectivo, compromisos)
+3. ~~Rediseño de compromisos~~ ✅ (17/10/2026)
 4. **Categorías del sistema** con iconos
 5. **Cuentas bancarias** (y pagar compromisos desde cuenta)
 6. **Tarjetas de crédito** completas (compras, cuotas, estado de cuenta automático)
