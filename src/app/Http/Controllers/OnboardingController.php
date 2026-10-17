@@ -14,18 +14,13 @@ class OnboardingController extends Controller
     public function create()
     {
         $today = Carbon::today(request()->user()->zona_horaria ?: config('app.timezone'));
-        $cutoff = min((int) (request()->user()->fecha_corte_dia ?: 31), $today->daysInMonth);
-        $cycleEnd = $today->copy()->day($cutoff);
-        if ($cycleEnd->lt($today)) {
-            $cycleEnd->addMonthNoOverflow()->day(min($cutoff, $cycleEnd->daysInMonth));
-        }
 
         return view('onboarding.create', [
             'monedas' => Moneda::query()->where('activo', true)->orderBy('nombre')->pluck('nombre', 'id'),
             'user' => request()->user(),
             'simbolo' => request()->user()->monedaPreferida?->simbolo ?? '$',
             'dateMin' => $today,
-            'dateMax' => $cycleEnd,
+            'dateMax' => $today->copy()->addYears(10),
             'draft' => $this->requestDraft(request()->user()),
         ]);
     }
@@ -122,6 +117,7 @@ class OnboardingController extends Controller
                 unset($compromiso['frecuencia']);
                 unset($compromiso['dia_pago']);
                 unset($compromiso['dia_semana'], $compromiso['dia_secundario'], $compromiso['finalizacion'], $compromiso['cuotas']);
+                $compromiso['saldo_pendiente'] = $compromiso['monto'];
                 $user->compromisos()->create($compromiso);
             }
         });

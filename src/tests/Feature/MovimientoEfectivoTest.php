@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -10,6 +11,12 @@ use Tests\TestCase;
 class MovimientoEfectivoTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow('2026-09-20 10:00:00');
+    }
 
     private function user(): User
     {

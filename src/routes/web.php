@@ -47,8 +47,6 @@ Route::middleware('auth')->group(function () {
     ]);
     Route::get('compromisos-export', [CompromisoController::class, 'export'])
         ->middleware('can:compromisos.export')->name('compromisos.export');
-    Route::post('compromisos/{compromiso}/abonar', [CompromisoController::class, 'abonar'])
-        ->middleware('can:compromisos.edit')->name('compromisos.abonar');
     Route::resource('tarjetas', TarjetaCreditoController::class)->except('show')->middleware([
         'index' => 'can:tarjetas.view',
         'create' => 'can:tarjetas.create',

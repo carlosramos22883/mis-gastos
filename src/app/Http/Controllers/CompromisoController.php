@@ -79,25 +79,6 @@ class CompromisoController extends Controller
         return response()->json(['success' => true, 'message' => 'Compromiso cancelado correctamente.']);
     }
 
-    public function abonar(Request $request, Compromiso $compromiso)
-    {
-        abort_unless($compromiso->user_id === auth()->id(), 404);
-        $data = $request->validate(['monto' => ['required', 'numeric', 'gt:0']]);
-        $abono = (float) $data['monto'];
-        $saldoActual = (float) ($compromiso->saldo_pendiente ?? $compromiso->monto);
-        abort_if($abono > $saldoActual, 422, 'El abono supera el saldo pendiente.');
-        $cuotasCompletas = (int) floor($abono / (float) $compromiso->monto);
-        $saldo = max(0, $saldoActual - $abono);
-        $compromiso->update([
-            'saldo_pendiente' => $saldo,
-            'cuotas_pagadas' => $compromiso->cuotas_pagadas + $cuotasCompletas,
-            'recurrencia_ocurrencias' => $compromiso->recurrencia_ocurrencias === null ? null : max(0, $compromiso->recurrencia_ocurrencias - $cuotasCompletas),
-            'estado' => $saldo <= 0 ? 'pagado' : 'activo',
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Abono registrado correctamente.']);
-    }
-
     public function export(Request $request)
     {
         abort_unless($request->user()->can('compromisos.export'), 403);
@@ -117,7 +98,7 @@ class CompromisoController extends Controller
         return $request->validate([
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0'],
-            'fecha_esperada' => ['required_if:recurrencia_tipo,unica', 'nullable', 'date', 'after_or_equal:today', 'before_or_equal:'.$this->dateLimits()['dateMax']->format('Y-m-d')],
+            'fecha_esperada' => ['required_if:recurrencia_tipo,unica', 'nullable', 'date', 'after_or_equal:today'],
             'medio_pago' => ['required', Rule::in(['efectivo', 'tarjeta', 'transferencia', 'por_definir'])],
             'recurrencia_tipo' => ['required', Rule::in(['unica', 'recurrente'])],
             'recurrencia_intervalo' => ['nullable', 'integer', 'min:1', 'required_if:recurrencia_tipo,recurrente'],
@@ -130,13 +111,9 @@ class CompromisoController extends Controller
     private function dateLimits(): array
     {
         $today = Carbon::today(auth()->user()->zona_horaria ?: config('app.timezone'));
-        $cutoff = min((int) (auth()->user()->fecha_corte_dia ?: 31), $today->daysInMonth);
-        $end = $today->copy()->day($cutoff);
-        if ($end->lt($today)) {
-            $end->addMonthNoOverflow()->day(min($cutoff, $end->daysInMonth));
-        }
 
-        return ['dateMin' => $today, 'dateMax' => $end];
+        // Un compromiso puede programarse para cualquier ciclo futuro; queda en el ciclo de su fecha.
+        return ['dateMin' => $today, 'dateMax' => $today->copy()->addYears(10)];
     }
 
     private function response(Request $request, Compromiso $compromiso, string $message)

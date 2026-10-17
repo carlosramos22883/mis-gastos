@@ -52,10 +52,11 @@ class MovimientoEfectivoController extends Controller
         $movimientos = $this->query($request)->paginate((int) $request->get('per_page', 10))->withQueryString();
         $categorias = CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('nombre', '!=', 'Saldo inicial')->orderBy('nombre')->get();
         $totals = $request->user()->movimientosEfectivo()
+            ->whereBetween('fecha', [$cycleStart->toDateString(), $cycleEnd->toDateString()])
             ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0) ingresos")
             ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN monto ELSE 0 END), 0) egresos")
             ->first();
-        $balance = (float) $totals->ingresos - (float) $totals->egresos;
+        $balance = $this->ciclos()->balance($request->user(), $cycleEnd);
         if ($request->ajax() || $request->wantsJson()) {
             $isCurrentCycle = $cycleStart->equalTo($this->cycle($request->user())[0]);
             $simbolo = $request->user()->monedaPreferida?->simbolo ?? '$';
@@ -95,14 +96,22 @@ class MovimientoEfectivoController extends Controller
         $data = $this->validated($request);
         $movimiento = null;
         DB::transaction(function () use ($request, $data, &$movimiento) {
-            $this->ensureBalance($request, $data['tipo'], (float) $data['monto']);
-            $movimiento = $request->user()->movimientosEfectivo()->create($data);
+            $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto']);
+            $compromiso = null;
             if (! empty($data['compromiso_id'])) {
                 $compromiso = Compromiso::whereKey($data['compromiso_id'])->lockForUpdate()->firstOrFail();
-                $saldo = max(0, (float) ($compromiso->saldo_pendiente ?? $compromiso->monto) - (float) $data['monto']);
+                $pendiente = (float) ($compromiso->saldo_pendiente ?? $compromiso->monto);
+                if ((float) $data['monto'] > $pendiente) {
+                    throw ValidationException::withMessages(['monto' => 'El pago supera el saldo pendiente del compromiso.']);
+                }
+            }
+            $movimiento = $request->user()->movimientosEfectivo()->create($data);
+            if ($compromiso) {
+                $saldo = round($pendiente - (float) $data['monto'], 2);
                 $compromiso->update([
                     'saldo_pendiente' => $saldo,
-                    'cuotas_pagadas' => $compromiso->cuotas_pagadas + 1,
+                    // Un abono parcial no completa una cuota; solo cuenta cuando el saldo queda en cero.
+                    'cuotas_pagadas' => $compromiso->cuotas_pagadas + ($saldo <= 0 ? 1 : 0),
                     'estado' => $saldo <= 0 && ! $compromiso->recurrencia_indefinida ? 'pagado' : 'activo',
                 ]);
             }
@@ -128,10 +137,7 @@ class MovimientoEfectivoController extends Controller
         abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
         $data = $this->validated($request);
         DB::transaction(function () use ($request, $data, $movimiento) {
-            $balanceWithout = $request->user()->movimientosEfectivo()->where('id', '!=', $movimiento->id)->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END), 0) balance")->value('balance');
-            if ($data['tipo'] === 'egreso' && (float) $balanceWithout < (float) $data['monto']) {
-                throw ValidationException::withMessages(['monto' => 'El egreso supera el saldo disponible.']);
-            }
+            $this->ensureBalance($request, $data['tipo'] === 'egreso' ? -(float) $data['monto'] : (float) $data['monto'], $movimiento->id);
             $movimiento->update($data);
         });
 
@@ -142,6 +148,9 @@ class MovimientoEfectivoController extends Controller
     {
         $this->own($request, $movimiento);
         abort_unless($movimiento->fecha->greaterThanOrEqualTo($this->cycle($request->user())[0]), 403);
+        if ($movimiento->tipo === 'ingreso') {
+            $this->ensureBalance($request, 0, $movimiento->id, 'No puedes eliminar este ingreso: el efectivo quedaría en negativo.');
+        }
         $movimiento->delete();
 
         $currentPage = max(1, (int) $request->input('page', 1));
@@ -183,16 +192,7 @@ class MovimientoEfectivoController extends Controller
     {
         $timezone = $user->zona_horaria ?: config('app.timezone');
         $today = Carbon::now($timezone)->startOfDay();
-        $cutoff = max(1, min((int) ($user->fecha_corte_dia ?: 31), 31));
-        $end = $today->copy()->day(min($cutoff, $today->daysInMonth));
-
-        if ($today->greaterThan($end)) {
-            $start = $end->copy()->addDay();
-            $end = $end->copy()->addMonthNoOverflow()->day(min($cutoff, $end->copy()->addMonthNoOverflow()->daysInMonth));
-        } else {
-            $previousEnd = $end->copy()->subMonthNoOverflow()->day(min($cutoff, $end->copy()->subMonthNoOverflow()->daysInMonth));
-            $start = $previousEnd->addDay();
-        }
+        [$start, $end] = $this->ciclos()->cycleFor($user, $today);
 
         $initialStart = $user->movimientosEfectivo()
             ->whereHas('categoria', fn ($q) => $q->where('nombre', 'Saldo inicial'))
@@ -226,16 +226,27 @@ class MovimientoEfectivoController extends Controller
         return null;
     }
 
-    private function ensureBalance(Request $request, string $type, float $amount): void
+    /**
+     * Valida que el efectivo no quede en negativo tras aplicar $delta
+     * (excluyendo, si se indica, el movimiento que se está editando o eliminando).
+     */
+    private function ensureBalance(Request $request, float $delta, ?int $exceptId = null, string $message = 'El egreso supera el saldo disponible.'): void
     {
-        if ($type === 'egreso' && (float) $request->user()->movimientosEfectivo()->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END), 0) balance")->value('balance') < $amount) {
-            throw ValidationException::withMessages(['monto' => 'El egreso supera el saldo disponible.']);
+        if (round($this->ciclos()->balance($request->user(), null, $exceptId) + $delta, 2) < 0) {
+            throw ValidationException::withMessages(['monto' => $message]);
         }
+    }
+
+    private function ciclos(): CicloEfectivoService
+    {
+        return app(CicloEfectivoService::class);
     }
 
     private function own(Request $request, MovimientoEfectivo $movimiento): void
     {
         abort_unless($movimiento->user_id === $request->user()->id, 404);
+        // El saldo arrastrado lo genera el corte; editarlo descuadraría el histórico.
+        abort_if($movimiento->es_saldo_arrastrado, 403);
     }
 
     private function success(Request $request, string $message, ?MovimientoEfectivo $movimiento = null, ?int $page = null)

@@ -1,148 +1,506 @@
-# SISTEMA MIS GASTOS - DOCUMENTO MAESTRO  
-**Última actualización:** 2026 (Fase de Catálogos y Frontend AJAX completada)  
-  
----  
-  
-## 1. OBJETIVO DEL SISTEMA  
-Sistema integral de control financiero personal y familiar que permite:  
-- Llevar control de efectivo, cuentas bancarias, tarjetas de crédito y compromisos.  
-- Gestionar deudores y deudas personales.  
-- Dividir gastos en eventos sociales.  
-- Trabajar en grupos familiares.  
-- Generar reportes financieros completos.  
-  
-**Propósito adicional:** Servir como portafolio profesional para demostrar habilidades de desarrollo full-stack, arquitectura de software y diseño de interfaces modernas.  
-  
----  
-  
-## 2. ARQUITECTURA TÉCNICA  
-### Stack Tecnológico  
-- **Backend:** Laravel 11+ (PHP 8.3+)  
-- **Base de datos:** PostgreSQL 16  
-- **Frontend:** Laravel Blade + Alpine.js + Tailwind CSS  
-- **Bundler:** Vite  
-- **Autenticación y Permisos:** Laravel Breeze + Spatie Permission  
-- **UI/UX Components:** SweetAlert2, Tom Select, Croppie (recorte de imágenes), DataTables personalizados con AJAX.  
-- **Almacenamiento:** Local (`storage/app/public`) con symlinks, preparado para migrar a AWS S3.  
-- **Contenedores:** Docker & Docker Compose (Nginx, PHP-FPM, PostgreSQL, Mailpit).  
-  
----  
-  
-## 3. ROLES Y PERMISOS  
-### Administrador  
-- Acceso total al sistema.  
-- Gestión de Catálogos del Sistema (Monedas, Bancos, Tipos de Cuenta, Marcas de Red).  
-- Gestión de Usuarios y Roles/Permisos.  
-  
-### Usuario Estándar  
-- Gestión de perfil, categorías personales, efectivo, cuentas, tarjetas, compromisos, deudores, grupos y eventos.  
-  
-### Implementación Técnica de Permisos  
-- Roles "Administrador" y "Usuario" creados por defecto vía Seeders.  
-- Permisos granulares por recurso (ej: `monedas.view`, `monedas.create`, `monedas.edit`, `monedas.delete`).  
-- Middleware `can:permission` en rutas.  
-- Directivas `@can` y `@canany` en vistas Blade para ocultar/mostrar botones y menús.  
-  
----  
-  
-## 4. CATÁLOGOS DEL SISTEMA (✅ COMPLETADO)  
-Gestionados por el Administrador mediante modales AJAX, DataTables dinámicos y recorte de imágenes (Croppie).  
-  
-### 4.1 Monedas  
-- **Campos:** `id`, `nombre`, `codigo` (USD, GTQ, etc.), `simbolo` ($, Q, etc.), `activo` (boolean).  
-  
-### 4.2 Bancos  
-- **Campos:** `id`, `nombre`, `codigo` (opcional), `logo` (imagen recortada, nullable), `activo` (boolean).  
-  
-### 4.3 Tipos de Cuenta  
-- **Campos:** `id`, `nombre` (Ahorros, Monetaria, etc.), `descripcion` (nullable), `activo` (boolean).  
-  
-### 4.4 Marcas de Red  
-- **Campos:** `id`, `nombre` (Visa, Mastercard, etc.), `logo` (imagen recortada, nullable), `color` (código hex, nullable), `activo` (boolean).  
-  
----  
-  
-## 5. MÓDULOS FUNCIONALES (Estado)  
-### 5.1 Perfil de Usuario (✅ Completado)  
-- Edición de nombre, email, contraseña.  
-- Subida y recorte de avatar con Croppie.  
-- Configuración de `moneda_preferida_id`, `fecha_corte_dia` y `zona_horaria`.
-  
-### 5.2 Categorías personales (✅ Completado)
-- CRUD aislado por usuario, colores, filtros, permisos, exportaciones y paginación AJAX.
+# SISTEMA MIS GASTOS - DOCUMENTO MAESTRO
+**Última actualización:** 17 de octubre, 2026
 
-### 5.3 Efectivo (✅ Completado)
-- Ingresos/egresos, saldo, moneda preferida, ciclos de corte, validación de saldo, filtros, exportaciones y paginación AJAX.
+> Leyenda de estado: ✅ Completado · 🔄 En progreso · ⏳ Pendiente
 
-### 5.4 Compromisos (🔄 En progreso)
-- Registro de compromisos únicos o recurrentes, medio de pago, monto, fecha esperada y cancelación.
-- Integración inicial con el wizard para registrar cero, uno o varios compromisos.
-- El wizard ya permite configurar frecuencia semanal, quincenal o mensual, día de pago y finalización indefinida o por número de cuotas.
-- Los permisos `view`, `create`, `edit`, `delete` y `export` están disponibles para Administrador y Usuario.
-- Pendiente: generación automática de ocurrencias por ciclo, calendario completo de cuotas y aplicación de abonos a capital sobre cuotas futuras.
-- El cierre automático de ciclos y la generación inicial de ocurrencias ya cuentan con servicio y comando programado; requieren validación operativa con el scheduler del entorno.
-- Permisos `view`, `create`, `edit`, `delete` y `export` incluidos para Administrador y Usuario.
-- Pendiente: generación automática de ocurrencias, cuotas y conexión con cuentas/tarjetas.
+---
 
-### 5.5 a 5.9 (Cuentas, Tarjetas, Deudores, Grupos y Eventos)
-- ⏳ **Pendiente de desarrollo.**
-  
----  
-  
-## 12. ESTADO ACTUAL DEL DESARROLLO  
-### ✅ Completado  
-- [x] Autenticación (Login, Registro, Verificación, Recuperación, Google OAuth).  
-- [x] Sistema de Roles y Permisos (Spatie) con Seeders.  
-- [x] CRUD de Usuarios y Roles con AJAX, modales, validaciones y DataTables.  
-- [x] **CRUD de Catálogos (Monedas, Bancos, Tipos de Cuenta, Marcas de Red)** con:  
-  - [x] Modales dinámicos cargados vía AJAX (`fetch` + `Alpine.initTree`).  
-  - [x] Recorte de imágenes para logos de Bancos y Marcas de Red (Croppie).  
-  - [x] Selects avanzados con Tom Select.  
-  - [x] Notificaciones de éxito/error con SweetAlert2.  
-  - [x] Estados "Activo/Inactivo" con checkbox marcado por defecto.  
-- [x] Layout principal responsivo (Sidebar colapsable, Top bar, Dark/Light mode).  
-- [x] Componentes Blade reutilizables (`floating-input`, `data-table`, `modal`).  
-- [x] Licencia de propiedad intelectual configurada en el repositorio.  
-- [x] Validación frontend estandarizada, componentes monetario/fecha y tablas responsivas.
-- [x] Navegación inteligente y resaltado de registros en categorías, efectivo, usuarios y roles.
-  
-### 🔄 En Progreso  
-- [x] Extender la navegación inteligente a los CRUD administrativos restantes.
-- [ ] Wizard de inicio y configuración inicial (en progreso: cuatro ventanas con perfil/Croppie, configuración de cuenta, configuración financiera, saldo inicial y compromisos múltiples; faltan cuentas y tarjetas guiadas).
-  
-### ⏳ Pendiente (Orden de Prioridad)  
-1. Completar wizard con compromisos iniciales y cuentas/tarjetas cuando existan esos módulos.
-2. Completar módulo de compromisos (generación de recurrencias y cuotas).
-3. Módulo de cuentas bancarias y tarjetas de crédito.
-4. Dashboard con gráficos y resumen financiero.
-5. Grupos familiares y eventos (división de gastos).
-6. Notificaciones automáticas (Email/Push).
-  
----  
-  
-## 13. PRÓXIMOS PASOS INMEDIATOS  
-1. Completar recurrencias y cuotas del módulo de compromisos.
-2. Ampliar el wizard cuando estén disponibles cuentas y tarjetas.
-  
----  
-  
-## 17. COMPONENTES Y HERRAMIENTAS IMPLEMENTADAS  
-- **Sistema de Layout:** `app.blade.php` y `guest.blade.php` con estructura semántica.  
-- **Navegación:** Sidebar con Alpine.js (`x-show`, `x-collapse`) y detección de ruta activa (`request()->routeIs()`).  
-- **Formularios AJAX:** Componente `ajaxForm` que intercepta submits, muestra loading states, maneja errores 422 de Laravel y refresca tablas sin recargar la página.  
-- **Tablas de Datos:** Componente `data-table` con paginación, búsqueda, ordenamiento y acciones (editar/eliminar) todo vía AJAX.  
-- **Imágenes:** Integración de `Croppie` para recorte de avatares y logos antes de la subida.  
-- **Selects:** `Tom Select` para búsquedas dentro de desplegables.  
-- **Alertas:** `SweetAlert2` configurado globalmente con temas claro/oscuro y botones personalizados.  
-- **Manejo de Errores:** Validaciones en tiempo real y mensajes de error visuales bajo cada campo.  
-  
----  
-  
-## 18. NOTAS TÉCNICAS Y CONVENCIONES  
-- **Nomenclatura:** Las rutas y permisos usan kebab-case (ej: `marcas-red.create`), las tablas usan plural snake_case (ej: `marcas_red`), y los modelos usan PascalCase singular (ej: `MarcaRed`).  
-- **Imágenes:** Los logos se almacenan en `storage/app/public/logos/` y se acceden vía `asset('storage/...')`.  
-- **Seguridad:** Todos los formularios incluyen `@csrf`. Las eliminaciones usan método `DELETE` con confirmación previa.  
-- **Portafolio:** El código está documentado, sigue los estándares PSR-12 y utiliza las mejores prácticas de Laravel 11.  
-  
----  
-**FIN DEL DOCUMENTO**  
+## 1. OBJETIVO DEL SISTEMA
+
+Sistema integral de control financiero personal y familiar que permite:
+- Llevar control de efectivo, cuentas bancarias, tarjetas de crédito y compromisos
+- Gestionar deudores y deudas personales
+- Dividir gastos en eventos sociales
+- Trabajar en grupos familiares
+- Generar reportes financieros completos
+
+**Propósito adicional:** Servir como portafolio profesional para demostrar habilidades de desarrollo full-stack (web + Android + iOS).
+
+---
+
+## 2. ARQUITECTURA TÉCNICA
+
+### Repositorios
+| Proyecto | Carpeta local | Tecnología |
+|---|---|---|
+| **Web + API** | `~/Proyectos/mis-gastos` (código en `src/`) | Laravel 13, PHP 8.3 |
+| **Android** | `~/Proyectos/Mis Gastos Kotlin` | Kotlin + Jetpack Compose |
+| **iOS** | `~/Proyectos/Mis-Gastos-iOS` | Swift + SwiftUI |
+
+### Stack Tecnológico
+- **Backend:** Laravel 13 (PHP 8.3)
+- **Base de datos:** PostgreSQL 16
+- **Frontend web:** Blade + Alpine.js + Tailwind CSS (Vite)
+- **Autenticación:** Laravel Breeze (web) + Laravel Sanctum (API tokens para móviles) + Google OAuth (Socialite)
+- **Permisos:** Spatie Laravel Permission
+- **UI:** SweetAlert2, Tom Select, Croppie, tablas AJAX propias
+- **Exportación:** maatwebsite/excel (CSV/XLSX) + dompdf (PDF)
+- **Documentación API:** l5-swagger
+- **Almacenamiento:** Local (`storage/app/public`), preparado para migrar a AWS S3
+- **Notificaciones:** Laravel Notifications (email + push)
+- **Generación de imágenes:** html2canvas (web) + nativo (móvil)
+- **Contenedores:** Docker Compose (Nginx, PHP-FPM, PostgreSQL, pgAdmin, Mailpit)
+
+### Principio de arquitectura (los 3 proyectos a la par)
+La lógica de negocio vive en **clases de servicio** (`src/app/Services`), no en los controladores. Los controladores web y los de API usan los mismos servicios, así una regla (por ejemplo, "no gastar más efectivo del que hay") existe en un solo lugar.
+
+Flujo por cada módulo: **Servicio + tests → Web → Endpoint API → Android → iOS**.
+
+---
+
+## 3. ROLES Y PERMISOS ✅
+
+### Administrador
+**Catálogos que puede gestionar:** Monedas, Bancos, Tipos de Cuenta, Marcas de Red. También gestiona usuarios y roles.
+
+### Usuario
+**Puede gestionar:** Perfil, categorías personales, efectivo, cuentas bancarias, tarjetas de crédito, compromisos, deudores, grupos familiares y eventos.
+
+### Implementación
+- Roles "Administrador" y "Usuario" creados por seeders.
+- Permisos granulares por recurso (`compromisos.view`, `compromisos.create`, `compromisos.edit`, `compromisos.delete`, `compromisos.export`).
+- Middleware `can:permiso` en rutas; `@can` / `@canany` en vistas.
+
+---
+
+## 4. CATÁLOGOS DEL SISTEMA
+
+### 4.1 Monedas ✅ (Solo Administrador)
+**Campos:** id, código (USD, GTQ…), nombre, símbolo ($, Q…), activo
+
+**Comportamiento:**
+- Cada usuario selecciona su moneda preferida y puede cambiarla desde su perfil
+- Los registros anteriores mantienen la moneda con la que fueron creados (⏳ pendiente: guardar `moneda_id` en cada movimiento)
+
+### 4.2 Bancos ✅ (Solo Administrador)
+**Campos:** id, nombre, código (opcional), logo (opcional, recortado con Croppie), activo
+
+### 4.3 Tipos de Cuenta ✅ (Solo Administrador)
+**Campos:** id, nombre (Ahorros, Monetaria…), descripción, activo
+
+### 4.4 Marcas de Red ✅ (Solo Administrador)
+**Campos:** id, nombre (Visa, Mastercard, Amex…), logo, color corporativo, activo
+> Nota técnica: la tabla se llama `marca_reds` (no `marcas_red` como dice la convención).
+
+### 4.5 Categorías de Gastos 🔄
+**Estado actual:** las categorías personales están completas (CRUD por usuario, color, tipo ingreso/egreso, filtros, exportación).
+
+**Pendiente:**
+- ⏳ Categorías del sistema por defecto (no editables ni eliminables):
+  Vivienda, Servicios, Alimentación, Transporte, Salud, Ocio y Entretenimiento, Educación, Ropa, Cuidado Personal, Ahorro, Deuda, Seguro, Super Mercado
+- ⏳ Campo `icono` y catálogo predefinido de iconos para elegir
+- ⏳ Marcar categorías del sistema con un campo (`es_sistema`) en lugar de identificarlas por nombre. Hoy "Saldo inicial" se busca por nombre (constante `CicloEfectivoService::CATEGORIA_SALDO_INICIAL`).
+
+**Comportamiento:**
+- Los usuarios pueden crear categorías personalizadas
+- Solo el creador puede ver y editar sus categorías personalizadas
+- Las categorías del sistema no se pueden editar ni eliminar
+
+---
+
+## 5. MÓDULOS FUNCIONALES
+
+### 5.1 PERFIL DE USUARIO ✅ (web)
+- Editar nombre, email y contraseña
+- Subir/recortar foto de perfil (Croppie)
+- Moneda preferida, día de corte (1-31), zona horaria
+- Eliminar cuenta
+
+**Pendiente:**
+- ⏳ Teléfono y fecha de nacimiento (opcionales)
+- ⏳ Configuración de horarios de notificaciones (JSON)
+- ⏳ Exportar todos mis datos
+
+### 5.2 EFECTIVO ✅
+
+#### 5.2.1 Ingresos de Efectivo
+**Campos:** id, descripción, monto, categoría, fecha, usuario, `es_saldo_arrastrado`
+- Se suman al "Efectivo actual"
+- ⏳ Pendiente: comentario; ingresos recurrentes automáticos (ej. sueldo en efectivo)
+
+#### 5.2.2 Egresos de Efectivo
+**Campos:** id, descripción, monto, categoría, fecha, usuario, compromiso_id (si paga un compromiso)
+- **VALIDACIÓN CRÍTICA:** el egreso no puede ser mayor al "Efectivo actual"; se muestra alerta y se bloquea
+- Tampoco se puede editar ni eliminar un ingreso si el efectivo quedaría en negativo
+- ⏳ Pendiente: comentario
+
+#### 5.2.3 Cálculo de Efectivo Actual
+```
+Efectivo Actual = Suma(Ingresos) - Suma(Egresos)   (excluyendo saldos arrastrados)
+```
+Implementado en `CicloEfectivoService::balance()`.
+
+#### 5.2.4 Saldo inicial y saldo arrastrado
+- **Saldo inicial:** el efectivo registrado en el wizard. Es dinero real y cuenta en el balance.
+- **Saldo arrastrado:** en cada corte se crea un ingreso "Saldo inicial" con `es_saldo_arrastrado = true` y el efectivo al cierre. **Es informativo**: muestra con cuánto abre el ciclo, pero no se suma al balance (si se sumara, el dinero se contaría dos veces). No se puede editar ni eliminar.
+
+### 5.3 COMPROMISOS 🔄
+
+**Estado actual (implementado):**
+- CRUD de compromisos únicos y recurrentes (semanal, quincenal, mensual), medio de pago, fecha esperada
+- Pago total o parcial desde "Pagar con efectivo" (crea el egreso y descuenta el saldo pendiente; no permite pagar más que el pendiente)
+- Cancelar compromiso (estado `cancelado`)
+- Generación de ocurrencias en el corte (comando `efectivo:cerrar-ciclos`)
+- Recordatorios diarios de compromisos vencidos (comando `compromisos:notificar-pendientes`)
+- La fecha esperada puede ser de cualquier ciclo futuro
+
+**Campos objetivo:**
+- id, descripción, valor_total, valor_pendiente, categoría_id, comentario
+- fecha_estimada_pago (opcional), ciclo/mes al que pertenece
+- usuario_id, fecha de creación
+- tipo_pago (efectivo, tarjeta, cuenta_bancaria)
+- estado, compromiso_padre_id, es_recurrente, frecuencia, fecha_fin
+- numero_cuota, total_cuotas
+- tarjeta_id, cuenta_id
+
+**Pendiente (rediseño):**
+- ⏳ Modelo **padre/hijo**: el padre define la regla; cada ciclo se genera un hijo. Hoy el padre recurrente nunca suma cuotas, por lo que los compromisos con número de cuotas no terminan solos.
+- ⏳ Categoría del compromiso
+- ⏳ Estados completos (ver abajo); hoy solo existen `activo`, `pagado`, `cancelado`
+- ⏳ Histórico de cada abono (hoy se ven como egresos ligados con `compromiso_id`)
+- ⏳ Borrar solo el compromiso del mes o toda la serie
+- ⏳ El campo `recurrencia_intervalo` guarda en realidad el **día de pago**: renombrarlo en el rediseño
+- ⏳ Préstamos y mora de tarjeta
+
+**Tipos de compromisos:**
+
+#### A. Una sola vez
+Ejemplo: "Pagar préstamo a David". Puede no tener fecha (se paga "en algún momento") o tener fecha estimada; si la fecha cae en otro ciclo, pertenece a ese ciclo.
+
+#### B. Recurrentes (padre → hijos)
+- Ejemplo: "Cuota de Gaby", $150 mensual hasta que cumpla 18; "Microbús de Gaby", $37.50 hasta el último mes de colegio
+- Al crearlo se genera el compromiso del ciclo actual; en cada corte se genera el del siguiente
+- Puede tener fecha fin o ser indefinido
+- Se pueden cancelar los futuros sin tocar los ya generados
+
+#### C. Por cuotas
+Ejemplo: $1,200 en 12 cuotas de $100. Se define el total de cuotas y por cuál va. Cada cuota es un compromiso.
+
+#### D. Compras de tarjeta en cuotas (tasa cero)
+1. Se descuenta el TOTAL del disponible de la tarjeta inmediatamente
+2. Se generan compromisos mensuales por cada cuota, en la fecha de corte de la tarjeta
+3. El usuario ve la proyección de cuotas al crear la compra
+4. La última cuota absorbe el ajuste de centavos
+
+Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 compromisos de $100.
+
+#### E. Préstamos
+**Campos adicionales:** monto_total, tasa_interes (opcional), saldo_pendiente, numero_cuotas, cuota_mensual, banco_id, fecha_inicio, fecha_fin estimada
+**Funcionalidades:** registrar abonos, cuotas pagadas vs pendientes, calcular intereses si se conoce la tasa.
+
+**Estados de compromiso:**
+- **Registrado/Pendiente:** fecha de pago futura o sin fecha
+- **Parcial:** pagado parcialmente (valor_pendiente < valor_total)
+- **Vencido:** fecha de pago pasada y no pagado (color de alerta)
+- **Pagado:** completamente pagado
+- **Antiguo:** de ciclos anteriores y aún sin pagar (se muestra diferente)
+
+**Pagos parciales:** un compromiso de $15 se puede pagar en abonos ($10 + $5, o 15 de $1). Se muestra el valor original y el pendiente.
+
+**Mora de tarjeta de crédito:** si vence el compromiso de un estado de cuenta, el usuario puede crear un compromiso "Mora de tarjeta de crédito" (descripción editable, valor manual) relacionado con el compromiso vencido.
+
+**Al pagarse**, el compromiso se convierte en egreso de efectivo, de cuenta bancaria o de tarjeta.
+
+### 5.4 CUENTAS BANCARIAS ⏳
+
+**Campos:** id, nombre/alias, banco_id, número de cuenta (opcional, encriptado), tipo_cuenta_id, monto_inicial, usuario_id, grupo_familiar_id (null si es individual), activo
+
+- **Ingresos:** suman al monto. Ejemplo: cuenta en $0, ingreso de $10 → $10
+- **Egresos:** no pueden superar el monto actual
+- **Transferencias:** dos movimientos (egreso en origen + ingreso en destino), tipo "transferencia". Pueden ser entre cuentas propias, del grupo familiar o de cuenta a efectivo (retiro)
+- **Pago de compromisos** desde la cuenta
+- **Corte:** se guarda el monto final, que es el inicial del siguiente ciclo
+
+### 5.5 TARJETAS DE CRÉDITO 🔄
+
+**Estado actual:** CRUD básico (nombre, banco, marca, últimos 4 dígitos, límite, saldo actual, día de corte, día de pago, activo). Tablas `estados_cuenta_tarjeta` y `movimientos_tarjeta` creadas, sin lógica todavía.
+
+**Campos objetivo:**
+- nombre/alias, marca_red_id, banco_id, número (opcional, encriptado), límite
+- día de corte, día límite de pago (editable por cada mes)
+- color, foto (opcional), tasa de interés (opcional)
+- disponible, saldo pendiente
+
+**Registro inicial:** si hay saldo pendiente, preguntar "¿Desea crear un compromiso automático con el saldo pendiente?". Al pagar ese compromiso, se suma al disponible.
+
+**Compras con tarjeta:** descripción, monto, fecha, usuario, comentario, tarjeta, es_en_cuotas, total_cuotas, tasa_cero. Cada compra resta del disponible.
+
+**Estado de cuenta automático:** en la fecha de corte se suman las compras del período y se crea un compromiso (descripción = alias de la tarjeta, valor = total, fecha = fecha límite de pago). Al pagarlo (efectivo o cuenta), se restaura el disponible.
+
+**Fecha límite variable:** se puede editar por mes (enero día 15, febrero día 20).
+
+### 5.6 DEUDORES ⏳
+
+**Deudor:** id, nombre, tipo (persona, institución, empresa), contacto (opcional), notas, usuario_id
+
+**Deuda:** id, deudor_id, descripción, valor_original, valor_pendiente, fecha_prestamo, tipo_origen (efectivo, tarjeta, cuenta), referencia al egreso, comentario, estado (activa, parcial, pagada), usuario_id
+
+**Pago de deuda:** id, deuda_id, valor, fecha, tipo_ingreso (efectivo, cuenta), referencia al ingreso, comentario, usuario_id
+
+**Flujo:**
+1. Al registrar un egreso, se marca "Crear deuda" y se elige o crea el deudor
+2. Al registrar un ingreso, se marca "Relacionar con deuda"
+3. Un ingreso puede pagar **varias deudas** (se distribuye el monto)
+4. Si el pendiente llega a 0, la deuda queda "pagada"
+
+**Ejemplo:**
+- Semana 1: presto $100 a Juan en efectivo → deuda 1: $100
+- Semana 2: presto $200 a Juan desde la cuenta → deuda 2: $200 (Juan debe $300)
+- Semana 3: Juan paga $50 → deuda 1 queda en $50 (Juan debe $250)
+- Semana 4: Juan paga $250 → un solo ingreso salda ambas deudas
+
+### 5.7 GRUPOS FAMILIARES ⏳
+
+**Grupo:** id, nombre, creado_por, fecha_creacion, activo
+**Miembro:** id, grupo_id, usuario_id, rol (administrador, miembro), fecha_union, estado (pendiente, activo, inactivo)
+
+**Flujo:**
+1. El usuario crea un grupo y queda como administrador
+2. Invita a otro usuario por email
+3. El invitado recibe una notificación y acepta o rechaza
+4. Si acepta, entra como miembro
+
+**Comportamiento:**
+- Los miembros ven cuentas, tarjetas y gastos de los demás miembros
+- Cada registro guarda quién lo creó
+- Un usuario puede salir del grupo; sus registros personales permanecen y deja de ver los del grupo
+
+### 5.8 EVENTOS (DIVISIÓN DE GASTOS) ⏳
+
+**Evento:** id, nombre ("Cumpleaños de María"), fecha, lugar, usuario_id, propina_porcentaje (opcional), quién pagó, tipo_pago, referencia al pago
+**Participante:** id, evento_id, nombre, es_festejado, total_a_pagar, ya_pago, fecha_pago, tipo_pago
+**Ítem consumido:** id, evento_id, participante(s), descripción, valor, compartido
+
+**Lógica de cálculo:**
+- Sin festejados: cada persona paga sus consumos + su parte proporcional de propina
+- Con festejados: el consumo de los festejados (con su propina) se divide entre los no festejados, que además pagan sus propios consumos y su propina
+
+**Funcionalidades:**
+- Registrar participantes, consumos, festejados y propina
+- Si yo pagué: registrar el gasto (efectivo/tarjeta/cuenta) y los ingresos a medida que me pagan
+- Si otro pagó: solo marcar quién ya pagó
+- Generar una **imagen** de la tabla de totales para compartir por WhatsApp
+- Editar si hubo errores
+
+---
+
+## 6. DASHBOARD ⏳
+
+### 6.1 Ciclo actual
+Fecha de inicio y fecha de corte
+
+### 6.2 Efectivo
+- Efectivo actual · Compromisos en efectivo del ciclo · **Liquidez neta** (efectivo − compromisos) · Gastos del ciclo
+
+### 6.3 Tarjetas de crédito
+- Disponible total · Compromisos de tarjetas · Liquidez neta · Gastos en tarjetas
+
+### 6.4 Cuentas bancarias
+- Disponible total · Compromisos de cuentas · Liquidez neta · Gastos de cuentas
+
+### 6.5 Deudores
+- Total que me deben
+
+### 6.6 Gráficos
+1. Ingresos vs Gastos vs Compromisos
+2. Gastos por categoría
+3. Gastos por tarjeta de crédito
+
+### 6.7 Vínculos rápidos
+Crear ingreso · Crear gasto · Crear compromiso · Ver ejecución financiera
+
+### 6.8 Alertas
+- Compromisos que vencen hoy, tarjetas con fecha límite cercana
+- Solo el día correspondiente; desaparecen al pagarse
+
+---
+
+## 7. REPORTES ⏳
+
+### 7.1 Ejecución Financiera
+Ingresos de efectivo, egresos de efectivo, compromisos, tarjetas (ordenadas por fecha límite de pago), cuentas bancarias, deudores. Totales grandes al final. Filtro: ciclo actual o rango.
+
+### 7.2 Gastos por Categoría
+Ciclo actual o rango de meses.
+
+### 7.3 Estado de Cuenta (por tarjeta y mes)
+
+### 7.4 Préstamos
+Datos del préstamo, cuotas pagadas y faltantes, totales.
+
+### 7.5 Exportación
+PDF, CSV, XLSX e imagen.
+
+---
+
+## 8. NOTIFICACIONES 🔄
+
+**Implementado:** tabla `notifications`, página de notificaciones, recordatorio diario (8:00) de compromisos vencidos (máximo 5 por compromiso).
+
+### 8.1 Tipos
+1. Compromisos con fecha de pago hoy
+2. Tarjetas con fecha límite cercana (3 días antes) y del día
+3. Compromisos vencidos
+4. Invitaciones a grupos familiares
+5. Recordatorios de deudores
+
+### 8.2 Canales
+- **Email** con el detalle del compromiso
+- **Push** en móviles
+
+### 8.3 Horarios (por usuario)
+8:00 AM, 10:00 AM, 12:00 PM, 2:00 PM, 4:00 PM, activables uno a uno, según la zona horaria del usuario.
+
+---
+
+## 9. WIZARD DE INICIO (PRIMER LOGIN) 🔄
+
+**Implementado (web):** perfil con foto, configuración de cuenta, configuración financiera (moneda, día de corte, zona horaria), efectivo inicial, compromisos múltiples, borrador guardado automáticamente.
+
+**Pasos objetivo:**
+1. ✅ Configuración básica (moneda, día de corte, zona horaria)
+2. ✅ Efectivo inicial ("así se registran los ingresos")
+3. ⏳ Cuentas bancarias (opcional)
+4. ⏳ Tarjetas de crédito (opcional, con compromiso automático si hay saldo pendiente)
+5. ⏳ Deudas existentes / préstamos (opcional)
+6. ⏳ Deudores (opcional)
+7. ✅ Compromisos activos (opcional)
+8. ⏳ Grupo familiar (opcional)
+9. ⏳ Notificaciones
+10. ⏳ Resumen y finalizar
+
+---
+
+## 10. FLUJO DE CORTE MENSUAL 🔄
+
+**¿Cuándo?** En el día de corte del usuario. Si es 31 (o 29/30) y el mes es más corto, el último día del mes.
+**Implementado en:** `CicloEfectivoService::closeIfNeeded()`, que corre cada día a las 00:01 y también al entrar a Efectivo. Si el usuario estuvo ausente varios meses, cierra cada ciclo pendiente.
+
+### 10.1 Efectivo ✅
+1. Se calcula el efectivo al cierre del ciclo
+2. Se registra como saldo arrastrado del siguiente ciclo (`es_saldo_arrastrado = true`)
+3. Los ingresos recurrentes (sueldo) se registran aparte (⏳)
+
+### 10.2 Cuentas bancarias ⏳
+Se guarda el monto final de cada cuenta como inicial del siguiente ciclo.
+
+### 10.3 Tarjetas de crédito ⏳
+Se genera el estado de cuenta y su compromiso.
+
+### 10.4 Compromisos 🔄
+- Los pendientes pasan al siguiente ciclo conservando su fecha (a menos que el usuario la cambie)
+- Los recurrentes generan el compromiso del siguiente ciclo (✅ básico)
+
+### 10.5 Histórico ⏳
+Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cada tarjeta, compromisos pendientes.
+
+---
+
+## 11. SEGURIDAD Y PRIVACIDAD
+
+- **Encriptar:** números de tarjeta y de cuenta (⏳)
+- **Contraseñas:** bcrypt ✅
+- **CSRF** en formularios web ✅; validación en frontend y backend ✅
+- **Aislamiento por usuario:** cada consulta filtra por `user_id`; acceder a un registro ajeno devuelve 404 ✅
+- **Backups** diarios con 30 días de retención (⏳, al publicar)
+- **Exportar mis datos** y **eliminar cuenta** con confirmación (eliminar ✅, exportar ⏳)
+
+---
+
+## 12. ESTADO ACTUAL DEL DESARROLLO
+
+### Web (Laravel)
+| Módulo | Estado |
+|---|---|
+| Autenticación, registro, verificación, recuperación, Google | ✅ |
+| Roles y permisos; CRUD de usuarios y roles | ✅ |
+| Catálogos (Monedas, Bancos, Tipos de Cuenta, Marcas de Red) | ✅ |
+| Perfil | ✅ |
+| Categorías personales | ✅ (faltan categorías del sistema e iconos) |
+| Efectivo | ✅ |
+| Wizard | 🔄 |
+| Compromisos | 🔄 (falta rediseño padre/hijo, estados, categoría) |
+| Tarjetas de crédito | 🔄 (CRUD básico) |
+| Cuentas, Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
+
+### API (para móviles)
+| Endpoint | Estado |
+|---|---|
+| Auth (registro, login, Google, olvido/reset, logout, usuario) | ✅ |
+| Perfil y avatar | ✅ |
+| Admin usuarios y roles | ✅ |
+| Catálogos, categorías, efectivo, compromisos… | ⏳ |
+
+### Android (Kotlin)
+| Pantalla | Estado |
+|---|---|
+| Login, registro, Google, olvido/reset de contraseña | ✅ |
+| Dashboard | Vacío |
+| Todo lo demás | ⏳ |
+
+### iOS (Swift)
+| Pantalla | Estado |
+|---|---|
+| Login, registro, Google, olvido/reset de contraseña | ✅ |
+| Perfil | Básico |
+| Todo lo demás | ⏳ |
+
+### Calidad
+- 37 tests automáticos (auth, perfil, categorías, efectivo, ciclos y pagos de compromisos)
+- Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
+
+---
+
+## 13. PRÓXIMOS PASOS (en orden)
+
+1. **Mover lógica a servicios:** efectivo (✅ ciclos y saldo), compromisos, categorías
+2. **API + móviles al día:** perfil, catálogos, categorías y efectivo en Android e iOS
+3. **Rediseño de compromisos:** padre/hijo, estados, categoría, histórico de abonos, borrado de serie
+4. **Categorías del sistema** con iconos
+5. **Cuentas bancarias** (y pagar compromisos desde cuenta)
+6. **Tarjetas de crédito** completas (compras, cuotas, estado de cuenta automático)
+7. **Wizard:** cuentas y tarjetas
+8. **Dashboard**
+9. Deudores → Grupos familiares → Eventos → Reportes → Notificaciones push
+
+---
+
+## 14. NOTAS TÉCNICAS Y CONVENCIONES
+
+- **Nomenclatura:** rutas y permisos en kebab-case (`marcas-red.create`), tablas en plural snake_case, modelos en PascalCase singular
+- **Transacciones de BD** en toda operación que mueva dinero, con `lockForUpdate` cuando se modifican saldos
+- **Imágenes:** `storage/app/public/...` vía `asset('storage/...')`
+- **Estilo:** PSR-12 con Laravel Pint
+- **Comandos útiles** (desde la raíz del repositorio):
+  - Tests: `docker compose exec app php artisan test`
+  - Estilo: `docker compose exec app ./vendor/bin/pint`
+  - Migraciones: `docker compose exec app php artisan migrate`
+
+### Consideraciones pendientes
+- Soft deletes en registros importantes
+- Auditoría (quién creó/modificó/eliminó)
+- Cache para cálculos frecuentes (efectivo actual)
+- Colas para tareas pesadas (reportes)
+
+### UX/UI
+- Responsive (mobile-first), modo claro/oscuro
+- Colores de las marcas de tarjetas, iconos claros por categoría
+- Confirmación en acciones destructivas, estados de carga y mensajes de error amigables
+
+---
+
+## 15. GLOSARIO
+
+- **Ciclo / corte:** período financiero del usuario; termina en su día de corte
+- **Compromiso:** gasto programado o deuda por pagar
+- **Compromiso padre / hijo:** regla recurrente / instancia de cada ciclo
+- **Efectivo actual:** dinero en efectivo que el usuario tiene ahora
+- **Saldo arrastrado:** efectivo con el que abre un ciclo (informativo, no suma al balance)
+- **Liquidez neta:** disponible menos compromisos
+- **Deudor:** persona o institución que le debe dinero al usuario
+- **Festejado:** persona invitada en un evento; su consumo lo pagan los demás
+- **Tasa cero:** compra en cuotas sin intereses
+
+---
+
+**FIN DEL DOCUMENTO**

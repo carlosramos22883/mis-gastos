@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo'])]
+#[Fillable(['user_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo', 'es_saldo_arrastrado'])]
 class MovimientoEfectivo extends Model
 {
     use HasFactory;
@@ -17,6 +17,7 @@ class MovimientoEfectivo extends Model
     protected $casts = [
         'monto' => 'decimal:2',
         'fecha' => 'date',
+        'es_saldo_arrastrado' => 'boolean',
     ];
 
     public function user(): BelongsTo
