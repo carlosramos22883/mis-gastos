@@ -619,6 +619,8 @@ document.addEventListener('alpine:init', () => {
 
         showValidationErrors() {
             this.clearValidationErrors();
+            const root = this.$el.tagName === 'FORM' ? this.$el : (this.$el.querySelector('form') || document);
+            const sinCampo = [];
 
             for (const [field, messages] of Object.entries(this.errors)) {
                 let input;
@@ -628,8 +630,13 @@ document.addEventListener('alpine:init', () => {
                     input = document.getElementById('permissions-error-container');
                 } else {
                     // Comportamiento normal para inputs de texto, selects, etc.
-                    const inputName = field.includes('.') ? field.replace('.', '\\.') : field;
-                    input = document.querySelector(`[name="${inputName}"], [name="${field}[]"]`);
+                    // Solo dentro de este formulario (en la página puede haber otros con campos del mismo nombre);
+                    // "cargos.0.monto" se busca como "cargos[0][monto]"
+                    const corchetes = field.split('.').map((p, i) => (i === 0 ? p : `[${p}]`)).join('');
+                    input = root.querySelector(`[name="${CSS.escape(field)}"], [name="${CSS.escape(corchetes)}"], [name="${CSS.escape(field)}[]"]`);
+                    if (!input) {
+                        sinCampo.push(messages[0]);
+                    }
                 }
 
                 if (input) {
@@ -659,6 +666,9 @@ document.addEventListener('alpine:init', () => {
                         errorContainer.appendChild(errorDiv);
                     }
                 }
+            }
+            if (sinCampo.length) {
+                showAlert('error', 'Revisa los datos', sinCampo.join(' '));
             }
         },
 

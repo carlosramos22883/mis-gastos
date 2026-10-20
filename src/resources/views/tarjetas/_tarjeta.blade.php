@@ -11,14 +11,14 @@
     <{{ $tag }} @if ($tag === 'a') href="{{ route('tarjetas.show', $tarjeta) }}" @endif class="block rounded-2xl p-5 shadow-lg transition hover:shadow-xl"
         style="background: linear-gradient(135deg, {{ $tarjeta->color }} 0%, {{ $tarjeta->color }}cc 100%); color: {{ $texto }}">
         <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-                <p class="truncate text-lg font-semibold">{{ $tarjeta->nombre }}</p>
-                <p class="truncate text-xs opacity-80">{{ $tarjeta->banco?->nombre }}</p>
+            <div class="flex min-w-0 items-center gap-3">
+                <x-logo-banco :banco="$tarjeta->banco" />
+                <div class="min-w-0">
+                    <p class="truncate text-lg font-semibold leading-tight">{{ $tarjeta->nombre }}</p>
+                    <p class="truncate text-xs opacity-80">{{ $tarjeta->banco?->nombre }}</p>
+                </div>
             </div>
-            <div class="shrink-0 text-right text-xs font-semibold uppercase tracking-wide opacity-90">
-                {{ $tarjeta->marcaRed?->nombre }}
-                @unless ($tarjeta->activo)<span class="block normal-case">Inactiva</span>@endunless
-            </div>
+            @unless ($tarjeta->activo)<span class="shrink-0 text-xs font-semibold opacity-90">Inactiva</span>@endunless
         </div>
         <p class="mt-4 font-mono text-sm tracking-widest opacity-80">•••• •••• •••• {{ $tarjeta->ultimos_digitos ?? '••••' }}</p>
         @if ($titular)<p class="mt-1 truncate text-xs font-medium uppercase tracking-wide opacity-80">{{ $titular }}</p>@endif
@@ -26,8 +26,9 @@
             <div>
                 <p class="text-xs opacity-80">Disponible</p>
                 <p class="text-2xl font-bold">{{ $simbolo }} {{ number_format($tarjeta->disponible, 2) }}</p>
+                <p class="text-xs opacity-80">de {{ $simbolo }} {{ number_format((float) $tarjeta->limite_credito, 2) }}</p>
             </div>
-            <p class="text-right text-xs opacity-80">de {{ $simbolo }} {{ number_format((float) $tarjeta->limite_credito, 2) }}</p>
+            <x-logo-red :marca="$tarjeta->marcaRed" />
         </div>
         <div class="mt-2 h-1.5 overflow-hidden rounded-full" style="background-color: {{ $texto }}33">
             <div class="h-full rounded-full" style="width: {{ $uso }}%; background-color: {{ $texto }}"></div>

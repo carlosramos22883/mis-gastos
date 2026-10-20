@@ -7,6 +7,7 @@ use App\Models\EstadoCuentaTarjeta;
 use App\Models\MovimientoTarjeta;
 use App\Models\TarjetaCredito;
 use App\Models\User;
+use App\Support\MovimientoVinculado;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -187,7 +188,7 @@ class TarjetaService
     public function esEditable(MovimientoTarjeta $movimiento): bool
     {
         return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && ! $movimiento->items()->exists()
-            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
+            && MovimientoVinculado::modulo($movimiento) === null; // los de un deudor o un préstamo se gestionan desde su módulo
     }
 
     /** Avance a efectivo o a una cuenta (lo crea TransferenciaService). */
@@ -324,7 +325,7 @@ class TarjetaService
 
     private function asegurarEditable(MovimientoTarjeta $movimiento): void
     {
-        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
+        MovimientoVinculado::asegurarLibre($movimiento);
         abort_unless($this->esEditable($movimiento), 403, 'Este movimiento ya se facturó o se gestiona desde su transferencia o compromiso.');
     }
 

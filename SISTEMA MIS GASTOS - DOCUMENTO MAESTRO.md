@@ -242,6 +242,33 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Permisos `deudores.view/create/edit/delete`. Menú "Nos deben"
 - ⏳ Marcar "es préstamo" al registrar un gasto y "es pago de un deudor" al registrar un ingreso (hoy se hace desde Deudores); pantallas móviles
 
+### 5.6b PRÉSTAMOS (lo que debemos) ✅ (web + API)
+
+**Tablas:** `prestamos` (titular, tipo, banco o acreedor, monto original, tasa anual, tasa de mora, plazo, otorgamiento, día de pago, cuota capital+interés, **saldo de capital a una fecha**, medio de pago, compromiso mensual, color), `prestamo_cargos` (seguros, IVA… de cada cuota) y `prestamo_pagos` (capital, interés, cargos, mora, origen, egreso y abono al compromiso).
+**Lógica:** `PrestamoService`.
+
+- **Saldo** = saldo a la fecha de registro − capital de los pagos. **Interés** = saldo × tasa × días / 365 (como los bancos de El Salvador; verificado: pago real 117.46 de interés, "saldo de intereses" de las apps 423.22 y 93.38, y "deuda total" 17,540.20)
+- **Pago con desglose** sugerido a la fecha (ajustable a lo que diga el banco); para abonar extra se sube el capital. Desde efectivo o cuenta crea el egreso (categoría "Préstamos y deudas") y abona la cuota del mes en Compromisos; por planilla o "solo anotar" no mueve dinero. Solo se elimina el último pago (revierte egreso y compromiso)
+- **Pago mixto:** `monto_planilla` = parte de la cuota que se descuenta del sueldo (ej. casa: 526.50 por planilla + 316.43 en ventanilla = 842.93). El compromiso mensual y el egreso son solo el resto; el pago guarda la parte de planilla
+- Al registrarlo (si no es todo por planilla) puede crear el **compromiso mensual** de la cuota; "Pagar" ese compromiso abre el formulario del préstamo
+- **Proyecciones:** tabla de pagos restante, fecha de fin, intereses por pagar; **qué pasa si…** pago todo hoy (monto y ahorro), abono extra mensual (meses menos y ahorro), abono único hoy reduciendo plazo o bajando la cuota; préstamos sin cuota fija (ej. de una persona) se proyectan con "lo que puedo pagar al mes"
+- Los egresos de un préstamo se gestionan desde Préstamos (`App\Support\MovimientoVinculado`)
+- Permisos `prestamos.view/create/edit/delete`
+- ⏳ Registro automático de los descuentos de planilla (con el módulo de ingresos con desglose); comisión por pago anticipado; seguros que bajan con el saldo
+
+### 5.6c INGRESOS CON DESGLOSE ✅ (web + API)
+
+**Tablas:** `fuentes_ingreso` (quién lo recibe, tipo planilla/servicios/otro, pagador, frecuencia mensual/quincenal, días de pago, bruto habitual, destino del neto), `fuente_ingreso_conceptos` (plantilla: descuento o adición, monto fijo o % del bruto con tope, préstamo ligado), `ingresos` (cada pago recibido: bruto, neto, destino y su movimiento) e `ingreso_lineas`.
+**Lógica:** `IngresoService`.
+
+- **Plantilla** con atajos: ISSS 3 % (tope $30), AFP 7.25 %, renta (monto), comisión por transferencia, adiciones (bono). Ej. sueldo de Stef: 1,920 − 231.16 − 139.20 − 30 − 350.24 − 526.50 = **642.90**
+- **Registrar pago recibido:** propone las líneas (recalcula los % al cambiar el bruto), neto en vivo; el **neto** entra como ingreso ("Sueldo y trabajos") al efectivo o a una cuenta (o solo se anota)
+- Un descuento ligado a un préstamo **100 % de planilla** registra su pago en Préstamos (cargos, interés del período y el resto a capital). Si el préstamo es mixto (casa), su pago se registra al pagar la ventanilla
+- **Resumen anual** por fuente: bruto, cada descuento y adición, neto (para la declaración de renta)
+- El neto se gestiona desde Ingresos (`MovimientoVinculado`); eliminar un pago revierte su ingreso y los pagos de préstamos que registró
+- Permisos `ingresos.view/create/edit/delete`. Menú "Ingresos"
+- ⏳ Recordatorio el día de pago; el historial de sueldos de la hoja quedó como movimientos de cuenta
+
 ### 5.7 HOGAR (GRUPOS FAMILIARES) ✅ (web + API)
 
 **Tablas:** `hogares` (nombre, administrador), `users.hogar_id`, `hogar_invitaciones` (correo, invitado por, estado pendiente/aceptada/rechazada/cancelada). Las 9 tablas con datos (`categorias_personales`, `movimientos_efectivo`, `compromisos_recurrentes`, `compromisos`, `cuentas`, `transferencias`, `movimientos_cuenta`, `tarjetas_credito`, `movimientos_tarjeta`) llevan `hogar_id`.
@@ -276,6 +303,9 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Editar si hubo errores
 
 ---
+
+### Logos
+- Bancos y marcas de red tienen logo en su catálogo (Configuración). Componentes `x-logo-banco` (sin logo: iniciales) y `x-logo-red` (pastilla blanca sobre el color de la tarjeta); se muestran en tarjetas, cuentas y préstamos
 
 ## 6. DASHBOARD ⏳
 
@@ -417,7 +447,9 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
 | Deudores ("Nos deben"): préstamos, pagos repartidos | ✅ |
-| Préstamos, Ingresos con desglose, Eventos, Dashboard, Reportes | ⏳ |
+| Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
+| Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
+| Eventos, Dashboard, Reportes | ⏳ |
 
 ### API (para móviles)
 | Endpoint | Estado |
@@ -431,6 +463,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
 | `/api/hogar` (ver, renombrar, invitar, cancelar, aceptar, rechazar, salir, quitar miembro); `user_id` en efectivo y compromisos | ✅ |
 | `/api/deudores` (CRUD, detalle con deudas y pagos), `POST /api/deudores/{id}/deudas`, `POST /api/deudores/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}` | ✅ |
+| `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
+| `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
 | Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
@@ -448,7 +482,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 101 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, permisos)
+- 118 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, préstamos, ingresos, permisos)
+- Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
 ---
@@ -461,8 +496,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 4. ~~Hogar (grupos familiares)~~ ✅ (19/10/2026)
 5. ~~Importador de la hoja de cálculo~~ ✅ (19/10/2026) — todo 2026 (efectivo, cuentas, transferencias, 14 tarjetas con estado pendiente y sin facturar, avances, compromisos) a los correos destino; local en `.claude/datos/` (no se sube). Se amplía con cada módulo
 6. ~~Deudores~~ ✅ (19/10/2026)
-7. **Préstamos** con tabla de pagos y proyecciones (pagar todo hoy, abonos extra, reducir cuota o plazo). Interés = saldo × tasa × días / 365
-8. **Ingresos con desglose** (sueldo bruto, renta, AFP, ISSS, préstamos; servicios profesionales y comisiones por remesa)
+7. ~~Préstamos~~ ✅ (19/10/2026) con tabla de pagos y proyecciones
+8. ~~Ingresos con desglose~~ ✅ (20/10/2026)
 9. **Intereses de tarjeta:** "interés estimado si no pagas el total" y explicación de la mora
 10. **Dashboard** (incluye disponible por tarjeta y "de las que sí puedo sacar")
 11. **Móviles al día:** pantallas de Android e iOS (perfil, categorías, efectivo, compromisos, cuentas, tarjetas, hogar)

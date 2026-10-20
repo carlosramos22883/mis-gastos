@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Compromiso;
 use App\Models\MovimientoEfectivo;
 use App\Models\User;
+use App\Support\MovimientoVinculado;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +82,7 @@ class MovimientoEfectivoService
         // Los movimientos de una transferencia se editan o eliminan desde la transferencia
         return ! $movimiento->es_saldo_arrastrado && ! $movimiento->transferencia_id
             && $movimiento->fecha->toDateString() >= $inicio->toDateString()
-            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
+            && MovimientoVinculado::modulo($movimiento) === null; // los de un deudor o un préstamo se gestionan desde su módulo
     }
 
     /**
@@ -125,7 +126,7 @@ class MovimientoEfectivoService
 
     private function asegurarEditable(MovimientoEfectivo $movimiento): void
     {
-        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
+        MovimientoVinculado::asegurarLibre($movimiento);
         abort_unless($this->esEditable($movimiento), 403, 'Solo se pueden modificar movimientos del ciclo actual.');
     }
 

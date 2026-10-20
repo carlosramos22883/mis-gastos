@@ -36,7 +36,7 @@ class Deuda extends Model
 
     public function pagos(): HasMany
     {
-        return $this->hasMany(DeudaPago::class)->orderBy('fecha')->orderBy('id');
+        return $this->hasMany(DeudaPago::class); // sin orden: se usa para sumar (PostgreSQL no admite ORDER BY con agregados)
     }
 
     public function movimientoEfectivo(): BelongsTo

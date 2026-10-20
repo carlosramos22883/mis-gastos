@@ -122,7 +122,7 @@ class DeudorController extends Controller
     {
         $this->own($request, $deudor);
         $deudor = $deudor->fresh();
-        $deudor->load(['deudas' => fn ($q) => $q->withSum('pagos', 'monto')->with('pagos')]);
+        $deudor->load(['deudas' => fn ($q) => $q->withSum('pagos', 'monto')->with('pagos')->orderBy('fecha')->orderBy('id')]);
 
         return $this->deudores->resumir($deudor)->setAttribute('con_detalle', true);
     }

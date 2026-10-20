@@ -23,7 +23,7 @@ use Illuminate\Validation\ValidationException;
  *  - Un pago entra al efectivo o a una cuenta (categoría "Cobros de deudas") y se reparte entre las deudas
  *    pendientes del deudor, de la más antigua a la más reciente, o se aplica a una sola.
  *  - Lo pagado y lo pendiente se calculan de los pagos; nunca se guardan.
- *  - Los movimientos ligados a un deudor se modifican desde Deudores (no desde efectivo, cuentas o tarjetas).
+ *  - Los movimientos ligados a un deudor se modifican desde Deudores (App\Support\MovimientoVinculado).
  */
 class DeudorService
 {
@@ -124,7 +124,7 @@ class DeudorService
     {
         return DB::transaction(function () use ($user, $deudor, $data) {
             Deudor::whereKey($deudor->id)->lockForUpdate()->first();
-            $deudas = $deudor->deudas()->withSum('pagos', 'monto')->get()
+            $deudas = $deudor->deudas()->withSum('pagos', 'monto')->orderBy('fecha')->orderBy('id')->get()
                 ->filter(fn (Deuda $d) => $d->pendiente() > 0)
                 ->when(! empty($data['deuda_id']), fn ($c) => $c->where('id', (int) $data['deuda_id']));
             $monto = round((float) $data['monto'], 2);
@@ -173,19 +173,6 @@ class DeudorService
             }
             $this->eliminarMovimiento($movimiento);
         });
-    }
-
-    /** ¿El movimiento nació de una deuda o de un pago? (entonces se gestiona desde Deudores) */
-    public static function ligado(Model $movimiento): bool
-    {
-        $columna = match (true) {
-            $movimiento instanceof MovimientoEfectivo => 'movimiento_efectivo_id',
-            $movimiento instanceof MovimientoCuenta => 'movimiento_cuenta_id',
-            $movimiento instanceof MovimientoTarjeta => 'movimiento_tarjeta_id',
-        };
-
-        return Deuda::where($columna, $movimiento->id)->exists()
-            || ($columna !== 'movimiento_tarjeta_id' && DeudaPago::where($columna, $movimiento->id)->exists());
     }
 
     private function eliminarMovimiento(?Model $movimiento): void

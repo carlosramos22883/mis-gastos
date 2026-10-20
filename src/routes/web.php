@@ -13,11 +13,13 @@ use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\DeudorController;
 use App\Http\Controllers\EstadoCuentaController;
 use App\Http\Controllers\HogarController;
+use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\MovimientoTarjetaController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PagoCompromisoController;
+use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TarjetaCreditoController;
@@ -113,6 +115,31 @@ Route::middleware('auth')->group(function () {
         Route::get('deudores/{deudor}/pagos/create', 'crearPago')->middleware('can:deudores.create')->name('deudores.pagos.create');
         Route::post('deudores/{deudor}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('deudores.pagos.store');
         Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
+    });
+
+    // Ingresos con desglose (sueldos, servicios profesionales…)
+    Route::resource('ingresos', IngresoController::class)->parameters(['ingresos' => 'fuente'])
+        ->middlewareFor(['index', 'show'], 'can:ingresos.view')
+        ->middlewareFor(['create', 'store'], 'can:ingresos.create')
+        ->middlewareFor(['edit', 'update'], 'can:ingresos.edit')
+        ->middlewareFor('destroy', 'can:ingresos.delete');
+    Route::controller(IngresoController::class)->group(function () {
+        Route::get('ingresos/{fuente}/recibos/create', 'crearRecibo')->middleware('can:ingresos.create')->name('ingresos.recibos.create');
+        Route::post('ingresos/{fuente}/recibos', 'guardarRecibo')->middleware('can:ingresos.create')->name('ingresos.recibos.store');
+        Route::delete('recibos/{ingreso}', 'eliminarRecibo')->middleware('can:ingresos.delete')->name('recibos.destroy');
+    });
+
+    // Préstamos (lo que debemos)
+    Route::resource('prestamos', PrestamoController::class)
+        ->middlewareFor(['index', 'show'], 'can:prestamos.view')
+        ->middlewareFor(['create', 'store'], 'can:prestamos.create')
+        ->middlewareFor(['edit', 'update'], 'can:prestamos.edit')
+        ->middlewareFor('destroy', 'can:prestamos.delete');
+    Route::controller(PrestamoController::class)->group(function () {
+        Route::get('prestamos/{prestamo}/simular', 'simular')->middleware('can:prestamos.view')->name('prestamos.simular');
+        Route::get('prestamos/{prestamo}/pagos/create', 'crearPago')->middleware('can:prestamos.create')->name('prestamos.pagos.create');
+        Route::post('prestamos/{prestamo}/pagos', 'guardarPago')->middleware('can:prestamos.create')->name('prestamos.pagos.store');
+        Route::delete('prestamo-pagos/{pago}', 'eliminarPago')->middleware('can:prestamos.delete')->name('prestamo-pagos.destroy');
     });
 
     // Hogar: miembros que comparten el fondo

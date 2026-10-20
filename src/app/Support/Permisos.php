@@ -26,6 +26,8 @@ class Permisos
         'compromisos' => 'Compromisos',
         'tarjetas' => 'Tarjetas de crédito',
         'deudores' => 'Deudores',
+        'prestamos' => 'Préstamos',
+        'ingresos' => 'Ingresos (sueldos)',
         'hogar' => 'Hogar',
     ];
 

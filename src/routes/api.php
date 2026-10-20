@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\CompromisoController;
 use App\Http\Controllers\Api\DeudorController;
 use App\Http\Controllers\Api\EfectivoController;
 use App\Http\Controllers\Api\HogarController;
+use App\Http\Controllers\Api\IngresoController;
+use App\Http\Controllers\Api\PrestamoController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\RoleController;
@@ -46,6 +48,28 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('deudas/{deuda}', 'eliminarDeuda')->middleware('can:deudores.delete')->name('deudas.destroy');
             Route::post('deudores/{deudor}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('deudores.pagos.store');
             Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
+        });
+
+        Route::apiResource('ingresos', IngresoController::class)->parameters(['ingresos' => 'fuente'])
+            ->middlewareFor(['index', 'show'], 'can:ingresos.view')
+            ->middlewareFor('store', 'can:ingresos.create')
+            ->middlewareFor('update', 'can:ingresos.edit')
+            ->middlewareFor('destroy', 'can:ingresos.delete');
+        Route::controller(IngresoController::class)->group(function () {
+            Route::get('ingresos/{fuente}/propuesta', 'propuesta')->middleware('can:ingresos.view')->name('ingresos.propuesta');
+            Route::post('ingresos/{fuente}/recibos', 'guardarRecibo')->middleware('can:ingresos.create')->name('ingresos.recibos.store');
+            Route::delete('recibos/{ingreso}', 'eliminarRecibo')->middleware('can:ingresos.delete')->name('recibos.destroy');
+        });
+
+        Route::apiResource('prestamos', PrestamoController::class)
+            ->middlewareFor(['index', 'show'], 'can:prestamos.view')
+            ->middlewareFor('store', 'can:prestamos.create')
+            ->middlewareFor('update', 'can:prestamos.edit')
+            ->middlewareFor('destroy', 'can:prestamos.delete');
+        Route::controller(PrestamoController::class)->group(function () {
+            Route::get('prestamos/{prestamo}/proyeccion', 'proyeccion')->middleware('can:prestamos.view')->name('prestamos.proyeccion');
+            Route::post('prestamos/{prestamo}/pagos', 'guardarPago')->middleware('can:prestamos.create')->name('prestamos.pagos.store');
+            Route::delete('prestamo-pagos/{pago}', 'eliminarPago')->middleware('can:prestamos.delete')->name('prestamo-pagos.destroy');
         });
 
         Route::prefix('hogar')->name('hogar.')->controller(HogarController::class)->group(function () {

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Compromiso;
 use App\Models\Cuenta;
 use App\Models\MovimientoCuenta;
+use App\Support\MovimientoVinculado;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -130,7 +131,7 @@ class CuentaService
         $inicio = $inicioCicloActual ?? $this->ciclos->cicloConsultado($movimiento->user)[0];
 
         return ! $movimiento->transferencia_id && $movimiento->fecha->toDateString() >= $inicio->toDateString()
-            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
+            && MovimientoVinculado::modulo($movimiento) === null; // los de un deudor o un préstamo se gestionan desde su módulo
     }
 
     /** El saldo de la cuenta no puede quedar en negativo tras aplicar $delta (sin contar $exceptId). */
@@ -150,7 +151,7 @@ class CuentaService
 
     private function asegurarEditable(MovimientoCuenta $movimiento): void
     {
-        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
+        MovimientoVinculado::asegurarLibre($movimiento);
         abort_unless($this->esEditable($movimiento), 403, 'Solo se pueden modificar movimientos propios del ciclo actual.');
     }
 

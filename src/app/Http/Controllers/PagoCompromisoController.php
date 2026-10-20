@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PagoCompromisoRequest;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
+use App\Models\Prestamo;
 use App\Services\CicloEfectivoService;
 use App\Services\CuentaService;
 use App\Services\MovimientoEfectivoService;
@@ -18,6 +19,11 @@ class PagoCompromisoController extends Controller
     public function create(Request $request, Compromiso $compromiso)
     {
         $this->own($request, $compromiso);
+        // La cuota de un préstamo se paga con su desglose (capital, interés, seguros)
+        $prestamo = $compromiso->compromiso_recurrente_id ? Prestamo::where('compromiso_recurrente_id', $compromiso->compromiso_recurrente_id)->first() : null;
+        if ($prestamo && $request->user()->can('prestamos.create')) {
+            return view('prestamos._pago_form', app(PrestamoController::class)->pagoData($request, $prestamo));
+        }
         $user = $request->user();
         [$inicio, $fin] = app(CicloEfectivoService::class)->cicloConsultado($user);
         $cuentas = app(CuentaService::class);

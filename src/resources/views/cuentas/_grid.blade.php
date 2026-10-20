@@ -11,11 +11,14 @@
                 <div class="absolute inset-y-0 left-0 w-1.5" style="background-color: {{ $cuenta->color }}"></div>
                 <a href="{{ route('cuentas.show', $cuenta) }}" class="block p-5 pl-6 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                     <div class="flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-3">
+                        <x-logo-banco :banco="$cuenta->banco" />
                         <div class="min-w-0">
                             <p class="truncate font-semibold text-gray-900 dark:text-gray-100">@include('hogar._por', ['id' => $cuenta->user_id]){{ $cuenta->nombre }}</p>
                             <p class="truncate text-xs text-gray-500 dark:text-gray-400">
                                 {{ collect([$cuenta->tipoCuenta?->nombre, $cuenta->banco?->nombre, $cuenta->numeroEnmascarado()])->filter()->implode(' · ') }}
                             </p>
+                        </div>
                         </div>
                         @unless ($cuenta->activo)
                             <span class="shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">Inactiva</span>

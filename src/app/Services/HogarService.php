@@ -9,11 +9,15 @@ use App\Models\Cuenta;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
 use App\Models\Deudor;
+use App\Models\FuenteIngreso;
 use App\Models\Hogar;
 use App\Models\HogarInvitacion;
+use App\Models\Ingreso;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
+use App\Models\Prestamo;
+use App\Models\PrestamoPago;
 use App\Models\TarjetaCredito;
 use App\Models\Transferencia;
 use App\Models\User;
@@ -33,7 +37,8 @@ class HogarService
     public const MODELOS = [
         CategoriaPersonal::class, MovimientoEfectivo::class, CompromisoRecurrente::class, Compromiso::class,
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
-        Deudor::class, Deuda::class, DeudaPago::class,
+        Deudor::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
+        FuenteIngreso::class, Ingreso::class,
     ];
 
     /** Modelos con categoría (para unificar categorías al fusionar hogares). */

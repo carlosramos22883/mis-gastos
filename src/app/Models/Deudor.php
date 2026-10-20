@@ -28,7 +28,7 @@ class Deudor extends Model
 
     public function deudas(): HasMany
     {
-        return $this->hasMany(Deuda::class)->orderBy('fecha')->orderBy('id');
+        return $this->hasMany(Deuda::class);
     }
 
     public function pagos(): HasManyThrough
