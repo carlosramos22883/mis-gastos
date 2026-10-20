@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['user_id', 'tarjeta_credito_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'tipo', 'descripcion', 'comentario', 'monto', 'fecha', 'cuotas'])]
 class MovimientoTarjeta extends Model
 {
+    use PerteneceAHogar;
+
     public const TIPOS = ['compra' => 'Compra', 'avance' => 'Avance', 'cargo' => 'Cargo', 'credito' => 'Crédito'];
 
     protected $table = 'movimientos_tarjeta';

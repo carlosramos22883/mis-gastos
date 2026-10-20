@@ -85,7 +85,7 @@ class CuentaService
                 $this->compromisos->abonar(Compromiso::findOrFail($data['compromiso_id']), (float) $data['monto']);
             }
 
-            return $cuenta->movimientos()->create($data + ['user_id' => $cuenta->user_id]);
+            return $cuenta->movimientos()->create($data);
         });
     }
 
@@ -129,7 +129,8 @@ class CuentaService
     {
         $inicio = $inicioCicloActual ?? $this->ciclos->cicloConsultado($movimiento->user)[0];
 
-        return ! $movimiento->transferencia_id && $movimiento->fecha->toDateString() >= $inicio->toDateString();
+        return ! $movimiento->transferencia_id && $movimiento->fecha->toDateString() >= $inicio->toDateString()
+            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
     }
 
     /** El saldo de la cuenta no puede quedar en negativo tras aplicar $delta (sin contar $exceptId). */
@@ -149,6 +150,7 @@ class CuentaService
 
     private function asegurarEditable(MovimientoCuenta $movimiento): void
     {
+        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
         abort_unless($this->esEditable($movimiento), 403, 'Solo se pueden modificar movimientos propios del ciclo actual.');
     }
 

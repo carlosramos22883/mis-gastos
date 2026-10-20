@@ -160,7 +160,7 @@ class TarjetaService
             $tarjeta = TarjetaCredito::whereKey($tarjeta->id)->lockForUpdate()->firstOrFail();
             $this->validarMovimiento($tarjeta, $data);
 
-            return $tarjeta->movimientos()->create($data + ['user_id' => $tarjeta->user_id]);
+            return $tarjeta->movimientos()->create($data);
         });
     }
 
@@ -186,7 +186,8 @@ class TarjetaService
     /** Solo lo que aún no se ha facturado; los avances se gestionan desde su transferencia y la mora desde su compromiso. */
     public function esEditable(MovimientoTarjeta $movimiento): bool
     {
-        return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && ! $movimiento->items()->exists();
+        return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && ! $movimiento->items()->exists()
+            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
     }
 
     /** Avance a efectivo o a una cuenta (lo crea TransferenciaService). */
@@ -197,7 +198,7 @@ class TarjetaService
         $tarjeta = TarjetaCredito::whereKey($tarjeta->id)->lockForUpdate()->firstOrFail();
         $this->validarMovimiento($tarjeta, $data);
 
-        return $tarjeta->movimientos()->create($data + ['user_id' => $tarjeta->user_id]);
+        return $tarjeta->movimientos()->create($data);
     }
 
     /** Mora de un estado de cuenta vencido: un cargo a la tarjeta que se paga en su propio compromiso. */
@@ -220,7 +221,7 @@ class TarjetaService
                 'tarjeta_credito_id' => $tarjeta->id,
             ]);
             $tarjeta->movimientos()->create([
-                'user_id' => $tarjeta->user_id, 'tipo' => 'cargo', 'descripcion' => $descripcion,
+                'tipo' => 'cargo', 'descripcion' => $descripcion,
                 'monto' => $monto, 'fecha' => $hoy->toDateString(), 'compromiso_id' => $mora->id,
             ]);
 
@@ -323,6 +324,7 @@ class TarjetaService
 
     private function asegurarEditable(MovimientoTarjeta $movimiento): void
     {
+        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
         abort_unless($this->esEditable($movimiento), 403, 'Este movimiento ya se facturó o se gestiona desde su transferencia o compromiso.');
     }
 

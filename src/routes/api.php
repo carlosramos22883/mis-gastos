@@ -5,7 +5,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
+use App\Http\Controllers\Api\DeudorController;
 use App\Http\Controllers\Api\EfectivoController;
+use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\RoleController;
@@ -33,6 +35,29 @@ Route::middleware('auth:sanctum')->group(function () {
     // Módulos financieros (mismas reglas que la web, vía servicios compartidos)
     Route::name('api.')->group(function () {
         Route::get('/catalogos', CatalogoController::class)->name('catalogos');
+
+        Route::apiResource('deudores', DeudorController::class)->parameters(['deudores' => 'deudor'])
+            ->middlewareFor(['index', 'show'], 'can:deudores.view')
+            ->middlewareFor('store', 'can:deudores.create')
+            ->middlewareFor('update', 'can:deudores.edit')
+            ->middlewareFor('destroy', 'can:deudores.delete');
+        Route::controller(DeudorController::class)->group(function () {
+            Route::post('deudores/{deudor}/deudas', 'guardarDeuda')->middleware('can:deudores.create')->name('deudores.deudas.store');
+            Route::delete('deudas/{deuda}', 'eliminarDeuda')->middleware('can:deudores.delete')->name('deudas.destroy');
+            Route::post('deudores/{deudor}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('deudores.pagos.store');
+            Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
+        });
+
+        Route::prefix('hogar')->name('hogar.')->controller(HogarController::class)->group(function () {
+            Route::get('/', 'show')->middleware('can:hogar.view')->name('show');
+            Route::patch('/', 'update')->middleware('can:hogar.edit')->name('update');
+            Route::post('invitaciones', 'invitar')->middleware('can:hogar.edit')->name('invitar');
+            Route::delete('invitaciones/{invitacion}', 'cancelar')->middleware('can:hogar.edit')->name('cancelar');
+            Route::post('invitaciones/{invitacion}/aceptar', 'aceptar')->middleware('can:hogar.view')->name('aceptar');
+            Route::post('invitaciones/{invitacion}/rechazar', 'rechazar')->middleware('can:hogar.view')->name('rechazar');
+            Route::post('salir', 'salir')->middleware('can:hogar.view')->name('salir');
+            Route::delete('miembros/{miembro}', 'quitar')->middleware('can:hogar.edit')->name('quitar');
+        });
 
         Route::apiResource('categorias', CategoriaController::class)->except('show')
             ->middlewareFor('index', 'can:categorias.view')

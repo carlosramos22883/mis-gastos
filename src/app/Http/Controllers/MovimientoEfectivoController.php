@@ -123,7 +123,7 @@ class MovimientoEfectivoController extends Controller
 
     private function categorias(Request $request)
     {
-        return CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)
+        return CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)->where('activo', true)
             ->where('nombre', '!=', CicloEfectivoService::CATEGORIA_SALDO_INICIAL)->orderBy('nombre')->get();
     }
 
@@ -155,7 +155,7 @@ class MovimientoEfectivoController extends Controller
 
     private function own(Request $request, MovimientoEfectivo $movimiento): void
     {
-        abort_unless($movimiento->user_id === $request->user()->id, 404);
+        abort_unless($movimiento->esDelHogar($request->user()), 404);
     }
 
     private function success(Request $request, string $message, ?MovimientoEfectivo $movimiento = null, ?int $page = null)

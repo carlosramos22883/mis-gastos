@@ -63,7 +63,7 @@ class CuentaController extends Controller
         $primera = max($cuenta->fecha_inicial->toDateString(), ($this->ciclos->primeraFecha($request->user()) ?? $cuenta->fecha_inicial)->toDateString());
         $anterior = $inicio->toDateString() <= $primera ? null : $inicio->copy()->subDay()->toDateString();
         $siguiente = $esActual ? null : $fin->copy()->addDay()->toDateString();
-        $categorias = CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)
+        $categorias = CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)->where('activo', true)
             ->where('nombre', '!=', CicloEfectivoService::CATEGORIA_SALDO_INICIAL)->orderBy('nombre')->pluck('nombre', 'id')->all();
 
         return view('cuentas.show', compact('cuenta', 'movimientos', 'resumen', 'inicio', 'fin', 'esActual', 'anterior', 'siguiente', 'categorias', 'inicioActual'));
@@ -129,7 +129,7 @@ class CuentaController extends Controller
 
     private function own(Request $request, Cuenta $cuenta): void
     {
-        abort_unless($cuenta->user_id === $request->user()->id, 404);
+        abort_unless($cuenta->esDelHogar($request->user()), 404);
     }
 
     private function response(Request $request, string $message, Cuenta $cuenta)

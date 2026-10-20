@@ -229,41 +229,34 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Una tarjeta con historial no se elimina: se desactiva
 - ⏳ API para móviles; foto de la tarjeta (opcional en la especificación)
 
-### 5.6 DEUDORES ⏳
+### 5.6 DEUDORES ("Nos deben") ✅ (web + API)
 
-**Deudor:** id, nombre, tipo (persona, institución, empresa), contacto (opcional), notas, usuario_id
+**Tablas:** `deudores` (nombre único en el hogar, tipo persona/institución/empresa, contacto, notas, activo), `deudas` (descripción, monto, fecha, origen y el movimiento que generó) y `deuda_pagos` (monto, fecha, destino y el ingreso que generó; un ingreso puede tener varias filas).
+**Lógica:** `DeudorService`. Lo pagado y lo pendiente **se calculan** de los pagos (no se guardan); estado de la deuda: pendiente / abonada / pagada.
 
-**Deuda:** id, deudor_id, descripción, valor_original, valor_pendiente, fecha_prestamo, tipo_origen (efectivo, tarjeta, cuenta), referencia al egreso, comentario, estado (activa, parcial, pagada), usuario_id
+- **Prestar o anotar:** el dinero sale del efectivo, de una cuenta o de una tarjeta (se crea ese gasto con la categoría "Préstamos a terceros") o se **solo anota** si ya estaba registrado (admite fechas de ciclos anteriores)
+- **Pago:** entra al efectivo o a una cuenta (categoría "Cobros de deudas", un solo ingreso) o se solo anota. Sin elegir deuda se reparte **de la más antigua a la más reciente**; no puede superar lo pendiente
+- Eliminar un pago elimina su ingreso (y todas sus partes); una deuda solo se elimina sin pagos y se lleva su gasto
+- Los movimientos de un deudor no se editan ni eliminan desde efectivo, cuentas o tarjetas (`DeudorService::ligado`): se gestionan desde Deudores
+- Un deudor con historial no se elimina: se desactiva
+- Permisos `deudores.view/create/edit/delete`. Menú "Nos deben"
+- ⏳ Marcar "es préstamo" al registrar un gasto y "es pago de un deudor" al registrar un ingreso (hoy se hace desde Deudores); pantallas móviles
 
-**Pago de deuda:** id, deuda_id, valor, fecha, tipo_ingreso (efectivo, cuenta), referencia al ingreso, comentario, usuario_id
+### 5.7 HOGAR (GRUPOS FAMILIARES) ✅ (web + API)
 
-**Flujo:**
-1. Al registrar un egreso, se marca "Crear deuda" y se elige o crea el deudor
-2. Al registrar un ingreso, se marca "Relacionar con deuda"
-3. Un ingreso puede pagar **varias deudas** (se distribuye el monto)
-4. Si el pendiente llega a 0, la deuda queda "pagada"
+**Tablas:** `hogares` (nombre, administrador), `users.hogar_id`, `hogar_invitaciones` (correo, invitado por, estado pendiente/aceptada/rechazada/cancelada). Las 9 tablas con datos (`categorias_personales`, `movimientos_efectivo`, `compromisos_recurrentes`, `compromisos`, `cuentas`, `transferencias`, `movimientos_cuenta`, `tarjetas_credito`, `movimientos_tarjeta`) llevan `hogar_id`.
+**Lógica:** `HogarService`; trait `PerteneceAHogar` en los modelos (asigna `hogar_id` al crear, scope `delHogar`, `esDelHogar()`).
 
-**Ejemplo:**
-- Semana 1: presto $100 a Juan en efectivo → deuda 1: $100
-- Semana 2: presto $200 a Juan desde la cuenta → deuda 2: $200 (Juan debe $300)
-- Semana 3: Juan paga $50 → deuda 1 queda en $50 (Juan debe $250)
-- Semana 4: Juan paga $250 → un solo ingreso salda ambas deudas
-
-### 5.7 GRUPOS FAMILIARES ⏳
-
-**Grupo:** id, nombre, creado_por, fecha_creacion, activo
-**Miembro:** id, grupo_id, usuario_id, rol (administrador, miembro), fecha_union, estado (pendiente, activo, inactivo)
-
-**Flujo:**
-1. El usuario crea un grupo y queda como administrador
-2. Invita a otro usuario por email
-3. El invitado recibe una notificación y acepta o rechaza
-4. Si acepta, entra como miembro
-
-**Comportamiento:**
-- Los miembros ven cuentas, tarjetas y gastos de los demás miembros
-- Cada registro guarda quién lo creó
-- Un usuario puede salir del grupo; sus registros personales permanecen y deja de ver los del grupo
+- **Un solo fondo:** los miembros comparten efectivo, ciclo, categorías, compromisos, cuentas y tarjetas. Nada es privado
+- Todo usuario tiene un hogar (se crea al registrarse); quien vive solo no nota nada
+- `user_id` = **quién lo hizo** (por defecto quien registra; se puede cambiar a otro miembro) o el **titular** en cuentas y tarjetas. El selector aparece solo si el hogar tiene más de un miembro; las listas muestran las iniciales
+- **Ciclo del hogar:** el día de corte y la zona horaria se mantienen iguales en todos los miembros (cambiarlo en un perfil lo cambia para todos)
+- **Flujo:** quien administra invita por correo (notificación + email; si no tiene cuenta, se registra con ese correo) → el invitado acepta o rechaza en la pantalla Hogar
+- Al aceptar siendo el **único miembro** de su hogar, sus registros se suman al nuevo (categorías con el mismo nombre se unifican; los saldos arrastrados se recalculan). Si su hogar tenía más miembros, sus registros se quedan allí
+- **Salir / quitar:** los registros se quedan en el hogar; la persona arranca un hogar propio vacío. Si sale quien administra, la administración pasa al siguiente miembro
+- Al eliminar un usuario, sus registros pasan a otro miembro; si era el único, el hogar se elimina con él
+- Permisos `hogar.view` (pantalla, aceptar, salir) y `hogar.edit` (renombrar, invitar, quitar; además hay que administrar el hogar)
+- ⏳ Pantallas de Android e iOS
 
 ### 5.8 EVENTOS (DIVISIÓN DE GASTOS) ⏳
 
@@ -422,7 +415,9 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Compromisos | ✅ web (falta editar la regla de una serie y pagar con cuenta/tarjeta) |
 | Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
-| Deudores, Grupos, Eventos, Dashboard, Reportes | ⏳ |
+| Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
+| Deudores ("Nos deben"): préstamos, pagos repartidos | ✅ |
+| Préstamos, Ingresos con desglose, Eventos, Dashboard, Reportes | ⏳ |
 
 ### API (para móviles)
 | Endpoint | Estado |
@@ -434,6 +429,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/categorias` (listar, crear, editar, eliminar si no está en uso) | ✅ |
 | `/api/efectivo` (por ciclo con resumen y navegación; crear, editar, eliminar; pagar compromisos con `compromiso_id`) | ✅ |
 | `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
+| `/api/hogar` (ver, renombrar, invitar, cancelar, aceptar, rechazar, salir, quitar miembro); `user_id` en efectivo y compromisos | ✅ |
+| `/api/deudores` (CRUD, detalle con deudas y pagos), `POST /api/deudores/{id}/deudas`, `POST /api/deudores/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}` | ✅ |
 | Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
@@ -451,7 +448,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 56 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, permisos)
+- 101 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, permisos)
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
 ---
@@ -459,14 +456,18 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 ## 13. PRÓXIMOS PASOS (en orden)
 
 1. ~~Mover lógica a servicios~~ ✅ (efectivo, compromisos, categorías; validación compartida en `app/Http/Requests`)
-2. **Móviles al día:** API ✅ — faltan las pantallas de Android e iOS (perfil, categorías, efectivo, compromisos)
-3. ~~Rediseño de compromisos~~ ✅ (17/10/2026)
-4. **Categorías del sistema** con iconos
-5. ~~Cuentas bancarias~~ ✅
-6. ~~Tarjetas de crédito~~ ✅
-7. **Wizard:** cuentas y tarjetas
-8. **Dashboard**
-9. Deudores → Grupos familiares → Eventos → Reportes → Notificaciones push
+2. ~~Rediseño de compromisos~~ ✅ (17/10/2026)
+3. ~~Cuentas bancarias~~ ✅ · ~~Tarjetas de crédito~~ ✅
+4. ~~Hogar (grupos familiares)~~ ✅ (19/10/2026)
+5. ~~Importador de la hoja de cálculo~~ ✅ (19/10/2026) — todo 2026 (efectivo, cuentas, transferencias, 14 tarjetas con estado pendiente y sin facturar, avances, compromisos) a los correos destino; local en `.claude/datos/` (no se sube). Se amplía con cada módulo
+6. ~~Deudores~~ ✅ (19/10/2026)
+7. **Préstamos** con tabla de pagos y proyecciones (pagar todo hoy, abonos extra, reducir cuota o plazo). Interés = saldo × tasa × días / 365
+8. **Ingresos con desglose** (sueldo bruto, renta, AFP, ISSS, préstamos; servicios profesionales y comisiones por remesa)
+9. **Intereses de tarjeta:** "interés estimado si no pagas el total" y explicación de la mora
+10. **Dashboard** (incluye disponible por tarjeta y "de las que sí puedo sacar")
+11. **Móviles al día:** pantallas de Android e iOS (perfil, categorías, efectivo, compromisos, cuentas, tarjetas, hogar)
+12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
+13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
 ---
 

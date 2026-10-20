@@ -49,6 +49,6 @@ class EstadoCuentaController extends Controller
 
     private function own(Request $request, EstadoCuentaTarjeta $estado): void
     {
-        abort_unless($estado->tarjeta->user_id === $request->user()->id, 404);
+        abort_unless($estado->tarjeta->esDelHogar($request->user()), 404);
     }
 }

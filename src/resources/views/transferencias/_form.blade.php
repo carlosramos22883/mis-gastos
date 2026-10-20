@@ -16,6 +16,7 @@
     <x-floating-money id="monto" label="Monto" :symbol="$simbolo" required />
     <x-floating-date id="fecha" label="Fecha" :value="now(auth()->user()->zona_horaria)" :min="$cycleStart" :max="min(now(auth()->user()->zona_horaria), $cycleEnd)" required />
     <x-floating-input id="descripcion" label="Descripción (opcional)" maxlength="255" />
+    @include('hogar._quien')
     <div class="flex justify-end gap-3">
         <x-secondary-button type="button" x-on:click="$dispatch('close-modal', 'transferencia-modal')">Cancelar</x-secondary-button>
         <x-primary-button type="submit" x-bind:disabled="loading">Transferir</x-primary-button>

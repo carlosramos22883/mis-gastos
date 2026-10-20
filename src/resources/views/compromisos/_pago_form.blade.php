@@ -16,6 +16,7 @@
     <x-floating-money id="monto" label="Monto" :symbol="$simbolo" :value="$compromiso->saldo_pendiente" required />
     <x-floating-date id="fecha" label="Fecha" :value="now(auth()->user()->zona_horaria)" :min="$cycleStart" :max="min(now(auth()->user()->zona_horaria), $cycleEnd)" required />
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$compromiso->descripcion" required />
+    @include('hogar._quien', ['label' => '¿Quién paga?'])
     @unless ($compromiso->tarjeta_credito_id)
         <x-floating-select id="categoria_personal_id" label="Categoría" :options="$categorias" :value="$compromiso->categoria_personal_id" required />
     @endunless

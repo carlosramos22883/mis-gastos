@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 /** Pago (total o abono) de un compromiso desde el efectivo o desde una cuenta. */
 class PagoCompromisoRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -33,13 +34,14 @@ class PagoCompromisoRequest extends FormRequest
         $limite = min(Carbon::now($user->zona_horaria ?: config('app.timezone'))->toDateString(), $fin->toDateString());
 
         return [
+            'user_id' => $this->reglaMiembro(),
             'origen' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+)$/'],
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$inicio->toDateString(), 'before_or_equal:'.$limite],
             // El pago de una tarjeta no es un gasto nuevo (cada compra ya tiene su categoría)
             'categoria_personal_id' => [$this->route('compromiso')?->tarjeta_credito_id ? 'nullable' : 'required', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
-                ->where('user_id', $user->id)->where('activo', true)->where('tipo', 'egreso'))],
+                ->where('hogar_id', $user->hogar_id)->where('activo', true)->where('tipo', 'egreso'))],
         ];
     }
 

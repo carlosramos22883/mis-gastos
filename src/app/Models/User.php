@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Notifications\CustomResetPasswordNotification;
 use App\Notifications\CustomVerifyEmailNotification;
+use App\Services\HogarService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,6 +21,22 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
+
+    protected static function booted(): void
+    {
+        // Todo usuario pertenece a un hogar: al registrarse se le crea el suyo.
+        static::created(fn (User $user) => $user->hogar_id ?: app(HogarService::class)->crearPara($user));
+
+        // El ciclo es del hogar: el corte y la zona horaria se mantienen iguales en todos sus miembros.
+        static::updated(function (User $user) {
+            if ($user->hogar_id && $user->wasChanged(['fecha_corte_dia', 'zona_horaria'])) {
+                User::where('hogar_id', $user->hogar_id)->whereKeyNot($user->id)
+                    ->update($user->only(['fecha_corte_dia', 'zona_horaria']));
+            }
+        });
+
+        static::deleting(fn (User $user) => app(HogarService::class)->antesDeEliminarUsuario($user));
+    }
 
     /**
      * Send the password reset notification.
@@ -44,44 +63,62 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Moneda::class, 'moneda_preferida');
     }
 
-    public function categoriasPersonales()
+    public function hogar(): BelongsTo
     {
-        return $this->hasMany(CategoriaPersonal::class);
+        return $this->belongsTo(Hogar::class);
     }
 
-    public function compromisos()
+    /** Miembros del hogar (incluye al propio usuario). */
+    public function miembrosHogar(): HasMany
     {
-        return $this->hasMany(Compromiso::class);
+        return $this->hasMany(User::class, 'hogar_id', 'hogar_id')->orderBy('name');
     }
 
-    public function compromisosRecurrentes()
+    // Los registros son del hogar: cada relación devuelve los de todos sus miembros.
+
+    public function categoriasPersonales(): HasMany
     {
-        return $this->hasMany(CompromisoRecurrente::class);
+        return $this->hasMany(CategoriaPersonal::class, 'hogar_id', 'hogar_id');
     }
 
-    public function cuentas()
+    public function compromisos(): HasMany
     {
-        return $this->hasMany(Cuenta::class);
+        return $this->hasMany(Compromiso::class, 'hogar_id', 'hogar_id');
     }
 
-    public function movimientosCuenta()
+    public function compromisosRecurrentes(): HasMany
     {
-        return $this->hasMany(MovimientoCuenta::class);
+        return $this->hasMany(CompromisoRecurrente::class, 'hogar_id', 'hogar_id');
     }
 
-    public function transferencias()
+    public function cuentas(): HasMany
     {
-        return $this->hasMany(Transferencia::class);
+        return $this->hasMany(Cuenta::class, 'hogar_id', 'hogar_id');
     }
 
-    public function tarjetasCredito()
+    public function movimientosCuenta(): HasMany
     {
-        return $this->hasMany(TarjetaCredito::class);
+        return $this->hasMany(MovimientoCuenta::class, 'hogar_id', 'hogar_id');
     }
 
-    public function movimientosEfectivo()
+    public function transferencias(): HasMany
     {
-        return $this->hasMany(MovimientoEfectivo::class);
+        return $this->hasMany(Transferencia::class, 'hogar_id', 'hogar_id');
+    }
+
+    public function tarjetasCredito(): HasMany
+    {
+        return $this->hasMany(TarjetaCredito::class, 'hogar_id', 'hogar_id');
+    }
+
+    public function deudores(): HasMany
+    {
+        return $this->hasMany(Deudor::class, 'hogar_id', 'hogar_id');
+    }
+
+    public function movimientosEfectivo(): HasMany
+    {
+        return $this->hasMany(MovimientoEfectivo::class, 'hogar_id', 'hogar_id');
     }
 
     /**

@@ -10,7 +10,9 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\DeudorController;
 use App\Http\Controllers\EstadoCuentaController;
+use App\Http\Controllers\HogarController;
 use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\MovimientoTarjetaController;
@@ -97,6 +99,32 @@ Route::middleware('auth')->group(function () {
         Route::patch('fecha-limite', 'fechaLimite')->middleware('can:tarjetas.edit')->name('fecha-limite');
         Route::get('mora', 'moraForm')->middleware('can:tarjetas.create')->name('mora.create');
         Route::post('mora', 'mora')->middleware('can:tarjetas.create')->name('mora.store');
+    });
+    // Deudores ("nos deben")
+    Route::resource('deudores', DeudorController::class)->parameters(['deudores' => 'deudor'])
+        ->middlewareFor(['index', 'show'], 'can:deudores.view')
+        ->middlewareFor(['create', 'store'], 'can:deudores.create')
+        ->middlewareFor(['edit', 'update'], 'can:deudores.edit')
+        ->middlewareFor('destroy', 'can:deudores.delete');
+    Route::controller(DeudorController::class)->group(function () {
+        Route::get('deudores/{deudor}/deudas/create', 'crearDeuda')->middleware('can:deudores.create')->name('deudores.deudas.create');
+        Route::post('deudores/{deudor}/deudas', 'guardarDeuda')->middleware('can:deudores.create')->name('deudores.deudas.store');
+        Route::delete('deudas/{deuda}', 'eliminarDeuda')->middleware('can:deudores.delete')->name('deudas.destroy');
+        Route::get('deudores/{deudor}/pagos/create', 'crearPago')->middleware('can:deudores.create')->name('deudores.pagos.create');
+        Route::post('deudores/{deudor}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('deudores.pagos.store');
+        Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
+    });
+
+    // Hogar: miembros que comparten el fondo
+    Route::prefix('hogar')->name('hogar.')->controller(HogarController::class)->group(function () {
+        Route::get('/', 'index')->middleware('can:hogar.view')->name('index');
+        Route::patch('/', 'update')->middleware('can:hogar.edit')->name('update');
+        Route::post('invitaciones', 'invitar')->middleware('can:hogar.edit')->name('invitar');
+        Route::delete('invitaciones/{invitacion}', 'cancelar')->middleware('can:hogar.edit')->name('cancelar');
+        Route::post('invitaciones/{invitacion}/aceptar', 'aceptar')->middleware('can:hogar.view')->name('aceptar');
+        Route::post('invitaciones/{invitacion}/rechazar', 'rechazar')->middleware('can:hogar.view')->name('rechazar');
+        Route::post('salir', 'salir')->middleware('can:hogar.view')->name('salir');
+        Route::delete('miembros/{miembro}', 'quitar')->middleware('can:hogar.edit')->name('quitar');
     });
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Asumimos que profile.view lo tiene todos
     Route::get('/notificaciones', function () {

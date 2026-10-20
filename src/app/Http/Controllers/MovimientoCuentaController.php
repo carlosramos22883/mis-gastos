@@ -60,7 +60,7 @@ class MovimientoCuentaController extends Controller
         [$inicio, $fin] = app(CicloEfectivoService::class)->cicloConsultado($request->user());
 
         return [
-            'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)
+            'categorias' => CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)->where('activo', true)
                 ->where('nombre', '!=', CicloEfectivoService::CATEGORIA_SALDO_INICIAL)->orderBy('nombre')->get(),
             'cycleStart' => $inicio,
             'cycleEnd' => $fin,
@@ -69,7 +69,7 @@ class MovimientoCuentaController extends Controller
 
     private function own(Request $request, Cuenta $cuenta, ?MovimientoCuenta $movimiento = null): void
     {
-        abort_unless($cuenta->user_id === $request->user()->id, 404);
+        abort_unless($cuenta->esDelHogar($request->user()), 404);
         abort_if($movimiento && $movimiento->cuenta_id !== $cuenta->id, 404);
     }
 }

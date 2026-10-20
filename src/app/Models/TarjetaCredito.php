@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use App\Support\Color;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['user_id', 'banco_id', 'marca_red_id', 'nombre', 'ultimos_digitos', 'color', 'limite_credito', 'tasa_interes', 'deuda_inicial', 'dia_corte', 'dia_pago', 'fecha_registro', 'activo'])]
 class TarjetaCredito extends Model
 {
+    use PerteneceAHogar;
+
     protected $table = 'tarjetas_credito';
 
     protected function casts(): array

@@ -2,7 +2,7 @@
 @forelse($movimientos as $movimiento)
     @php($editable = app(\App\Services\CuentaService::class)->esEditable($movimiento, $inicioActual))
     <tr data-record-id="{{ $movimiento->id }}" class="border-b dark:border-gray-700">
-        <td class="px-6 py-4">{{ $movimiento->descripcion }}</td>
+        <td class="px-6 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}</td>
         <td class="px-6 py-4 whitespace-nowrap {{ $movimiento->tipo === 'ingreso' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' }}">
             {{ $movimiento->tipo === 'ingreso' ? '+' : '−' }} {{ $simbolo }} {{ number_format((float) $movimiento->monto, 2) }}
         </td>

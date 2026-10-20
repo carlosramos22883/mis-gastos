@@ -126,7 +126,7 @@ class CompromisoController extends Controller
     private function formData(Request $request): array
     {
         return [
-            'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('tipo', 'egreso')->where('activo', true)->orderBy('nombre')->pluck('nombre', 'id')->all(),
+            'categorias' => CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)->where('tipo', 'egreso')->where('activo', true)->orderBy('nombre')->pluck('nombre', 'id')->all(),
             'hoy' => $this->fechas($request)[0],
         ];
     }
@@ -139,7 +139,7 @@ class CompromisoController extends Controller
 
     private function own(Request $request, Compromiso $compromiso): void
     {
-        abort_unless($compromiso->user_id === $request->user()->id, 404);
+        abort_unless($compromiso->esDelHogar($request->user()), 404);
     }
 
     private function response(Request $request, ?Compromiso $compromiso, string $message)

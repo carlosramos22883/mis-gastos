@@ -62,7 +62,7 @@ class CategoriaController extends Controller
 
     private function own(Request $request, CategoriaPersonal $categoria): void
     {
-        abort_unless($categoria->user_id === $request->user()->id, 404);
+        abort_unless($categoria->esDelHogar($request->user()), 404);
         abort_unless($this->categorias->esEditable($categoria), 403, 'Esta categoría la administra el sistema.');
     }
 }

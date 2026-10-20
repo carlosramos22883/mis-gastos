@@ -89,6 +89,6 @@ class CompromisoController extends Controller
 
     private function own(Request $request, Compromiso $compromiso): void
     {
-        abort_unless($compromiso->user_id === $request->user()->id, 404);
+        abort_unless($compromiso->esDelHogar($request->user()), 404);
     }
 }

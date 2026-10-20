@@ -17,6 +17,7 @@ class CompromisoResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'user_id' => $this->user_id, // quién lo hizo (miembro del hogar)
             'descripcion' => $this->descripcion,
             'comentario' => $this->comentario,
             'monto' => number_format((float) $this->monto, 2, '.', ''),

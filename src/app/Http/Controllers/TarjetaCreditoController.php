@@ -115,6 +115,6 @@ class TarjetaCreditoController extends Controller
 
     private function own(Request $request, TarjetaCredito $tarjeta): void
     {
-        abort_unless($tarjeta->user_id === $request->user()->id, 404);
+        abort_unless($tarjeta->esDelHogar($request->user()), 404);
     }
 }

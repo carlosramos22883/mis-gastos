@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
@@ -12,7 +13,9 @@ use Illuminate\Validation\Rule;
  */
 class CompromisoRequest extends FormRequest
 {
-    private const COMUNES = ['descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id'];
+    use ValidaMiembroHogar;
+
+    private const COMUNES = ['user_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id'];
 
     public function authorize(): bool
     {
@@ -27,12 +30,13 @@ class CompromisoRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
+            'user_id' => $this->reglaMiembro(),
             'descripcion' => ['required', 'string', 'max:255'],
             'comentario' => ['nullable', 'string', 'max:1000'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'medio_pago' => ['required', Rule::in(['efectivo', 'tarjeta', 'transferencia', 'por_definir'])],
             'categoria_personal_id' => ['nullable', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
-                ->where('user_id', $this->user()->id)->where('tipo', 'egreso')->where('activo', true))],
+                ->where('hogar_id', $this->user()->hogar_id)->where('tipo', 'egreso')->where('activo', true))],
             'recurrencia_tipo' => ['nullable', Rule::in(['unica', 'recurrente'])],
             'fecha_esperada' => ['nullable', 'date'],
         ];

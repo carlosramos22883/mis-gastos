@@ -25,6 +25,8 @@ class Permisos
         'cuentas' => 'Cuentas y billeteras',
         'compromisos' => 'Compromisos',
         'tarjetas' => 'Tarjetas de crédito',
+        'deudores' => 'Deudores',
+        'hogar' => 'Hogar',
     ];
 
     public const ACCIONES = [

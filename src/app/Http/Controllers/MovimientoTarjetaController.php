@@ -57,7 +57,7 @@ class MovimientoTarjetaController extends Controller
     private function formData(Request $request, TarjetaCredito $tarjeta): array
     {
         return [
-            'categorias' => CategoriaPersonal::where('user_id', $request->user()->id)->where('activo', true)->where('tipo', 'egreso')->orderBy('nombre')->pluck('nombre', 'id')->all(),
+            'categorias' => CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)->where('activo', true)->where('tipo', 'egreso')->orderBy('nombre')->pluck('nombre', 'id')->all(),
             'desde' => $this->tarjetas->inicioPeriodoAbierto($tarjeta),
             'disponible' => $this->tarjetas->disponible($tarjeta),
         ];
@@ -65,7 +65,7 @@ class MovimientoTarjetaController extends Controller
 
     private function own(Request $request, TarjetaCredito $tarjeta, ?MovimientoTarjeta $movimiento = null): void
     {
-        abort_unless($tarjeta->user_id === $request->user()->id, 404);
+        abort_unless($tarjeta->esDelHogar($request->user()), 404);
         abort_if($movimiento && $movimiento->tarjeta_credito_id !== $tarjeta->id, 404);
     }
 }

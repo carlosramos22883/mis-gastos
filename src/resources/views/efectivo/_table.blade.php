@@ -1,6 +1,6 @@
 @forelse($movimientos as $movimiento)
     <tr data-record-id="{{ $movimiento->id }}" class="border-b dark:border-gray-700">
-        <td class="px-6 py-4">{{ $movimiento->descripcion }}</td>
+        <td class="px-6 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}</td>
         <td class="px-6 py-4">{{ $simbolo ?? '$' }} {{ number_format((float) $movimiento->monto, 2) }}</td>
         <td class="px-6 py-4">{{ $movimiento->fecha->format('d/m/Y') }}</td>
         <td class="px-6 py-4">

@@ -13,6 +13,7 @@
         </button>
     </div>
     <x-floating-input id="nombre" label="Nombre o alias (ej. BAC Walmart Carlos)" maxlength="100" :value="$tarjeta->nombre ?? ''" required />
+    @include('hogar._quien', ['valor' => $tarjeta->user_id ?? null, 'label' => 'Titular'])
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-select id="banco_id" label="Banco emisor" :options="$bancos" :value="$tarjeta->banco_id ?? ''" required />
         <x-floating-select id="marca_red_id" label="Marca" :options="$marcas" :value="$tarjeta->marca_red_id ?? ''" required />

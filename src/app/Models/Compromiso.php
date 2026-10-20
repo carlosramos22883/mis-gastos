@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['user_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
 class Compromiso extends Model
 {
+    use PerteneceAHogar;
+
     /** Estados guardados en la base de datos. */
     public const PENDIENTE = 'pendiente';
 

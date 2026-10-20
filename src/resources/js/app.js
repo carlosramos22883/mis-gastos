@@ -456,6 +456,33 @@ async function performDelete(url) {
     }
 }
 
+// Acción puntual (aceptar, salir, quitar…) con confirmación opcional; al terminar recarga la página.
+window.confirmAction = function (title, text, url, method = 'POST') {
+    const run = async () => {
+        const formData = new FormData();
+        formData.append('_method', method);
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const first = data.errors ? Object.values(data.errors)[0]?.[0] : null;
+                showAlert('error', 'Error', first || data.message || 'No se pudo completar la acción.');
+                return;
+            }
+            await showAlert('success', '¡Listo!', data.message);
+            window.location.reload();
+        } catch (error) {
+            showAlert('error', 'Error de conexión', 'No se pudo comunicar con el servidor.');
+        }
+    };
+    title ? showConfirm(title, text, run) : run();
+};
+
 // Función para exportar datos con los filtros actuales
 window.exportData = function (format) {
     const form = document.getElementById('data-table-form');

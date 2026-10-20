@@ -15,6 +15,7 @@
         </p>
     @endisset
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$movimiento->descripcion ?? ($compromiso->descripcion ?? '')" :error="$errors->first('descripcion')" required />
+    @include('hogar._quien', ['valor' => $movimiento->user_id ?? null])
     <x-floating-money id="monto" label="Monto" :value="$movimiento->monto ?? ($compromiso->saldo_pendiente ?? '')" :error="$errors->first('monto')" :symbol="auth()->user()->monedaPreferida?->simbolo ?? '$'" required />
     <x-floating-date id="fecha" label="Fecha" :value="isset($movimiento) ? $movimiento->fecha : now()" :min="$cycleStart" :max="$cycleEnd" :error="$errors->first('fecha')" required />
     @isset($compromiso)

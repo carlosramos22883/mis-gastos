@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable(['user_id', 'origen_tipo', 'origen_cuenta_id', 'origen_tarjeta_id', 'destino_tipo', 'destino_cuenta_id', 'descripcion', 'monto', 'fecha'])]
 class Transferencia extends Model
 {
+    use PerteneceAHogar;
+
     protected $table = 'transferencias';
 
     protected function casts(): array

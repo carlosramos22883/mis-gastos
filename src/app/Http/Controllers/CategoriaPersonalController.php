@@ -24,7 +24,7 @@ class CategoriaPersonalController extends Controller
             : 'nombre';
         $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = CategoriaPersonal::where('user_id', $request->user()->id)
+        $query = CategoriaPersonal::where('hogar_id', $request->user()->hogar_id)
             ->where('nombre', '!=', 'Saldo inicial')
             ->when($search !== null && $search !== '', fn ($q) => $q->where('nombre', 'like', '%'.$search.'%'))
             ->when($tipo !== null && $tipo !== '', fn ($q) => $q->where('tipo', $tipo))
@@ -94,7 +94,7 @@ class CategoriaPersonalController extends Controller
 
     private function own(Request $request, CategoriaPersonal $categoria): void
     {
-        abort_unless($categoria->user_id === $request->user()->id, 404);
+        abort_unless($categoria->esDelHogar($request->user()), 404);
         abort_unless(app(CategoriaPersonalService::class)->esEditable($categoria), 403);
     }
 

@@ -85,6 +85,12 @@ class RoleAndPermissionSeeder extends Seeder
             'tarjetas.edit',
             'tarjetas.delete',
             'tarjetas.export',
+            'hogar.view',
+            'hogar.edit',
+            'deudores.view',
+            'deudores.create',
+            'deudores.edit',
+            'deudores.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -106,6 +112,8 @@ class RoleAndPermissionSeeder extends Seeder
             'cuentas.view', 'cuentas.create', 'cuentas.edit', 'cuentas.delete', 'cuentas.export',
             'compromisos.view', 'compromisos.create', 'compromisos.edit', 'compromisos.delete', 'compromisos.export',
             'tarjetas.view', 'tarjetas.create', 'tarjetas.edit', 'tarjetas.delete', 'tarjetas.export',
+            'hogar.view', 'hogar.edit',
+            'deudores.view', 'deudores.create', 'deudores.edit', 'deudores.delete',
         ]);
 
         // 4. Crear Usuario Administrador por defecto

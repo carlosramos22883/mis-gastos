@@ -20,7 +20,7 @@ class CategoriaPersonalRequest extends FormRequest
 
         return [
             'nombre' => ['required', 'string', 'max:100', Rule::notIn([CicloEfectivoService::CATEGORIA_SALDO_INICIAL]),
-                Rule::unique('categorias_personales')->where(fn ($q) => $q->where('user_id', $this->user()->id)->where('tipo', $this->input('tipo', 'egreso')))->ignore($categoria?->id)],
+                Rule::unique('categorias_personales')->where(fn ($q) => $q->where('hogar_id', $this->user()->hogar_id)->where('tipo', $this->input('tipo', 'egreso')))->ignore($categoria?->id)],
             'tipo' => ['required', Rule::in(['ingreso', 'egreso'])],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'activo' => ['nullable', 'boolean'],

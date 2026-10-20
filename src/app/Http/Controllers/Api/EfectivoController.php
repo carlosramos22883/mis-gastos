@@ -81,6 +81,6 @@ class EfectivoController extends Controller
 
     private function own(Request $request, MovimientoEfectivo $movimiento): void
     {
-        abort_unless($movimiento->user_id === $request->user()->id, 404);
+        abort_unless($movimiento->esDelHogar($request->user()), 404);
     }
 }

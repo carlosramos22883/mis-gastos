@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['user_id', 'banco_id', 'tipo_cuenta_id', 'nombre', 'numero_cuenta', 'color', 'saldo_inicial', 'fecha_inicial', 'activo'])]
 class Cuenta extends Model
 {
+    use PerteneceAHogar;
+
     protected $table = 'cuentas';
 
     protected $hidden = ['numero_cuenta'];

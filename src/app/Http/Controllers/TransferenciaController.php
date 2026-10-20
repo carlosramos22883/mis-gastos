@@ -41,7 +41,7 @@ class TransferenciaController extends Controller
 
     public function destroy(Request $request, Transferencia $transferencia)
     {
-        abort_unless($transferencia->user_id === $request->user()->id, 404);
+        abort_unless($transferencia->esDelHogar($request->user()), 404);
         $this->transferencias->eliminar($transferencia);
 
         return response()->json(['success' => true, 'message' => 'Transferencia eliminada: se revirtieron sus dos movimientos.']);

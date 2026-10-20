@@ -35,7 +35,7 @@ class MovimientoEfectivoService
                 $data['compromiso_cuota'] = $compromiso->numero_cuota;
             }
 
-            return $user->movimientosEfectivo()->create($data);
+            return $user->movimientosEfectivo()->create($data + ['user_id' => $user->id]);
         });
     }
 
@@ -80,7 +80,8 @@ class MovimientoEfectivoService
 
         // Los movimientos de una transferencia se editan o eliminan desde la transferencia
         return ! $movimiento->es_saldo_arrastrado && ! $movimiento->transferencia_id
-            && $movimiento->fecha->toDateString() >= $inicio->toDateString();
+            && $movimiento->fecha->toDateString() >= $inicio->toDateString()
+            && ! DeudorService::ligado($movimiento); // los de un deudor se gestionan desde Deudores
     }
 
     /**
@@ -95,7 +96,7 @@ class MovimientoEfectivoService
         $monto = $filtros['monto'] ?? null;
         $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $filtros['sort'] : 'fecha';
 
-        return MovimientoEfectivo::with('categoria', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')->where('user_id', $user->id)
+        return MovimientoEfectivo::with('categoria', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')->where('hogar_id', $user->hogar_id)
             ->when($search !== null && $search !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('descripcion', 'like', "%{$search}%")->orWhere('monto', 'like', "%{$search}%")))
             ->when($monto !== null && $monto !== '', fn ($q) => $q->where('monto', 'like', '%'.$monto.'%'))
@@ -124,6 +125,7 @@ class MovimientoEfectivoService
 
     private function asegurarEditable(MovimientoEfectivo $movimiento): void
     {
+        abort_if(DeudorService::ligado($movimiento), 403, 'Este movimiento es de un deudor: modifícalo desde Deudores.');
         abort_unless($this->esEditable($movimiento), 403, 'Solo se pueden modificar movimientos del ciclo actual.');
     }
 

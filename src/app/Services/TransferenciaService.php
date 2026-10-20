@@ -49,6 +49,7 @@ class TransferenciaService
             }
 
             $transferencia = $user->transferencias()->create([
+                'user_id' => $data['user_id'] ?? $user->id,
                 'origen_tipo' => $origenTipo,
                 'origen_cuenta_id' => $origen?->id,
                 'origen_tarjeta_id' => $tarjeta?->id,

@@ -101,6 +101,7 @@ class CicloEfectivoService
 
                 if (! $category->movimientos()->where('es_saldo_arrastrado', true)->whereDate('fecha', $nextStart)->exists()) {
                     $user->movimientosEfectivo()->create([
+                        'user_id' => $user->id,
                         'categoria_personal_id' => $category->id,
                         'descripcion' => self::CATEGORIA_SALDO_INICIAL,
                         'monto' => max(0, $this->balance($user, $cycleEnd)),

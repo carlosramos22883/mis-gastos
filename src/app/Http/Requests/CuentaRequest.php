@@ -3,12 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class CuentaRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -26,6 +27,7 @@ class CuentaRequest extends FormRequest
         $editando = $this->route('cuenta') !== null;
 
         return [
+            'user_id' => $this->reglaMiembro(),
             'nombre' => ['required', 'string', 'max:100'],
             'tipo_cuenta_id' => ['required', 'integer', Rule::exists('tipo_cuentas', 'id')->where('activo', true)],
             'banco_id' => ['nullable', 'integer', Rule::exists('bancos', 'id')->where('activo', true)],

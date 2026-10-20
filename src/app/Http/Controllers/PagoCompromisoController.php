@@ -37,7 +37,7 @@ class PagoCompromisoController extends Controller
             'compromiso' => $compromiso,
             'origenes' => $origenes,
             'origen' => $compromiso->medio_pago === 'transferencia' ? (array_keys($origenes)[1] ?? 'efectivo') : array_key_first($origenes),
-            'categorias' => CategoriaPersonal::where('user_id', $user->id)->where('activo', true)->where('tipo', 'egreso')->orderBy('nombre')->pluck('nombre', 'id')->all(),
+            'categorias' => CategoriaPersonal::where('hogar_id', $user->hogar_id)->where('activo', true)->where('tipo', 'egreso')->orderBy('nombre')->pluck('nombre', 'id')->all(),
             'cycleStart' => $inicio,
             'cycleEnd' => $fin,
         ]);
@@ -70,7 +70,7 @@ class PagoCompromisoController extends Controller
 
     private function own(Request $request, Compromiso $compromiso): void
     {
-        abort_unless($compromiso->user_id === $request->user()->id, 404);
+        abort_unless($compromiso->esDelHogar($request->user()), 404);
         abort_unless($compromiso->estado === Compromiso::PENDIENTE, 403, 'Este compromiso ya no está pendiente.');
     }
 }

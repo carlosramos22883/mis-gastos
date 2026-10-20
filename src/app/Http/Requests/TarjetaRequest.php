@@ -3,12 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class TarjetaRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, ValidaMiembroHogar;
 
     private const MONTO = 'regex:/^\d+(?:\.\d{1,2})?$/';
 
@@ -29,6 +30,7 @@ class TarjetaRequest extends FormRequest
         $soloAlCrear = $creando ? 'nullable' : 'prohibited';
 
         return [
+            'user_id' => $this->reglaMiembro(),
             'nombre' => ['required', 'string', 'max:100'],
             'banco_id' => ['required', 'integer', Rule::exists('bancos', 'id')->where('activo', true)],
             'marca_red_id' => ['required', 'integer', Rule::exists('marca_reds', 'id')->where('activo', true)],

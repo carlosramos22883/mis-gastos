@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use App\Support\Color;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['user_id', 'nombre', 'tipo', 'color', 'activo'])]
 class CategoriaPersonal extends Model
 {
-    use HasFactory;
+    use HasFactory, PerteneceAHogar;
 
     protected $table = 'categorias_personales';
 

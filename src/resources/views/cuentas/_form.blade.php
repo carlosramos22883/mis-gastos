@@ -9,6 +9,7 @@
         </button>
     </div>
     <x-floating-input id="nombre" label="Nombre o alias (ej. BAC Carlos, Chivo)" maxlength="100" :value="$cuenta->nombre ?? ''" required />
+    @include('hogar._quien', ['valor' => $cuenta->user_id ?? null, 'label' => 'Titular'])
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-select id="tipo_cuenta_id" label="Tipo" :allowEmpty="false" :options="$tipos" :value="$cuenta->tipo_cuenta_id ?? array_key_first($tipos)" required />
         <x-floating-select id="banco_id" label="Banco (opcional)" :options="$bancos" :value="$cuenta->banco_id ?? ''" />

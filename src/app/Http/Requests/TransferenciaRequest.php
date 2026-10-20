@@ -3,13 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TransferenciaRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -28,6 +29,7 @@ class TransferenciaRequest extends FormRequest
         $limite = min(Carbon::now($user->zona_horaria ?: config('app.timezone'))->toDateString(), $fin->toDateString());
 
         return [
+            'user_id' => $this->reglaMiembro(),
             'origen' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+|tarjeta:\d+)$/'],
             'destino' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+)$/', 'different:origen'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],

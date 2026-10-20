@@ -3,6 +3,8 @@
     $simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$';
     $texto = $tarjeta->textColor();
     $tag = ($enlace ?? false) ? 'a' : 'div';
+    $miembros = auth()->user()->miembrosHogar;
+    $titular = $miembros->count() > 1 ? $miembros->firstWhere('id', $tarjeta->user_id)?->name : null;
     $uso = (float) $tarjeta->limite_credito > 0 ? min(100, max(0, $tarjeta->deuda / (float) $tarjeta->limite_credito * 100)) : 0;
 @endphp
 <div class="{{ $tarjeta->activo ? '' : 'opacity-60' }}" data-record-id="{{ $tarjeta->id }}">
@@ -19,6 +21,7 @@
             </div>
         </div>
         <p class="mt-4 font-mono text-sm tracking-widest opacity-80">•••• •••• •••• {{ $tarjeta->ultimos_digitos ?? '••••' }}</p>
+        @if ($titular)<p class="mt-1 truncate text-xs font-medium uppercase tracking-wide opacity-80">{{ $titular }}</p>@endif
         <div class="mt-4 flex items-end justify-between">
             <div>
                 <p class="text-xs opacity-80">Disponible</p>

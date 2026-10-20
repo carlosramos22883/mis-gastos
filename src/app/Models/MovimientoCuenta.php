@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAHogar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['user_id', 'cuenta_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'descripcion', 'monto', 'fecha', 'tipo'])]
 class MovimientoCuenta extends Model
 {
+    use PerteneceAHogar;
+
     protected $table = 'movimientos_cuenta';
 
     protected function casts(): array

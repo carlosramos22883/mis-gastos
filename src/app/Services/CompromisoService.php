@@ -27,7 +27,7 @@ class CompromisoService
         $search = $filtros['search'] ?? null;
         $estado = $filtros['estado'] ?? null;
 
-        return Compromiso::query()->where('user_id', $user->id)->with('categoria', 'recurrente')
+        return Compromiso::query()->where('hogar_id', $user->hogar_id)->with('categoria', 'recurrente')
             ->when($search, fn ($q) => $q->where('descripcion', 'like', '%'.$search.'%'))
             ->when($estado, fn ($q) => $q->estadoVisual($estado, $hoy, $inicio))
             ->when($periodo === 'actual', fn ($q) => $q
@@ -52,7 +52,7 @@ class CompromisoService
     {
         $fecha = isset($data['fecha_esperada']) ? Carbon::parse($data['fecha_esperada']) : null;
 
-        return $user->compromisos()->create(array_merge($data, [
+        return $user->compromisos()->create(array_merge(['user_id' => $user->id], $data, [
             'saldo_pendiente' => $data['monto'],
             'ciclo_inicio' => $this->ciclos->cycleFor($user, $fecha ?? $this->hoy($user))[0],
             'estado' => Compromiso::PENDIENTE,
@@ -63,7 +63,7 @@ class CompromisoService
     public function crearRecurrente(User $user, array $data): CompromisoRecurrente
     {
         return DB::transaction(function () use ($user, $data) {
-            $recurrente = $user->compromisosRecurrentes()->create($data);
+            $recurrente = $user->compromisosRecurrentes()->create($data + ['user_id' => $user->id]);
             $this->generar($recurrente, $this->ciclos->cycleFor($user)[1]);
 
             return $recurrente;
@@ -104,6 +104,7 @@ class CompromisoService
 
                 $recurrente->cuotas_generadas++;
                 $user->compromisos()->create([
+                    'user_id' => $recurrente->user_id,
                     'compromiso_recurrente_id' => $recurrente->id,
                     'categoria_personal_id' => $recurrente->categoria_personal_id,
                     'descripcion' => $recurrente->descripcion,
