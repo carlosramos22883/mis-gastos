@@ -8,8 +8,8 @@
     $uso = (float) $tarjeta->limite_credito > 0 ? min(100, max(0, $tarjeta->deuda / (float) $tarjeta->limite_credito * 100)) : 0;
 @endphp
 <div class="{{ $tarjeta->activo ? '' : 'opacity-60' }}" data-record-id="{{ $tarjeta->id }}">
-    <{{ $tag }} @if ($tag === 'a') href="{{ route('tarjetas.show', $tarjeta) }}" @endif class="block rounded-2xl p-5 shadow-lg transition hover:shadow-xl"
-        style="background: linear-gradient(135deg, {{ $tarjeta->color }} 0%, {{ $tarjeta->color }}cc 100%); color: {{ $texto }}">
+    <{{ $tag }} @if ($tag === 'a') href="{{ route('tarjetas.show', $tarjeta) }}" @endif class="block rounded-2xl p-5 shadow-lg ring-1 ring-black/5 transition hover:shadow-xl dark:ring-white/15 [&_p]:[color:inherit]"
+        style="background: linear-gradient(135deg, {{ $tarjeta->color }} 0%, {{ $tarjeta->colorDegradado() }} 100%); color: {{ $texto }}">
         <div class="flex items-start justify-between gap-2">
             <div class="flex min-w-0 items-center gap-3">
                 <x-logo-banco :banco="$tarjeta->banco" />

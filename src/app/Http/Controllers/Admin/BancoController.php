@@ -47,6 +47,7 @@ class BancoController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
+            'tipo' => 'nullable|in:'.implode(',', array_keys(Banco::TIPOS)),
             'logo' => 'nullable|image|max:2048', // Máximo 2MB
             'activo' => 'boolean',
         ]);
@@ -73,6 +74,7 @@ class BancoController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
+            'tipo' => 'nullable|in:'.implode(',', array_keys(Banco::TIPOS)),
             'logo' => 'nullable|image|max:2048',
             'activo' => 'boolean',
         ]);

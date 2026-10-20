@@ -104,7 +104,7 @@ class TransferenciaService
             return null;
         }
 
-        return $user->tarjetasCredito()->where('activo', true)->find($m[1])
+        return $user->tarjetasCredito()->where('activo', true)->where('permite_avances', true)->find($m[1])
             ?? throw ValidationException::withMessages(['origen' => 'Selecciona una tarjeta válida.']);
     }
 

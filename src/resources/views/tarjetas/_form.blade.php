@@ -15,8 +15,8 @@
     <x-floating-input id="nombre" label="Nombre o alias (ej. BAC Walmart Carlos)" maxlength="100" :value="$tarjeta->nombre ?? ''" required />
     @include('hogar._quien', ['valor' => $tarjeta->user_id ?? null, 'label' => 'Titular'])
     <div class="grid gap-4 sm:grid-cols-2">
-        <x-floating-select id="banco_id" label="Banco emisor" :options="$bancos" :value="$tarjeta->banco_id ?? ''" required />
-        <x-floating-select id="marca_red_id" label="Marca" :options="$marcas" :value="$tarjeta->marca_red_id ?? ''" required />
+        <x-floating-select id="banco_id" label="Banco o tienda emisora (opcional)" :options="$bancos" :value="$tarjeta->banco_id ?? ''" />
+        <x-floating-select id="marca_red_id" label="Red: Visa, Mastercard… (opcional)" :options="$marcas" :value="$tarjeta->marca_red_id ?? ''" />
     </div>
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-input id="ultimos_digitos" label="Últimos 4 dígitos (opcional)" maxlength="4" inputmode="numeric" :value="$tarjeta->ultimos_digitos ?? ''" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)" />
@@ -50,6 +50,10 @@
         </label>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input type="checkbox" name="activo" value="1" @checked($tarjeta->activo ?? true) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activa
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300" title="Las tarjetas de tienda no sirven para avances ni recargas (Chivo, Niu)">
+            <input type="hidden" name="permite_avances" value="0">
+            <input type="checkbox" name="permite_avances" value="1" @checked($tarjeta->permite_avances ?? true) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Sirve para avances o recargas
         </label>
     </div>
     <div class="flex justify-end gap-3">

@@ -96,6 +96,25 @@ class TarjetaService
         return round((float) $tarjeta->limite_credito - $this->deuda($tarjeta, $exceptMovimientoId), 2);
     }
 
+    /**
+     * Lo que costaría no pagar completo un estado de cuenta: interés de un mes sobre lo pendiente
+     * (saldo × tasa anual × 30 / 365). Es un mínimo: muchos bancos cobran desde la fecha de cada compra
+     * y además cargan el pago tardío. null si la tarjeta no tiene tasa.
+     *
+     * @return array{pendiente: float, tasa: float, interes_mes: float, fecha_limite: ?string}|null
+     */
+    public function costoDeNoPagar(TarjetaCredito $tarjeta, Compromiso $compromiso): ?array
+    {
+        $tasa = (float) $tarjeta->tasa_interes;
+        if ($tasa <= 0) {
+            return null;
+        }
+        $pendiente = (float) $compromiso->saldo_pendiente;
+
+        return ['pendiente' => $pendiente, 'tasa' => $tasa, 'interes_mes' => round($pendiente * $tasa / 100 * 30 / 365, 2),
+            'fecha_limite' => $compromiso->fecha_esperada?->toDateString()];
+    }
+
     /** Primer día del período que aún no se ha facturado. */
     public function inicioPeriodoAbierto(TarjetaCredito $tarjeta): Carbon
     {

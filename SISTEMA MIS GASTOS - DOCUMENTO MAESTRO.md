@@ -304,39 +304,22 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 
 ---
 
-### Logos
-- Bancos y marcas de red tienen logo en su catálogo (Configuración). Componentes `x-logo-banco` (sin logo: iniciales) y `x-logo-red` (pastilla blanca sobre el color de la tarjeta); se muestran en tarjetas, cuentas y préstamos
+### Logos y colores
+- **Bancos y emisores** (catálogo `bancos` con `tipo`: banco, tienda, financiera, cooperativa; ej. Credisiman = tienda) y marcas de red tienen logo en su catálogo (Configuración).
+- El texto sobre un color (tarjetas, categorías, préstamos) se elige por **contraste WCAG** (`App\Support\Color::textoSobre`, casi negro o blanco, el que más se lea; con degradado, el que mejor se lea en ambos extremos). El degradado de las tarjetas es opaco (`Color::oscurecer`) para verse igual en tema claro y oscuro. Componentes `x-logo-banco` (sin logo: iniciales) y `x-logo-red` (pastilla blanca sobre el color de la tarjeta); se muestran en tarjetas, cuentas y préstamos
 
-## 6. DASHBOARD ⏳
+## 6. DASHBOARD ✅ (web + `GET /api/dashboard`)
 
-### 6.1 Ciclo actual
-Fecha de inicio y fecha de corte
+**Lógica:** `DashboardService`.
 
-### 6.2 Efectivo
-- Efectivo actual · Compromisos en efectivo del ciclo · **Liquidez neta** (efectivo − compromisos) · Gastos del ciclo
-
-### 6.3 Tarjetas de crédito
-- Disponible total · Compromisos de tarjetas · Liquidez neta · Gastos en tarjetas
-
-### 6.4 Cuentas bancarias
-- Disponible total · Compromisos de cuentas · Liquidez neta · Gastos de cuentas
-
-### 6.5 Deudores
-- Total que me deben
-
-### 6.6 Gráficos
-1. Ingresos vs Gastos vs Compromisos
-2. Gastos por categoría
-3. Gastos por tarjeta de crédito
-
-### 6.7 Vínculos rápidos
-Crear ingreso · Crear gasto · Crear compromiso · Ver ejecución financiera
-
-### 6.8 Alertas
-- Compromisos que vencen hoy, tarjetas con fecha límite cercana
-- Solo el día correspondiente; desaparecen al pagarse
-
----
+- **Ciclo actual** (inicio, corte, días que faltan) y vínculos rápidos
+- **Alertas** (con ícono y etiqueta, ordenadas por gravedad): compromisos vencidos, que vencen hoy o en 3 días, tarjetas sobre su límite, día de pago de un ingreso aún no registrado
+- **Indicadores:** efectivo · en cuentas · por pagar este ciclo · **al pagar mis compromisos tendré** (efectivo + cuentas − compromisos hasta el corte) · disponible en tarjetas y **"de las que sí puedo sacar"** (solo tarjetas que sirven para avances, sin restar sobregiros) · deuda en tarjetas · préstamos (saldo y cuotas al mes) · nos deben
+- **Cuadro de tarjetas** como en la hoja: logo, corte, día de pago, límite, disponible, por pagar y su fecha, con totales
+- **Gráficos** (HTML/CSS, paleta validada con el validador de la guía de visualización en claro y oscuro): gastos del ciclo por categoría (barras, las 8 mayores + "Otras") e ingresos vs gastos de los últimos 6 ciclos (columnas, leyenda, detalle al pasar el cursor y vista de tabla)
+- **Qué es gasto:** egresos con categoría (efectivo y cuentas, sin transferencias) + compras y cargos de tarjeta; no cuentan movimientos entre cuentas, ajustes, préstamos a terceros ni pago de avances. **Qué es ingreso:** ingresos con categoría sin transferencias; no cuentan saldo inicial, avances de tarjeta, préstamos recibidos, cobros de deudas, movimientos entre cuentas ni ajustes
+- Próximos compromisos y cuentas con su saldo
+- Tarjetas: campo **"sirve para avances o recargas"** (las de tienda no); banco y red son opcionales
 
 ## 7. REPORTES ⏳
 
@@ -449,7 +432,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Deudores ("Nos deben"): préstamos, pagos repartidos | ✅ |
 | Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
 | Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
-| Eventos, Dashboard, Reportes | ⏳ |
+| Dashboard (inicio) e intereses de tarjeta | ✅ |
+| Eventos, Reportes | ⏳ |
 
 ### API (para móviles)
 | Endpoint | Estado |
@@ -465,6 +449,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/deudores` (CRUD, detalle con deudas y pagos), `POST /api/deudores/{id}/deudas`, `POST /api/deudores/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}` | ✅ |
 | `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
 | `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
+| `GET /api/dashboard` (resumen de inicio) | ✅ |
 | Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
@@ -482,7 +467,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 118 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, préstamos, ingresos, permisos)
+- 121 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, préstamos, ingresos, dashboard, permisos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -498,8 +483,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 6. ~~Deudores~~ ✅ (19/10/2026)
 7. ~~Préstamos~~ ✅ (19/10/2026) con tabla de pagos y proyecciones
 8. ~~Ingresos con desglose~~ ✅ (20/10/2026)
-9. **Intereses de tarjeta:** "interés estimado si no pagas el total" y explicación de la mora
-10. **Dashboard** (incluye disponible por tarjeta y "de las que sí puedo sacar")
+9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
+10. ~~Dashboard~~ ✅ (20/10/2026)
 11. **Móviles al día:** pantallas de Android e iOS (perfil, categorías, efectivo, compromisos, cuentas, tarjetas, hogar)
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables

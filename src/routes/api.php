@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeudorController;
 use App\Http\Controllers\Api\EfectivoController;
 use App\Http\Controllers\Api\HogarController;
@@ -37,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Módulos financieros (mismas reglas que la web, vía servicios compartidos)
     Route::name('api.')->group(function () {
         Route::get('/catalogos', CatalogoController::class)->name('catalogos');
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
         Route::apiResource('deudores', DeudorController::class)->parameters(['deudores' => 'deudor'])
             ->middlewareFor(['index', 'show'], 'can:deudores.view')

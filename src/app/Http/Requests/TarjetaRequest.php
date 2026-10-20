@@ -21,7 +21,8 @@ class TarjetaRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->normalizarFechas('pendiente_fecha');
-        $this->merge(['activo' => $this->boolean('activo', ! $this->isMethod('put'))]);
+        $this->merge(['activo' => $this->boolean('activo', ! $this->isMethod('put')),
+            'permite_avances' => $this->boolean('permite_avances', ! $this->isMethod('put'))]);
     }
 
     public function rules(): array
@@ -32,8 +33,9 @@ class TarjetaRequest extends FormRequest
         return [
             'user_id' => $this->reglaMiembro(),
             'nombre' => ['required', 'string', 'max:100'],
-            'banco_id' => ['required', 'integer', Rule::exists('bancos', 'id')->where('activo', true)],
-            'marca_red_id' => ['required', 'integer', Rule::exists('marca_reds', 'id')->where('activo', true)],
+            // Opcionales: una tarjeta de tienda puede no tener banco del catálogo ni red
+            'banco_id' => ['nullable', 'integer', Rule::exists('bancos', 'id')->where('activo', true)],
+            'marca_red_id' => ['nullable', 'integer', Rule::exists('marca_reds', 'id')->where('activo', true)],
             'ultimos_digitos' => ['nullable', 'digits:4'],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'limite_credito' => ['required', 'numeric', 'gt:0', self::MONTO],
@@ -41,6 +43,7 @@ class TarjetaRequest extends FormRequest
             'dia_corte' => ['required', 'integer', 'between:1,31'],
             'dia_pago' => ['required', 'integer', 'between:1,31'],
             'activo' => ['boolean'],
+            'permite_avances' => ['boolean'],
             // Situación de la tarjeta al registrarla
             'disponible' => [$creando ? 'required' : 'prohibited', 'numeric', 'min:0', 'lte:limite_credito', self::MONTO],
             'pendiente_monto' => [$soloAlCrear, 'numeric', 'min:0', self::MONTO],

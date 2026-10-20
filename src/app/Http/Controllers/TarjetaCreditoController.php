@@ -55,6 +55,8 @@ class TarjetaCreditoController extends Controller
                 ->filter(fn ($m) => $m->items_count < $m->cuotas)->values(),
             'estados' => $tarjeta->estadosCuenta()->with('compromiso')->orderByDesc('fecha_corte')->limit(12)->get(),
             'otrosCompromisos' => $tarjeta->compromisos()->whereNull('estado_cuenta_tarjeta_id')->where('estado', 'pendiente')->get(),
+            'porPagar' => $tarjeta->compromisos()->where('estado', 'pendiente')->orderBy('fecha_esperada')->get()
+                ->map(fn ($c) => ['compromiso' => $c, 'costo' => $this->tarjetas->costoDeNoPagar($tarjeta, $c)]),
             'hoy' => $hoy,
             'inicioCiclo' => $inicioCiclo,
         ]);

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Tarjeta de crédito. La deuda y el disponible se calculan en TarjetaService a partir de
  * sus movimientos y de lo pagado en sus compromisos (estados de cuenta).
  */
-#[Fillable(['user_id', 'banco_id', 'marca_red_id', 'nombre', 'ultimos_digitos', 'color', 'limite_credito', 'tasa_interes', 'deuda_inicial', 'dia_corte', 'dia_pago', 'fecha_registro', 'activo'])]
+#[Fillable(['user_id', 'banco_id', 'marca_red_id', 'nombre', 'ultimos_digitos', 'color', 'limite_credito', 'tasa_interes', 'permite_avances', 'deuda_inicial', 'dia_corte', 'dia_pago', 'fecha_registro', 'activo'])]
 class TarjetaCredito extends Model
 {
     use PerteneceAHogar;
@@ -30,6 +30,7 @@ class TarjetaCredito extends Model
             'dia_pago' => 'integer',
             'fecha_registro' => 'date',
             'activo' => 'boolean',
+            'permite_avances' => 'boolean',
         ];
     }
 
@@ -63,8 +64,14 @@ class TarjetaCredito extends Model
         return $this->hasMany(Compromiso::class);
     }
 
+    /** Otro extremo del degradado de la tarjeta: el mismo color un poco más oscuro (opaco, igual en ambos temas). */
+    public function colorDegradado(): string
+    {
+        return Color::oscurecer($this->color ?: '#1E293B', 18);
+    }
+
     public function textColor(): string
     {
-        return Color::textoSobre($this->color, '#1E293B');
+        return Color::textoSobre($this->color, '#1E293B', $this->colorDegradado());
     }
 }

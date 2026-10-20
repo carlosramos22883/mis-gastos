@@ -17,7 +17,7 @@ class TransferenciaController extends Controller
         $user = $request->user();
         [$inicio, $fin] = app(CicloEfectivoService::class)->cicloConsultado($user);
         $cuentas = $user->cuentas()->where('activo', true)->orderBy('nombre')->get();
-        $tarjetas = $user->tarjetasCredito()->where('activo', true)->orderBy('nombre')->get();
+        $tarjetas = $user->tarjetasCredito()->where('activo', true)->where('permite_avances', true)->orderBy('nombre')->get();
 
         $destinos = ['efectivo' => 'Efectivo'] + $cuentas->mapWithKeys(fn ($c) => ['cuenta:'.$c->id => $c->nombre])->all();
         $origenes = $destinos + $tarjetas->mapWithKeys(fn ($t) => ['tarjeta:'.$t->id => "Tarjeta {$t->nombre} (avance)"])->all();

@@ -8,7 +8,7 @@
 
     <form x-data="ajaxForm(function() {
         $dispatch('close-modal', 'banco-modal');
-        showAlert('success', '¡Éxito!', 'Banco guardado correctamente.');
+        showAlert('success', '¡Éxito!', 'Emisor guardado correctamente.');
         window.dispatchEvent(new CustomEvent('refresh-table'));
     })" @submit.prevent="submit"
         action="{{ isset($banco) ? route('admin.catalogos.bancos.update', $banco) : route('admin.catalogos.bancos.store') }}"
@@ -18,7 +18,7 @@
 
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {{ isset($banco) ? 'Editar Banco' : 'Nuevo Banco' }}
+                {{ isset($banco) ? 'Editar emisor' : 'Nuevo banco o emisor' }}
             </h2>
             <button type="button" x-on:click="$dispatch('close-modal', 'banco-modal')"
                 class="text-gray-400 hover:text-gray-500">
@@ -49,9 +49,11 @@
         </div>
         <p class="text-xs text-center text-gray-500">Haz clic en el ícono para subir/recortar logo</p>
 
-        <x-floating-input id="nombre" name="nombre" label="Nombre del Banco" type="text" maxlength="255"
+        <x-floating-input id="nombre" name="nombre" label="Nombre (banco, tienda, financiera…)" type="text" maxlength="255"
             :value="isset($banco) ? old('nombre', $banco->nombre) : old('nombre')"
             :error="$errors->first('nombre')" required placeholder="Ej: Banco Industrial" />
+
+        <x-floating-select id="tipo" label="Tipo de emisor" :allowEmpty="false" :options="\App\Models\Banco::TIPOS" :value="$banco->tipo ?? 'banco'" />
 
         <!-- Checkbox Activo -->
         <div class="flex items-center gap-2">

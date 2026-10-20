@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeudorController;
 use App\Http\Controllers\EstadoCuentaController;
 use App\Http\Controllers\HogarController;
@@ -30,13 +31,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/dashboard', function () {
-    if (! auth()->user()->onboarding_completed) {
-        return redirect()->route('onboarding.create');
-    }
-
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['throttle:6,1'])->get('/verify-email/{id}/{hash}', VerifyEmailController::class)
     ->name('verification.verify');

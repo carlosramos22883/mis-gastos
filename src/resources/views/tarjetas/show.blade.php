@@ -12,9 +12,11 @@
                             <x-primary-button type="button" x-on:click="$dispatch('load-movimiento-modal-form', '{{ route('tarjetas.movimientos.create', [$tarjeta, 'tipo' => 'compra']) }}'); $dispatch('open-modal', 'movimiento-modal')">Registrar compra</x-primary-button>
                             <x-secondary-button type="button" x-on:click="$dispatch('load-movimiento-modal-form', '{{ route('tarjetas.movimientos.create', [$tarjeta, 'tipo' => 'cargo']) }}'); $dispatch('open-modal', 'movimiento-modal')">Cargo o crédito</x-secondary-button>
                         @endcan
+                        @if ($tarjeta->permite_avances)
                         @can('cuentas.create')
                             <x-secondary-button type="button" title="Sacar dinero con la tarjeta hacia el efectivo o una cuenta (ej. Chivo)" x-on:click="$dispatch('load-transferencia-modal-form', '{{ route('transferencias.create', ['origen' => 'tarjeta:'.$tarjeta->id]) }}'); $dispatch('open-modal', 'transferencia-modal')">Avance</x-secondary-button>
                         @endcan
+                        @endif
                     @endif
                     @can('tarjetas.edit')
                         <x-secondary-button type="button" x-on:click="$dispatch('load-tarjeta-modal-form', '{{ route('tarjetas.edit', $tarjeta) }}'); $dispatch('open-modal', 'tarjeta-modal')">Editar</x-secondary-button>
@@ -35,6 +37,27 @@
                         </div>
                     @endforeach
                 </div>
+                @if ($porPagar->isNotEmpty())
+                    <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-900/20 dark:text-sky-100" x-data="{ ver: false }">
+                        @foreach ($porPagar as $p)
+                            <p>
+                                @if ($p['costo'])
+                                    Si no pagas completo <strong>{{ $p['compromiso']->descripcion }}</strong>{{ $p['compromiso']->fecha_esperada ? ' antes del '.$p['compromiso']->fecha_esperada->format('d/m/Y') : '' }}:
+                                    ≈ <strong>{{ $simbolo }} {{ number_format($p['costo']['interes_mes'], 2) }}</strong> de intereses al mes ({{ rtrim(rtrim(number_format($p['costo']['tasa'], 2), '0'), '.') }} % anual sobre {{ $simbolo }} {{ number_format($p['costo']['pendiente'], 2) }}) + el cargo por pago tardío.
+                                @else
+                                    <strong>{{ $p['compromiso']->descripcion }}</strong>: {{ $simbolo }} {{ number_format((float) $p['compromiso']->saldo_pendiente, 2) }} pendientes. Agrega la <em>tasa de interés</em> de la tarjeta (Editar) para ver cuánto te costaría no pagarlo completo.
+                                @endif
+                            </p>
+                        @endforeach
+                        <button type="button" class="mt-2 text-xs font-medium underline" x-on:click="ver = !ver">¿Cómo cobran intereses las tarjetas?</button>
+                        <ul x-show="ver" x-cloak class="mt-2 list-disc space-y-1 pl-5 text-xs">
+                            <li>Si pagas <strong>el total</strong> del estado de cuenta antes de la fecha límite, no pagas intereses (por eso pasar una tarjeta al siguiente ciclo no cuesta nada mientras no llegue su fecha límite).</li>
+                            <li>Si pagas <strong>menos del total</strong> (aunque sea el mínimo), cobran intereses sobre lo que quedó, y muchos bancos los cuentan desde la fecha de cada compra, no desde la fecha límite: el cálculo de arriba es un mínimo.</li>
+                            <li>Si no pagas <strong>ni el mínimo</strong> a tiempo: cargo por pago tardío (más IVA), intereses moratorios y reporte en tu historial de crédito. Regístralo con «Registrar mora» en el estado de cuenta vencido.</li>
+                            <li>Las comisiones y cargos (seguros, membresía, «beneficio portafolio») llevan IVA del 13 %.</li>
+                        </ul>
+                    </div>
+                @endif
                 @if ($otrosCompromisos->isNotEmpty())
                     <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
                         @foreach ($otrosCompromisos as $c)
