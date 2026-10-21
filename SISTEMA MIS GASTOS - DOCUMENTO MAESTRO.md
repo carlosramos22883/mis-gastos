@@ -484,8 +484,11 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Cuentas: lista con logo y saldo, detalle por ciclo, registrar/editar/eliminar movimientos, eliminar transferencias | ✅ |
 | Transferencias desde Efectivo, Cuentas y Tarjetas (avance) | ✅ |
 | Tarjetas: lista con su color, detalle (por pagar con costo de no pagar, próximo corte, sin facturar, cuotas, estados de cuenta), compras en cuotas, cargos y créditos | ✅ |
-| Más: usuario, hogar y miembros, acceso a cuentas, cerrar sesión | ✅ |
-| Crear compromisos; crear/editar cuentas y tarjetas; contactos, préstamos, ingresos, perfil | ⏳ |
+| Contactos: lista con búsqueda y "nos deben", foto privada, crear/editar, prestar o anotar deudas, registrar y eliminar cobros | ✅ |
+| Préstamos: lista con saldo y avance, detalle con cuota y cargos, registrar pago con la sugerencia del sistema, eliminar el último, simulador (pagar hoy, extra mensual, abono único) | ✅ |
+| Ingresos: fuentes con su plantilla, registrar pago recibido con desglose calculado y editable (los préstamos de planilla se pagan solos), eliminar recibos | ✅ |
+| Más: usuario, hogar y miembros, acceso a cuentas, contactos, préstamos e ingresos, cerrar sesión | ✅ |
+| Crear compromisos; crear/editar cuentas, tarjetas, préstamos y fuentes de ingreso; foto de contacto; perfil | ⏳ |
 
 ### iOS (Swift)
 | Pantalla | Estado |
@@ -514,7 +517,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). Falta en Android: contactos y "nos deben", préstamos, ingresos, crear compromisos → luego iOS
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos e ingresos (21/10/2026). Falta en Android: crear compromisos y los formularios de alta (cuentas, tarjetas, préstamos, fuentes) → luego iOS
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
