@@ -1,6 +1,6 @@
 @props(['contacto' => null, 'size' => 'md'])
 {{-- Foto del contacto (privada) o sus iniciales. Uso: <x-avatar-contacto :contacto="$c" size="sm" /> --}}
-@php($medida = ['xs' => 'h-5 w-5 text-[9px]', 'sm' => 'h-7 w-7 text-[10px]', 'md' => 'h-10 w-10 text-sm', 'lg' => 'h-20 w-20 text-2xl'][$size] ?? 'h-10 w-10 text-sm')
+@php($medida = ['xs' => 'h-5 w-5 text-[9px]', 'sm' => 'h-7 w-7 text-[10px]', 'md' => 'h-10 w-10 text-sm', 'lg' => 'h-20 w-20 text-2xl', 'xl' => 'h-32 w-32 text-4xl'][$size] ?? 'h-10 w-10 text-sm')
 @if ($contacto?->foto)
     <img src="{{ $contacto->urlFoto() }}" alt="{{ $contacto->nombreCompleto() }}" title="{{ $contacto->nombreCompleto() }}" loading="lazy"
         {{ $attributes->merge(['class' => "$medida shrink-0 rounded-full object-cover ring-1 ring-black/5"]) }}>

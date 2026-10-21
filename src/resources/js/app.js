@@ -20,6 +20,26 @@ window.formatMoneyInput = function (input) {
     input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + `.${decimalPart.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}`;
 };
 
+
+// =============================================================================
+// RESALTAR UN REGISTRO AL LLEGAR (?resaltar=ID): desde la ficha de un contacto u otro enlace
+// Tablas AJAX: filas con data-record-id · listas fijas y estados de cuenta: data-movimiento
+// =============================================================================
+window.resaltarElemento = function (el) {
+    if (!el) return false;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const clases = ['resaltado-registro', 'bg-primary-50', 'dark:bg-primary-900/40', 'outline', 'outline-2', 'outline-primary-500', '-outline-offset-2'];
+    el.classList.add(...clases);
+    setTimeout(() => el.classList.remove(...clases), 6000);
+    return true;
+};
+window.resaltarDesdeUrl = function (raiz = document) {
+    const id = new URLSearchParams(window.location.search).get('resaltar');
+    if (!id || !/^\d+$/.test(id)) return false;
+    return window.resaltarElemento(raiz.querySelector(`[data-movimiento="${id}"]`));
+};
+document.addEventListener('DOMContentLoaded', () => window.resaltarDesdeUrl());
+
 // ==========================================
 // AYUDANTES DE FORMULARIO (fechas, dinero, límites de campos)
 // Globales: los usan ajaxForm y los formularios de TODAS las pantallas, tengan o no tabla de datos.
@@ -153,6 +173,14 @@ document.addEventListener('alpine:init', () => {
 
             if (tbody) this.tableBodyHtml = tbody.innerHTML;
             if (pagination) this.paginationHtml = pagination.innerHTML;
+
+            // Viene de un enlace a un registro concreto (ej. un movimiento desde la ficha de un contacto)
+            const resaltar = new URLSearchParams(window.location.search).get('resaltar');
+            if (resaltar && /^\d+$/.test(resaltar)) {
+                this.highlightRecordId = resaltar;
+                // Se marca ya y otra vez cuando la tabla termina de recargarse (la recarga reemplaza las filas)
+                this.$nextTick(() => window.resaltarElemento(document.querySelector(`[data-record-id="${resaltar}"]`)));
+            }
 
             this.defaultSort = container?.dataset.defaultSort || 'created_at';
             this.defaultDirection = container?.dataset.defaultDirection || 'desc';
@@ -351,11 +379,7 @@ document.addEventListener('alpine:init', () => {
                             if (tbody) Alpine.initTree(tbody);
                             if (pagination) Alpine.initTree(pagination);
                             if (this.highlightRecordId) {
-                                const row = document.querySelector(`[data-record-id="${this.highlightRecordId}"]`);
-                                if (row) {
-                                    row.classList.add('animate-pulse', 'bg-primary-50', 'dark:bg-primary-900/30');
-                                    setTimeout(() => row.classList.remove('animate-pulse', 'bg-primary-50', 'dark:bg-primary-900/30'), 2500);
-                                }
+                                window.resaltarElemento(document.querySelector(`[data-record-id="${this.highlightRecordId}"]`));
                                 this.highlightRecordId = null;
                             }
                         }

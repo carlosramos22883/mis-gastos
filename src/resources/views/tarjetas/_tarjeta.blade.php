@@ -4,7 +4,9 @@
     $texto = $tarjeta->textColor();
     $tag = ($enlace ?? false) ? 'a' : 'div';
     $miembros = auth()->user()->miembrosHogar;
-    $titular = $miembros->count() > 1 ? $miembros->firstWhere('id', $tarjeta->user_id)?->name : null;
+    // Titular (foto o inicial) en la esquina: ayuda a distinguir tarjetas parecidas en hogares de varios miembros
+    $persona = $miembros->count() > 1 ? $miembros->firstWhere('id', $tarjeta->user_id) : null;
+    $titular = $persona?->name;
     $uso = (float) $tarjeta->limite_credito > 0 ? min(100, max(0, $tarjeta->deuda / (float) $tarjeta->limite_credito * 100)) : 0;
 @endphp
 <div class="{{ $tarjeta->activo ? '' : 'opacity-60' }}" data-record-id="{{ $tarjeta->id }}">
@@ -18,7 +20,12 @@
                     <p class="truncate text-xs opacity-80">{{ $tarjeta->banco?->nombre }}</p>
                 </div>
             </div>
-            @unless ($tarjeta->activo)<span class="shrink-0 text-xs font-semibold opacity-90">Inactiva</span>@endunless
+            <div class="flex shrink-0 items-center gap-2">
+                @unless ($tarjeta->activo)<span class="text-xs font-semibold opacity-90">Inactiva</span>@endunless
+                @if ($persona)
+                    <span class="inline-flex rounded-full ring-2 ring-white/90 shadow" title="Titular: {{ $titular }}">@include('hogar._avatar', ['persona' => $persona])</span>
+                @endif
+            </div>
         </div>
         <p class="mt-4 font-mono text-sm tracking-widest opacity-80">•••• •••• •••• {{ $tarjeta->ultimos_digitos ?? '••••' }}</p>
         @if ($titular)<p class="mt-1 truncate text-xs font-medium uppercase tracking-wide opacity-80">{{ $titular }}</p>@endif

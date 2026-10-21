@@ -4,6 +4,7 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        './resources/js/**/*.js', // clases que solo usa el JS (ej. resaltar un registro)
     ],
     darkMode: 'class',
     theme: {

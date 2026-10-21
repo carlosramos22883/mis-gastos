@@ -1,11 +1,15 @@
 @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
 <x-app-layout>
     <x-slot name="header"><h1>{{ $tarjeta->nombre }}</h1></x-slot>
-    <div class="max-w-7xl mx-auto space-y-6" x-data x-on:refresh-table.window="$event.detail?.redirect ? window.location = $event.detail.redirect : window.location.reload()">
+    {{-- ?estado=ID abre ese estado de cuenta (viene de "ir al movimiento" de uno ya facturado) --}}
+    @php($abrirEstado = request()->filled('estado') ? $tarjeta->estadosCuenta()->whereKey((int) request('estado'))->first() : null)
+    <div class="max-w-7xl mx-auto space-y-6" x-data x-on:refresh-table.window="$event.detail?.redirect ? window.location = $event.detail.redirect : window.location.reload()"
+        @if ($abrirEstado) x-init="$nextTick(() => { $dispatch('load-estado-modal-form', '{{ route('estados-cuenta.show', $abrirEstado) }}'); $dispatch('open-modal', 'estado-modal') })" @endif>
         <div class="grid gap-6 lg:grid-cols-3">
             <div>@include('tarjetas._tarjeta')</div>
             <div class="lg:col-span-2 space-y-4">
                 <div class="flex flex-wrap gap-2">
+                    <x-volver />
                     <x-secondary-button type="button" onclick="window.location='{{ route('tarjetas.index') }}'">Todas las tarjetas</x-secondary-button>
                     @if ($tarjeta->activo)
                         @can('tarjetas.create')
@@ -87,7 +91,7 @@
                     <tbody>
                         @forelse ($porFacturar as $linea)
                             @php($m = $linea['movimiento'])
-                            <tr class="border-t border-gray-200 dark:border-gray-700">
+                            <tr class="border-t border-gray-200 dark:border-gray-700" data-movimiento="{{ $m->id }}">
                                 <td class="px-6 py-3 whitespace-nowrap">{{ $m->fecha->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3">@include('hogar._por', ['id' => $m->user_id]){{ $m->descripcion }}@include('contactos._chip', ['contacto' => $m->contacto])@if ($m->categoria)<span class="ml-2 text-xs text-gray-400">{{ $m->categoria->nombre }}</span>@endif</td>
                                 <td class="px-6 py-3 whitespace-nowrap">{{ $linea['cuota_numero'] ? 'Cuota '.$linea['cuota_numero'].' de '.$m->cuotas : \App\Models\MovimientoTarjeta::TIPOS[$m->tipo] }}</td>

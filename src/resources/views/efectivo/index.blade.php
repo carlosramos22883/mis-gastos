@@ -2,6 +2,7 @@
     <x-slot name="header">Movimientos de efectivo del {{ $cycleStart->format('d/m/Y') }} al
         {{ $cycleEnd->format('d/m/Y') }}</x-slot>
     <div class="max-w-7xl mx-auto space-y-4">
+        @if (\App\Support\Volver::destino(request()))<div><x-volver /></div>@endif
         @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
         <div class="grid gap-4 md:grid-cols-3">
             @foreach ([['Saldo disponible', $balance, 'text-primary-600 dark:text-primary-400', 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4h8v-8h-8zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2h6v4h-6z', 'balance'], ['Total de ingresos', $ingresos, 'text-green-600 dark:text-green-400', 'M12 3v18m9-9H3', 'ingresos'], ['Total de egresos', $egresos, 'text-red-600 dark:text-red-400', 'M5 12h14', 'egresos']] as [$label, $value, $color, $icon, $key])
@@ -38,7 +39,7 @@
             @endif
         </nav>
         @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
-        <x-data-table createPermission="efectivo.create" exportPermission="efectivo.export" filterCount="5" :keep="['cycle']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
+        <x-data-table createPermission="efectivo.create" exportPermission="efectivo.export" filterCount="5" :keep="['cycle', 'desde']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
             :exportRoute="route('efectivo.export')" searchPlaceholder="Buscar descripción..." defaultSort="fecha">
             <x-slot:filters>
                 <x-floating-money id="amount" label="Monto" :value="request('amount')" :symbol="$simbolo" />

@@ -8,6 +8,7 @@
             <span>{{ collect([$cuenta->tipoCuenta?->nombre, $cuenta->banco?->nombre, $cuenta->numeroEnmascarado()])->filter()->implode(' · ') }}
                 @unless ($cuenta->activo) · <strong>Inactiva</strong> @endunless</span>
             <div class="flex gap-2">
+                <x-volver />
                 <x-secondary-button type="button" onclick="window.location='{{ route('cuentas.index') }}'">Todas las cuentas</x-secondary-button>
                 @if ($esActual && $cuenta->activo)
                     @can('cuentas.create')
@@ -49,7 +50,7 @@
             ['label' => 'Categoría', 'sortable' => false],
             ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right'],
         ])
-        <x-data-table filterCount="2" :keep="['cycle']" :headers="$headers" :data="$movimientos"
+        <x-data-table filterCount="2" :keep="['cycle', 'desde']" :headers="$headers" :data="$movimientos"
             :createRoute="$esActual && $cuenta->activo ? route('cuentas.movimientos.create', $cuenta) : null" createModal="movimiento-modal" createPermission="cuentas.create"
             :exportRoute="route('cuentas.export', $cuenta)" exportPermission="cuentas.export"
             searchPlaceholder="Buscar descripción..." defaultSort="fecha" defaultDirection="desc">

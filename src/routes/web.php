@@ -16,6 +16,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EstadoCuentaController;
 use App\Http\Controllers\HogarController;
 use App\Http\Controllers\IngresoController;
+use App\Http\Controllers\IrAMovimientoController;
 use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\MovimientoTarjetaController;
@@ -189,6 +190,9 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:efectivo.export')->name('efectivo.export');
     Route::get('efectivo', [MovimientoEfectivoController::class, 'index'])
         ->middleware('can:efectivo.view')->name('efectivo.index');
+    // Ir a un movimiento (efectivo, cuenta o tarjeta) en su pantalla, ciclo y página; el permiso se revisa según la clase
+    Route::get('movimientos/{clase}/{id}', IrAMovimientoController::class)
+        ->whereIn('clase', ['efectivo', 'cuenta', 'tarjeta'])->whereNumber('id')->name('movimientos.ver');
     Route::get('efectivo/create', [MovimientoEfectivoController::class, 'create'])
         ->middleware('can:efectivo.create')->name('efectivo.create');
     Route::post('efectivo', [MovimientoEfectivoController::class, 'store'])

@@ -500,7 +500,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 139 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
+- 142 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -535,6 +535,12 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
   - Tests: `docker compose exec app php artisan test`
   - Estilo: `docker compose exec app ./vendor/bin/pint`
   - Migraciones: `docker compose exec app php artisan migrate`
+
+### Navegación entre pantallas (web)
+- `GET /movimientos/{efectivo|cuenta|tarjeta}/{id}` (`IrAMovimientoController`): lleva al movimiento en su pantalla, ciclo y página del listado y lo resalta (`?resaltar=ID`; filas con `data-record-id` en tablas AJAX o `data-movimiento` en listas fijas y estados de cuenta). Si ya se facturó, abre el estado de cuenta donde quedó.
+- `?desde=contacto:ID | prestamo:ID | tarjeta:ID` muestra "← Volver a …" (`<x-volver />`, `App\Support\Volver`). Solo pantallas conocidas y registros del hogar: nunca una URL libre.
+- La ficha del contacto enlaza cada movimiento, compromiso, préstamo, deuda y pago con su detalle.
+- Las tarjetas muestran la foto del titular (web y Android) en hogares de varios miembros.
 
 ### Apps móviles: notas
 - `GET /api/catalogos` responde sin la envoltura `data` (el resto de recursos sí la usan).

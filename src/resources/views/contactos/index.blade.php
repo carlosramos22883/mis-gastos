@@ -25,11 +25,11 @@
         @else
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($contactos as $c)
-                    <a href="{{ route('contactos.show', $c) }}" class="flex items-center gap-4 rounded-lg bg-white p-4 shadow hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/40 {{ $c->activo ? '' : 'opacity-60' }}" data-record-id="{{ $c->id }}">
-                        <x-avatar-contacto :contacto="$c" />
+                    <a href="{{ route('contactos.show', $c) }}" class="flex items-center gap-5 rounded-xl bg-white p-5 shadow hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/40 {{ $c->activo ? '' : 'opacity-60' }}" data-record-id="{{ $c->id }}">
+                        <x-avatar-contacto :contacto="$c" size="lg" class="ring-2 ring-white shadow-md dark:ring-gray-700" />
                         <div class="min-w-0 flex-1">
-                            <p class="truncate font-semibold text-gray-900 dark:text-gray-100">{{ $c->nombreCompleto() }}</p>
-                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $c->tipoContacto?->nombre }}{{ $c->telefono ? ' · '.$c->telefono : '' }}{{ $c->activo ? '' : ' · inactivo' }}</p>
+                            <p class="line-clamp-2 text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100" title="{{ $c->nombreCompleto() }}">{{ $c->nombreCompleto() }}</p>
+                            <p class="truncate text-sm text-gray-500 dark:text-gray-400">{{ $c->tipoContacto?->nombre }}{{ $c->telefono ? ' · '.$c->telefono : '' }}{{ $c->activo ? '' : ' · inactivo' }}</p>
                         </div>
                         @if ($c->pendiente > 0)
                             <div class="shrink-0 text-right">

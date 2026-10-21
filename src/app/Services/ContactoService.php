@@ -120,13 +120,14 @@ class ContactoService
     /** Movimientos con el contacto (efectivo, cuentas y tarjetas), del más reciente al más antiguo. */
     private function movimientos(Contacto $contacto): Collection
     {
-        $fila = fn (string $donde) => fn ($m) => ['fecha' => $m->fecha, 'descripcion' => $m->descripcion, 'monto' => (float) $m->monto,
-            'tipo' => in_array($m->tipo, ['ingreso', 'credito'], true) ? 'ingreso' : 'egreso', 'donde' => $donde, 'user_id' => $m->user_id];
+        // clase + id: para ir al movimiento en su pantalla (ruta movimientos.ver)
+        $fila = fn (string $donde, string $clase) => fn ($m) => ['fecha' => $m->fecha, 'descripcion' => $m->descripcion, 'monto' => (float) $m->monto,
+            'tipo' => in_array($m->tipo, ['ingreso', 'credito'], true) ? 'ingreso' : 'egreso', 'donde' => $donde, 'user_id' => $m->user_id, 'clase' => $clase, 'id' => $m->id];
 
         return collect()
-            ->concat(MovimientoEfectivo::where('contacto_id', $contacto->id)->where('es_saldo_arrastrado', false)->get()->map($fila('Efectivo')))
-            ->concat(MovimientoCuenta::with('cuenta')->where('contacto_id', $contacto->id)->get()->map(fn ($m) => $fila($m->cuenta->nombre)($m)))
-            ->concat(MovimientoTarjeta::with('tarjeta')->where('contacto_id', $contacto->id)->get()->map(fn ($m) => $fila('Tarjeta '.$m->tarjeta->nombre)($m)))
+            ->concat(MovimientoEfectivo::where('contacto_id', $contacto->id)->where('es_saldo_arrastrado', false)->get()->map($fila('Efectivo', 'efectivo')))
+            ->concat(MovimientoCuenta::with('cuenta')->where('contacto_id', $contacto->id)->get()->map(fn ($m) => $fila($m->cuenta->nombre, 'cuenta')($m)))
+            ->concat(MovimientoTarjeta::with('tarjeta')->where('contacto_id', $contacto->id)->get()->map(fn ($m) => $fila('Tarjeta '.$m->tarjeta->nombre, 'tarjeta')($m)))
             ->sortByDesc(fn ($m) => $m['fecha']->toDateString())->values();
     }
 

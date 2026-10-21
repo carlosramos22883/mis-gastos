@@ -6,6 +6,7 @@
     <x-slot name="header"><h1>{{ $prestamo->nombre }}</h1></x-slot>
     <div class="max-w-7xl mx-auto space-y-6" x-data x-on:refresh-table.window="$event.detail?.redirect ? window.location = $event.detail.redirect : window.location.reload()">
         <div class="flex flex-wrap gap-2">
+            <x-volver />
             <x-secondary-button type="button" onclick="window.location='{{ route('prestamos.index') }}'">Todos los préstamos</x-secondary-button>
             @can('prestamos.create')
                 @if ($r['saldo'] > 0)

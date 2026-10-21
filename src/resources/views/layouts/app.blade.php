@@ -107,7 +107,8 @@
         </header>
 
         <!-- Área de Contenido -->
-        <main class="flex-1 overflow-x-hidden bg-gray-50 dark:bg-gray-900 p-6">
+        {{-- pb-28: el footer es fijo; se deja su alto (~4rem) más un respiro para que no tape el final de la página --}}
+        <main class="flex-1 overflow-x-hidden bg-gray-50 dark:bg-gray-900 px-6 pt-6 pb-28">
             @isset($header)
                 <div class="mb-3 px-6 max-w-7xl mx-auto">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $header }}</h1>
@@ -117,10 +118,8 @@
             {{ $slot }}
         </main>
 
-        <!-- Footer (Full Width) -->
-        <div class="w-full mt-8">
-            <x-app-footer />
-        </div>
+        <!-- Footer (fijo, ancho completo) -->
+        <x-app-footer />
     </div>
 
     <!-- Scripts de Alertas -->

@@ -14,7 +14,8 @@
                 @if ($compromiso->recurrente)<span>· {{ $compromiso->recurrente->descripcionFrecuencia() }}</span>@endif
             </div>
             <div class="flex gap-2">
-                <x-secondary-button type="button" onclick="window.location='{{ route('compromisos.index') }}'">Volver</x-secondary-button>
+                <x-volver />
+                <x-secondary-button type="button" onclick="window.location='{{ route('compromisos.index') }}'">Todos los compromisos</x-secondary-button>
                 @if ($compromiso->estado === \App\Models\Compromiso::PENDIENTE)
                     @canany(['efectivo.create', 'cuentas.create'])
                         <x-primary-button type="button" x-on:click="$dispatch('load-pago-modal-form', '{{ route('compromisos.pagar', $compromiso) }}'); $dispatch('open-modal', 'pago-modal')">Pagar</x-primary-button>
