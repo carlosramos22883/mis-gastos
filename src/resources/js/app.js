@@ -21,6 +21,120 @@ window.formatMoneyInput = function (input) {
 };
 
 // ==========================================
+// AYUDANTES DE FORMULARIO (fechas, dinero, límites de campos)
+// Globales: los usan ajaxForm y los formularios de TODAS las pantallas, tengan o no tabla de datos.
+// ==========================================
+window.validateDateInput = function (input) {
+    const digits = input.value.replace(/\D/g, '').slice(0, 8);
+    const wrapper = input.closest('.relative');
+    const picker = wrapper?.querySelector('[data-date-picker]');
+    const error = wrapper?.querySelector('[data-date-error]');
+    const fail = (message) => {
+        input.value = '';
+        if (picker) picker.value = '';
+        if (error) {
+            error.textContent = message;
+            error.classList.remove('hidden');
+        }
+        return false;
+    };
+
+    if (!digits) {
+        if (!input.required) {
+            if (error) error.classList.add('hidden');
+            return true;
+        }
+        return fail('La fecha es obligatoria.');
+    }
+    if (digits.length !== 8) return fail('Usa el formato dd/mm/aaaa.');
+
+    const day = Number(digits.slice(0, 2));
+    const month = Number(digits.slice(2, 4));
+    const year = Number(digits.slice(4));
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return fail('La fecha no es válida.');
+    }
+
+    const iso = `${year.toString().padStart(4, '0')}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
+    if (picker?.min && iso < picker.min || picker?.max && iso > picker.max) {
+        return fail('La fecha debe estar dentro del ciclo permitido.');
+    }
+
+    input.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    if (picker) picker.value = iso;
+    if (error) {
+        error.textContent = '';
+        error.classList.add('hidden');
+    }
+    return true;
+};
+
+window.syncDateInput = function (picker) {
+    const display = picker.closest('.relative')?.querySelector('[data-date-input]');
+    if (display && picker.value) {
+        const [year, month, day] = picker.value.split('-');
+        display.value = `${day}/${month}/${year}`;
+        display.dispatchEvent(new Event('input', { bubbles: true }));
+        display.dispatchEvent(new Event('change', { bubbles: true }));
+        display.closest('.relative')?.querySelector('[data-date-error]')?.classList.add('hidden');
+    }
+};
+
+window.applyClientFieldLimits = function (root = document) {
+    if (!document.body) return;
+    const limits = {
+        name: 255, nombre: 255, descripcion: 500, email: 255,
+        codigo: 10, simbolo: 10, search: 255, color: 7,
+    };
+    root.querySelectorAll('input[name], textarea[name]').forEach((input) => {
+        const limit = limits[input.name];
+        if (limit && !input.maxLength) input.maxLength = limit;
+        if (limit && input.value.length > limit) input.value = input.value.slice(0, limit);
+    });
+    if (!window.clientFieldLimitObserver) {
+        window.clientFieldLimitObserver = new MutationObserver(() => window.applyClientFieldLimits());
+        window.clientFieldLimitObserver.observe(document.body, { childList: true, subtree: true });
+    }
+};
+window.applyClientFieldLimits();
+
+document.addEventListener('input', (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches('[data-money-input]')) return;
+
+    const [integerPart, decimalPart] = input.value.replace(/[^\d.]/g, '').split('.');
+    const integer = (integerPart || '0').replace(/^0+(?=\d)/, '');
+    input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+        + (decimalPart === undefined ? '' : `.${decimalPart.slice(0, 2)}`);
+});
+
+document.addEventListener('blur', (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.matches('[data-money-input]')) {
+        window.formatMoneyInput(event.target);
+    }
+}, true);
+
+document.addEventListener('submit', (event) => {
+    event.target.querySelectorAll('[data-money-input]').forEach((input) => {
+        input.value = input.value.replace(/,/g, '');
+        if (input.value && !input.value.includes('.')) input.value += '.00';
+        if (input.value) {
+            const [integer, decimals = ''] = input.value.split('.');
+            input.value = `${integer}.${decimals.padEnd(2, '0').slice(0, 2)}`;
+        }
+    });
+});
+
+document.addEventListener('input', (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches('[data-date-input]')) return;
+    const digits = input.value.replace(/\D/g, '').slice(0, 8);
+    input.value = digits.length > 4 ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}` :
+        digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+});
+
+// ==========================================
 // MANEJADOR DE TABLA DE DATOS AJAX (WEB)
 // ==========================================
 document.addEventListener('alpine:init', () => {
@@ -71,127 +185,6 @@ document.addEventListener('alpine:init', () => {
                 }
                 this.highlightRecordId = event.detail?.highlight_id || null;
                 this.fetchData(form.action, refreshFormData);
-            });
-
-            window.formatMoneyInput = function (input) {
-                const raw = String(input.value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
-                if (!raw) {
-                    input.value = '';
-                    return;
-                }
-                const [integerPart, decimalPart = ''] = raw.split('.');
-                const integer = (integerPart || '0').replace(/\D/g, '') || '0';
-                input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + `.${decimalPart.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}`;
-            };
-
-            window.validateDateInput = function (input) {
-                const digits = input.value.replace(/\D/g, '').slice(0, 8);
-                const wrapper = input.closest('.relative');
-                const picker = wrapper?.querySelector('[data-date-picker]');
-                const error = wrapper?.querySelector('[data-date-error]');
-                const fail = (message) => {
-                    input.value = '';
-                    if (picker) picker.value = '';
-                    if (error) {
-                        error.textContent = message;
-                        error.classList.remove('hidden');
-                    }
-                    return false;
-                };
-
-                if (!digits) {
-                    if (!input.required) {
-                        if (error) error.classList.add('hidden');
-                        return true;
-                    }
-                    return fail('La fecha es obligatoria.');
-                }
-                if (digits.length !== 8) return fail('Usa el formato dd/mm/aaaa.');
-
-                const day = Number(digits.slice(0, 2));
-                const month = Number(digits.slice(2, 4));
-                const year = Number(digits.slice(4));
-                const date = new Date(year, month - 1, day);
-                if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-                    return fail('La fecha no es válida.');
-                }
-
-                const iso = `${year.toString().padStart(4, '0')}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
-                if (picker?.min && iso < picker.min || picker?.max && iso > picker.max) {
-                    return fail('La fecha debe estar dentro del ciclo permitido.');
-                }
-
-                input.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-                if (picker) picker.value = iso;
-                if (error) {
-                    error.textContent = '';
-                    error.classList.add('hidden');
-                }
-                return true;
-            };
-
-            window.syncDateInput = function (picker) {
-                const display = picker.closest('.relative')?.querySelector('[data-date-input]');
-                if (display && picker.value) {
-                    const [year, month, day] = picker.value.split('-');
-                    display.value = `${day}/${month}/${year}`;
-                    display.dispatchEvent(new Event('input', { bubbles: true }));
-                    display.dispatchEvent(new Event('change', { bubbles: true }));
-                    display.closest('.relative')?.querySelector('[data-date-error]')?.classList.add('hidden');
-                }
-            };
-
-            window.applyClientFieldLimits = function (root = document) {
-                if (!document.body) return;
-                const limits = {
-                    name: 255, nombre: 255, descripcion: 500, email: 255,
-                    codigo: 10, simbolo: 10, search: 255, color: 7,
-                };
-                root.querySelectorAll('input[name], textarea[name]').forEach((input) => {
-                    const limit = limits[input.name];
-                    if (limit && !input.maxLength) input.maxLength = limit;
-                    if (limit && input.value.length > limit) input.value = input.value.slice(0, limit);
-                });
-                if (!window.clientFieldLimitObserver) {
-                    window.clientFieldLimitObserver = new MutationObserver(() => window.applyClientFieldLimits());
-                    window.clientFieldLimitObserver.observe(document.body, { childList: true, subtree: true });
-                }
-            };
-            window.applyClientFieldLimits();
-
-            document.addEventListener('input', (event) => {
-                const input = event.target;
-                if (!(input instanceof HTMLInputElement) || !input.matches('[data-money-input]')) return;
-
-                const [integerPart, decimalPart] = input.value.replace(/[^\d.]/g, '').split('.');
-                const integer = (integerPart || '0').replace(/^0+(?=\d)/, '');
-                input.value = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                    + (decimalPart === undefined ? '' : `.${decimalPart.slice(0, 2)}`);
-            });
-
-            document.addEventListener('blur', (event) => {
-                if (event.target instanceof HTMLInputElement && event.target.matches('[data-money-input]')) {
-                    window.formatMoneyInput(event.target);
-                }
-            }, true);
-
-            document.addEventListener('submit', (event) => {
-                event.target.querySelectorAll('[data-money-input]').forEach((input) => {
-                    input.value = input.value.replace(/,/g, '');
-                    if (input.value && !input.value.includes('.')) input.value += '.00';
-                    if (input.value) {
-                        const [integer, decimals = ''] = input.value.split('.');
-                        input.value = `${integer}.${decimals.padEnd(2, '0').slice(0, 2)}`;
-                    }
-                });
-            });
-
-            document.addEventListener('input', (event) => {
-                const input = event.target;
-                if (!(input instanceof HTMLInputElement) || !input.matches('[data-date-input]')) return;
-                const digits = input.value.replace(/\D/g, '').slice(0, 8);
-                input.value = digits.length > 4 ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}` :
-                    digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
             });
 
             // ✅ AGREGA ESTO: Forzar la carga de datos frescos al inicializar el componente
@@ -808,6 +801,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         cancelCrop() {
+            // Sin recorte no se envía la imagen original (puede ser enorme o de un formato no admitido)
+            const input = document.getElementById(inputId);
+            if (input) input.value = '';
             this.$dispatch('close-modal', cropModalName);
         },
     }));

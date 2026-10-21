@@ -53,7 +53,7 @@
             :value="isset($banco) ? old('nombre', $banco->nombre) : old('nombre')"
             :error="$errors->first('nombre')" required placeholder="Ej: Banco Industrial" />
 
-        <x-floating-select id="tipo" label="Tipo de emisor" :allowEmpty="false" :options="\App\Models\Banco::TIPOS" :value="$banco->tipo ?? 'banco'" />
+        <x-floating-select id="tipo_emisor_id" label="Tipo de emisor" :allowEmpty="false" :options="\App\Models\Catalogos\TipoEmisor::opciones($banco->tipo_emisor_id ?? null)" :value="$banco->tipo_emisor_id ?? \App\Models\Catalogos\TipoEmisor::predeterminado()" />
 
         <!-- Checkbox Activo -->
         <div class="flex items-center gap-2">
@@ -84,8 +84,9 @@
         </div>
     </form>
 
-    <!-- Modal de Croppie -->
-    <x-modal name="crop-banco-logo" :show="false">
+    <!-- Modal de Croppie: al nivel de la página (x-teleport) para que la ventana del banco no lo recorte -->
+    <template x-teleport="body">
+    <x-modal name="crop-banco-logo" :show="false" maxWidth="md">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Recortar Logo del Banco</h3>
             <div id="banco-crop-container" class="mb-4"></div>
@@ -95,4 +96,5 @@
             </div>
         </div>
     </x-modal>
+    </template>
 </div>

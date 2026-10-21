@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Catalogos\TipoContacto;
 use App\Models\Compromiso;
 use App\Models\Contacto;
 use App\Models\MovimientoCuenta;
@@ -77,7 +78,7 @@ class ContactoService
         [$primero, $resto] = array_pad(explode(' ', $nombre, 2), 2, null);
         $existente = $user->contactos()->whereRaw("LOWER(TRIM(nombre || ' ' || COALESCE(apellido, ''))) = ?", [mb_strtolower($nombre)])->value('id');
 
-        return $existente ?? $this->crear($user, ['nombre' => $primero, 'apellido' => $resto, 'tipo' => 'persona'])->id;
+        return $existente ?? $this->crear($user, ['nombre' => $primero, 'apellido' => $resto, 'tipo_contacto_id' => TipoContacto::predeterminado()])->id;
     }
 
     /** Opciones para el selector "¿Con quién?" (con foto). */

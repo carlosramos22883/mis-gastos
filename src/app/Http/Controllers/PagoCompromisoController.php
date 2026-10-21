@@ -7,13 +7,10 @@ use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\Prestamo;
 use App\Services\CicloEfectivoService;
-use App\Services\CuentaService;
-use App\Services\MovimientoEfectivoService;
+use App\Services\PagoCompromisoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Validation\ValidationException;
 
-/** "Pagar" un compromiso: crea el egreso en efectivo o en una cuenta y lo aplica como abono. */
+/** "Pagar" un compromiso desde efectivo, una cuenta o una tarjeta (la lógica está en PagoCompromisoService). */
 class PagoCompromisoController extends Controller
 {
     public function create(Request $request, Compromiso $compromiso)
@@ -26,17 +23,7 @@ class PagoCompromisoController extends Controller
         }
         $user = $request->user();
         [$inicio, $fin] = app(CicloEfectivoService::class)->cicloConsultado($user);
-        $cuentas = app(CuentaService::class);
-
-        $origenes = [];
-        if ($user->can('efectivo.create')) {
-            $origenes['efectivo'] = 'Efectivo ($ '.number_format(app(CicloEfectivoService::class)->balance($user), 2).')';
-        }
-        if ($user->can('cuentas.create')) {
-            foreach ($user->cuentas()->where('activo', true)->orderBy('nombre')->get() as $cuenta) {
-                $origenes['cuenta:'.$cuenta->id] = $cuenta->nombre.' ($ '.number_format($cuentas->saldo($cuenta), 2).')';
-            }
-        }
+        $origenes = app(PagoCompromisoService::class)->origenes($user, $compromiso);
         abort_if($origenes === [], 403);
 
         return view('compromisos._pago_form', [
@@ -52,20 +39,7 @@ class PagoCompromisoController extends Controller
     public function store(PagoCompromisoRequest $request, Compromiso $compromiso)
     {
         $this->own($request, $compromiso);
-        $data = Arr::except($request->validated(), ['origen']) + ['tipo' => 'egreso', 'compromiso_id' => $compromiso->id, 'contacto_id' => $compromiso->contacto_id];
-        $origen = $request->validated('origen');
-
-        if ($origen === 'efectivo') {
-            app(MovimientoEfectivoService::class)->registrar($request->user(), $data);
-        } else {
-            $cuenta = $request->user()->cuentas()->where('activo', true)->find((int) substr($origen, 7));
-            if (! $cuenta) {
-                throw ValidationException::withMessages(['origen' => 'Selecciona una cuenta válida.']);
-            }
-            app(CuentaService::class)->registrarMovimiento($cuenta, $data);
-        }
-
-        $compromiso->refresh();
+        $compromiso = app(PagoCompromisoService::class)->pagar($request->user(), $compromiso, $request->validated());
 
         return response()->json([
             'success' => true,

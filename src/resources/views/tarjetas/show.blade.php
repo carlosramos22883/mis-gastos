@@ -22,7 +22,7 @@
                         <x-secondary-button type="button" x-on:click="$dispatch('load-tarjeta-modal-form', '{{ route('tarjetas.edit', $tarjeta) }}'); $dispatch('open-modal', 'tarjeta-modal')">Editar</x-secondary-button>
                     @endcan
                     @can('tarjetas.delete')
-                        <x-danger-button type="button" x-on:click="deleteItem({{ $tarjeta->id }}, @js($tarjeta->nombre), '{{ route('tarjetas.destroy', $tarjeta) }}')">Eliminar</x-danger-button>
+                        <x-danger-button type="button" x-on:click="deleteItem({{ $tarjeta->id }}, {{ \Illuminate\Support\Js::from($tarjeta->nombre) }}, '{{ route('tarjetas.destroy', $tarjeta) }}')">Eliminar</x-danger-button>
                     @endcan
                 </div>
                 <div class="grid gap-4 sm:grid-cols-3">
@@ -101,7 +101,7 @@
                                                 </x-secondary-button>
                                             @endcan
                                             @can('tarjetas.delete')
-                                                <x-danger-button type="button" class="py-1.5 px-2" title="Eliminar" x-on:click="deleteItem({{ $m->id }}, @js($m->descripcion), '{{ route('tarjetas.movimientos.destroy', [$tarjeta, $m]) }}')">
+                                                <x-danger-button type="button" class="py-1.5 px-2" title="Eliminar" x-on:click="deleteItem({{ $m->id }}, {{ \Illuminate\Support\Js::from($m->descripcion) }}, '{{ route('tarjetas.movimientos.destroy', [$tarjeta, $m]) }}')">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 </x-danger-button>
                                             @endcan

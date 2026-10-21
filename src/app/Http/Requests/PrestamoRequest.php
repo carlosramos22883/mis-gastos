@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 /** Datos de un préstamo (web y API). user_id = titular. */
 class PrestamoRequest extends FormRequest
 {
-    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
+    use NormalizaFechas, ResuelveContacto, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -35,7 +35,7 @@ class PrestamoRequest extends FormRequest
             'user_id' => $this->reglaMiembro(),
             'contacto_id' => $this->reglaContacto(),
             'nombre' => ['required', 'string', 'max:100'],
-            'tipo' => ['required', Rule::in(array_keys(Prestamo::TIPOS))],
+            'tipo_prestamo_id' => ['required', 'integer', Rule::exists('tipos_prestamo', 'id')->where('activo', true)],
             'banco_id' => ['nullable', 'integer', Rule::exists('bancos', 'id')],
             'acreedor' => ['nullable', 'string', 'max:100'],
             'monto_original' => ['required', ...$dinero, 'gt:0'],

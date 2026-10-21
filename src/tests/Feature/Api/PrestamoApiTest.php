@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Catalogos\TipoPrestamo;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,7 +37,7 @@ class PrestamoApiTest extends TestCase
         $this->usuario();
 
         $id = $this->postJson('/api/prestamos', [
-            'nombre' => 'Préstamo de consumo', 'tipo' => 'consumo', 'monto_original' => '21550.00', 'tasa_anual' => '8.10', 'plazo_meses' => 120,
+            'nombre' => 'Préstamo de consumo', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Consumo / personal')->value('id'), 'monto_original' => '21550.00', 'tasa_anual' => '8.10', 'plazo_meses' => 120,
             'dia_pago' => 8, 'cuota' => '262.60', 'saldo_inicial' => '17642.63', 'fecha_saldo' => '2026-09-08', 'medio_pago' => 'planilla',
             'cargos' => [['nombre' => 'Seguros', 'monto' => '24.97'], ['nombre' => 'IVA', 'monto' => '1.12']],
         ])->assertCreated()->assertJsonPath('data.cuota_total', '288.69')->json('data.id');

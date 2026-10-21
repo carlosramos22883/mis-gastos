@@ -13,6 +13,9 @@
         Puedes pagarlo completo o hacer un abono.
     </p>
     <x-floating-select id="origen" label="Pagar desde" :allowEmpty="false" :options="$origenes" :value="$origen" required />
+    @if (collect(array_keys($origenes))->contains(fn ($o) => str_starts_with($o, 'tarjeta:')))
+        <p class="-mt-2 text-xs text-gray-500 dark:text-gray-400">También puedes pagar con otra tarjeta de crédito (por ejemplo, con el NPE del estado de cuenta): queda como una compra en esa tarjeta y baja su disponible.</p>
+    @endif
     <x-floating-money id="monto" label="Monto" :symbol="$simbolo" :value="$compromiso->saldo_pendiente" required />
     <x-floating-date id="fecha" label="Fecha" :value="now(auth()->user()->zona_horaria)" :min="$cycleStart" :max="min(now(auth()->user()->zona_horaria), $cycleEnd)" required />
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$compromiso->descripcion" required />

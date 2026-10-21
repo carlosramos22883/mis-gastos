@@ -80,6 +80,12 @@ class Compromiso extends Model
         return $this->hasMany(MovimientoEfectivo::class);
     }
 
+    /** Abonos cargados a una tarjeta (ej. pagar la Credisiman con la Atlántida). */
+    public function pagosConTarjeta(): HasMany
+    {
+        return $this->hasMany(MovimientoTarjeta::class, 'pago_compromiso_id');
+    }
+
     public function movimientosCuenta(): HasMany
     {
         return $this->hasMany(MovimientoCuenta::class);

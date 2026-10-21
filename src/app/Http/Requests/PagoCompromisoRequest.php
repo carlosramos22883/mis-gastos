@@ -35,7 +35,7 @@ class PagoCompromisoRequest extends FormRequest
 
         return [
             'user_id' => $this->reglaMiembro(),
-            'origen' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+)$/'],
+            'origen' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+|tarjeta:\d+)$/'],
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$inicio->toDateString(), 'before_or_equal:'.$limite],

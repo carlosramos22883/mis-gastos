@@ -9,7 +9,7 @@
                 <x-avatar-contacto :contacto="$contacto" size="lg" />
                 <div>
                     <p class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $contacto->nombreCompleto() }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ \App\Models\Contacto::TIPOS[$contacto->tipo] ?? $contacto->tipo }}{{ $contacto->activo ? '' : ' · inactivo' }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $contacto->tipoContacto?->nombre }}{{ $contacto->activo ? '' : ' · inactivo' }}</p>
                     <p class="text-sm">
                         @if ($contacto->telefono)<a href="tel:{{ preg_replace('/[^\d+]/', '', $contacto->telefono) }}">{{ $contacto->telefono }}</a>@endif
                         @if ($contacto->telefono && $contacto->email) · @endif
@@ -30,7 +30,7 @@
                     <x-secondary-button type="button" x-on:click="$dispatch('load-contacto-modal-form', '{{ route('contactos.edit', $contacto) }}'); $dispatch('open-modal', 'contacto-modal')">Editar</x-secondary-button>
                 @endcan
                 @can('contactos.delete')
-                    <x-danger-button type="button" x-on:click="deleteItem({{ $contacto->id }}, @js($contacto->nombreCompleto()), '{{ route('contactos.destroy', $contacto) }}')">Eliminar</x-danger-button>
+                    <x-danger-button type="button" x-on:click="deleteItem({{ $contacto->id }}, {{ \Illuminate\Support\Js::from($contacto->nombreCompleto()) }}, '{{ route('contactos.destroy', $contacto) }}')">Eliminar</x-danger-button>
                 @endcan
             </div>
         </div>

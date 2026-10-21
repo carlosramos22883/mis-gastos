@@ -13,7 +13,7 @@
     </div>
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-input id="nombre" label="Nombre (ej. Préstamo de la casa)" maxlength="100" :value="$prestamo->nombre ?? ''" required />
-        <x-floating-select id="tipo" label="Tipo" :allowEmpty="false" :options="\App\Models\Prestamo::TIPOS" :value="$prestamo->tipo ?? 'consumo'" required />
+        <x-floating-select id="tipo_prestamo_id" label="Tipo" :allowEmpty="false" :options="\App\Models\Catalogos\TipoPrestamo::opciones($prestamo->tipo_prestamo_id ?? null)" :value="$prestamo->tipo_prestamo_id ?? \App\Models\Catalogos\TipoPrestamo::predeterminado()" required />
     </div>
     @include('hogar._quien', ['valor' => $prestamo->user_id ?? null, 'label' => 'Titular'])
     @include('contactos._quien', ['valor' => $prestamo->contacto_id ?? null, 'label' => 'Si es de una persona o tienda: ¿a quién se le debe?'])

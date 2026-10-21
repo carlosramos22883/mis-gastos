@@ -73,7 +73,7 @@ Flujo por cada módulo: **Servicio + tests → Web → Endpoint API → Android 
 - Los registros anteriores mantienen la moneda con la que fueron creados (⏳ pendiente: guardar `moneda_id` en cada movimiento)
 
 ### 4.2 Bancos ✅ (Solo Administrador)
-**Campos:** id, nombre, código (opcional), logo (opcional, recortado con Croppie), activo
+**Campos:** id, nombre, código (opcional), tipo de emisor (catálogo 4.6), logo (opcional, recortado con Croppie), activo
 
 ### 4.3 Tipos de Cuenta ✅ (Solo Administrador)
 **Campos:** id, nombre (Ahorros, Monetaria…), descripción, activo
@@ -81,6 +81,23 @@ Flujo por cada módulo: **Servicio + tests → Web → Endpoint API → Android 
 ### 4.4 Marcas de Red ✅ (Solo Administrador)
 **Campos:** id, nombre (Visa, Mastercard, Amex…), logo, color corporativo, activo
 > Nota técnica: la tabla se llama `marca_reds` (no `marcas_red` como dice la convención).
+
+### 4.6 Catálogos de tipos ✅ (Solo Administrador, 20/10/2026)
+Un solo CRUD genérico (`Admin\CatalogoGenericoController` + `App\Support\CatalogosAdmin`), en Configuración → Catálogos. Cada uno tiene nombre, descripción, orden y activo; un elemento en uso no se elimina (se desactiva) y los inactivos ya no se pueden elegir en los formularios.
+
+| Catálogo | Tabla | Lo usa | Valores iniciales |
+|---|---|---|---|
+| Tipos de contacto | `tipos_contacto` | `contactos.tipo_contacto_id` | Persona, Tienda, Empresa, Institución, Mascota |
+| Tipos de emisor | `tipos_emisor` | `bancos.tipo_emisor_id` | Banco, Tienda, Financiera, Cooperativa |
+| Tipos de préstamo | `tipos_prestamo` | `prestamos.tipo_prestamo_id` | Consumo / personal, Hipotecario, Vehículo, De una persona, Otro |
+| Tipos de ingreso | `tipos_ingreso` | `fuentes_ingreso.tipo_ingreso_id` | Sueldo (planilla), Servicios profesionales, Otro |
+| Conceptos de planilla | `conceptos_planilla` | atajos del formulario de ingresos | ISSS (3 %, tope $30), AFP (7.25 %), Renta, Comisión por transferencia, Bono |
+
+Los conceptos de planilla tienen además tipo (descuento/adición), porcentaje, tope y monto fijo.
+
+**Se quedan fijos en el código** (cambiarlos rompería cálculos): ingreso/egreso, tipos de movimiento de tarjeta (compra, pago, avance…), estado y frecuencia de compromisos, medio de pago, origen/destino de transferencias.
+
+**Agregar otro catálogo:** migración + modelo que extienda `Catalogos\Catalogo` + una entrada en `CatalogosAdmin::DEFINICIONES` + sus permisos (`modulo.view/create/edit/delete`) en el seeder y en `Permisos::MODULOS`. La API los entrega en `GET /api/catalogos`.
 
 ### 4.5 Categorías de Gastos 🔄
 **Estado actual:** las categorías personales están completas (CRUD por usuario, color, tipo ingreso/egreso, filtros, exportación).
@@ -225,7 +242,7 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - **Avance** (tarjeta → Chivo/efectivo): transferencia con la tarjeta como origen
 - **Corte automático:** genera el estado de cuenta con su detalle y un **compromiso de pago** con la fecha límite (editable por estado de cuenta; el compromiso la sigue). Corre al abrir tarjetas o compromisos y en el comando diario
 - **Mora:** en un estado vencido, "Registrar mora" crea un cargo y su propio compromiso (no entra en el siguiente corte)
-- **Pagar** un estado de cuenta desde efectivo o una cuenta **sin categoría** (no es un gasto nuevo: cada compra ya tiene la suya)
+- **Pagar** un estado de cuenta (completo o un abono) desde efectivo, una cuenta **u otra tarjeta** (ej. la Credisiman con la Atlántida vía NPE) **sin categoría** (no es un gasto nuevo: cada compra ya tiene la suya). Con tarjeta queda como una compra en la tarjeta que paga (`movimientos_tarjeta.pago_compromiso_id`); editarla o eliminarla ajusta el abono. Una tarjeta no paga su propio estado. Lógica compartida en `PagoCompromisoService` (web y `POST /api/compromisos/{id}/pagar`, opciones en `GET /api/compromisos/{id}/origenes-pago`)
 - Una tarjeta con historial no se elimina: se desactiva
 - ⏳ API para móviles; foto de la tarjeta (opcional en la especificación)
 
@@ -236,7 +253,7 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 
 - **Ficha del contacto:** lo que te debe (deudas y pagos), lo que le debes (préstamos), sus compromisos y todos los movimientos con él; le pagaste / te pagó en el año
 - **"¿Con quién?"** en efectivo, cuentas, tarjetas, compromisos y préstamos: selector con búsqueda y fotos; al **escribir un nombre nuevo** se crea el contacto al guardar (no se duplica si ya existe con ese nombre). Se ve como una ficha pequeña en las listas. El contacto de un compromiso pasa a los pagos generados y a su egreso; el de un préstamo, a sus pagos
-- **Foto** en el disco privado (`local`), servida solo a miembros del hogar (`contactos.foto` en web, `api.contactos.foto` con token)
+- **Foto** elegida y recortada con el recortador (Croppie, circular, 512 px) y guardada en el disco privado (`local`), servida solo a miembros del hogar (`contactos.foto` en web, `api.contactos.foto` con token)
 - **Nos deben:** vista filtrada de contactos con deudas. Prestar desde efectivo, cuenta o tarjeta ("Préstamos a terceros") o solo anotar; un pago se reparte de la deuda más antigua a la más reciente; lo pendiente se calcula de los pagos. Los movimientos de una deuda se gestionan desde el contacto (`MovimientoVinculado`)
 - Un contacto con historial no se elimina: se desactiva
 - Permisos `contactos.view/create/edit/delete` (contactos) y `deudores.view/create/edit/delete` (deudas y pagos). Menú "Contactos" y "Nos deben"
@@ -420,12 +437,12 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 |---|---|
 | Autenticación, registro, verificación, recuperación, Google | ✅ |
 | Roles y permisos; CRUD de usuarios y roles | ✅ |
-| Catálogos (Monedas, Bancos, Tipos de Cuenta, Marcas de Red) | ✅ |
+| Catálogos (Monedas, Bancos, Tipos de Cuenta, Marcas de Red, tipos de contacto/emisor/préstamo/ingreso, conceptos de planilla) | ✅ |
 | Perfil | ✅ |
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | ✅ web (falta editar la regla de una serie y pagar con cuenta/tarjeta) |
+| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; falta editar la regla de una serie) |
 | Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
@@ -441,7 +458,8 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Auth (registro, login, Google, olvido/reset, logout, usuario) | ✅ |
 | Perfil y avatar | ✅ |
 | Admin usuarios y roles | ✅ |
-| `GET /api/catalogos` (monedas, bancos, tipos de cuenta, marcas de red activos) | ✅ |
+| `GET /api/catalogos` (monedas, bancos, tipos de cuenta, marcas de red, tipos de contacto/emisor/préstamo/ingreso y conceptos de planilla activos) | ✅ |
+| `GET /api/compromisos/{id}/origenes-pago`, `POST /api/compromisos/{id}/pagar` (efectivo, cuenta o tarjeta) | ✅ |
 | `/api/categorias` (listar, crear, editar, eliminar si no está en uso) | ✅ |
 | `/api/efectivo` (por ciclo con resumen y navegación; crear, editar, eliminar; pagar compromisos con `compromiso_id`) | ✅ |
 | `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
@@ -467,7 +485,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 124 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos)
+- 134 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -485,6 +503,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 8. ~~Ingresos con desglose~~ ✅ (20/10/2026)
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
+10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
 11. **Móviles al día:** pantallas de Android e iOS (perfil, categorías, efectivo, compromisos, cuentas, tarjetas, hogar)
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
@@ -501,6 +520,14 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
   - Tests: `docker compose exec app php artisan test`
   - Estilo: `docker compose exec app ./vendor/bin/pint`
   - Migraciones: `docker compose exec app php artisan migrate`
+
+### Frontend: reglas aprendidas
+- Los ayudantes de formulario (`validateDateInput`, `syncDateInput`, `applyClientFieldLimits`, formato de dinero) son **globales** en `resources/js/app.js`: no dependen de que la pantalla tenga una tabla de datos.
+- Dentro de atributos de un **componente** Blade (`<x-danger-button x-on:click="...">`) no usar `@js(...)` (no se compila): usar `{{ \Illuminate\Support\Js::from(...) }}`.
+- Un modal dentro de otro modal se recorta: usar `<template x-teleport="body">` (ej. los recortadores de fotos y logos).
+- No mezclar `@php(...)` en línea con un bloque `@php … @endphp` en la misma vista: Blade los confunde y da error de sintaxis.
+- Rutas con `->defaults('catalogo', …)`: Laravel pasa los valores por defecto **después** de los parámetros de la URL; el método recibe `($id, $catalogo)` en ese orden.
+- Revisar errores de JavaScript en un navegador real (Chrome sin interfaz) además de los tests del servidor.
 
 ### Consideraciones pendientes
 - Soft deletes en registros importantes

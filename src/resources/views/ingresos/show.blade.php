@@ -14,11 +14,11 @@
                 <x-secondary-button type="button" x-on:click="$dispatch('load-fuente-modal-form', '{{ route('ingresos.edit', $fuente) }}'); $dispatch('open-modal', 'fuente-modal')">Editar</x-secondary-button>
             @endcan
             @can('ingresos.delete')
-                <x-danger-button type="button" x-on:click="deleteItem({{ $fuente->id }}, @js($fuente->nombre), '{{ route('ingresos.destroy', $fuente) }}')">Eliminar</x-danger-button>
+                <x-danger-button type="button" x-on:click="deleteItem({{ $fuente->id }}, {{ \Illuminate\Support\Js::from($fuente->nombre) }}, '{{ route('ingresos.destroy', $fuente) }}')">Eliminar</x-danger-button>
             @endcan
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-300">
-            @include('hogar._por', ['id' => $fuente->user_id]){{ \App\Models\FuenteIngreso::TIPOS[$fuente->tipo] ?? $fuente->tipo }}{{ $fuente->pagador ? ' · '.$fuente->pagador : '' }}
+            @include('hogar._por', ['id' => $fuente->user_id]){{ $fuente->tipoIngreso?->nombre }}{{ $fuente->pagador ? ' · '.$fuente->pagador : '' }}
             · {{ $fuente->frecuencia === 'quincenal' ? 'quincenal (días '.$fuente->dia_pago.' y '.$fuente->dia_pago_2.')' : 'mensual'.($fuente->dia_pago ? ' (día '.$fuente->dia_pago.')' : '') }}
             @if ($fuente->conceptos->isNotEmpty()) · plantilla: {{ $fuente->conceptos->map(fn ($c) => $c->nombre.($c->porcentaje !== null ? ' '.(float) $c->porcentaje.' %' : ($c->monto !== null ? ' '.$dinero($c->monto) : '')))->implode(', ') }} @endif
         </p>

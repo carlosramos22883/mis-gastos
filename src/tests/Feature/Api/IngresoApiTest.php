@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Catalogos\TipoIngreso;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,7 +37,7 @@ class IngresoApiTest extends TestCase
         $this->usuario();
 
         $id = $this->postJson('/api/ingresos', [
-            'nombre' => 'Sueldo', 'tipo' => 'planilla', 'frecuencia' => 'mensual', 'dia_pago' => 22, 'monto_bruto' => '1920.00', 'destino' => 'efectivo',
+            'nombre' => 'Sueldo', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Sueldo (planilla)')->value('id'), 'frecuencia' => 'mensual', 'dia_pago' => 22, 'monto_bruto' => '1920.00', 'destino' => 'efectivo',
             'conceptos' => [['nombre' => 'AFP', 'tipo' => 'descuento', 'porcentaje' => '7.25'], ['nombre' => 'ISSS', 'tipo' => 'descuento', 'porcentaje' => '3', 'tope' => '30.00']],
         ])->assertCreated()->assertJsonCount(2, 'data.conceptos')->json('data.id');
 
@@ -46,7 +47,7 @@ class IngresoApiTest extends TestCase
             'lineas' => [['nombre' => 'AFP', 'tipo' => 'descuento', 'monto' => '139.20'], ['nombre' => 'ISSS', 'tipo' => 'descuento', 'monto' => '30.00']]])
             ->assertCreated()->assertJsonPath('data.recibos.0.neto', '1750.80');
 
-        $this->putJson("/api/ingresos/{$id}", ['nombre' => 'Sueldo Stef', 'tipo' => 'planilla', 'frecuencia' => 'mensual', 'destino' => 'efectivo'])
+        $this->putJson("/api/ingresos/{$id}", ['nombre' => 'Sueldo Stef', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Sueldo (planilla)')->value('id'), 'frecuencia' => 'mensual', 'destino' => 'efectivo'])
             ->assertOk()->assertJsonCount(2, 'data.conceptos'); // sin "conceptos" no se borra la plantilla
     }
 

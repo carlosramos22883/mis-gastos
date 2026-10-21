@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Deuda;
+use App\Models\Catalogos\TipoContacto;
 use App\Models\Contacto;
+use App\Models\Deuda;
 use App\Models\TipoCuenta;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
@@ -12,6 +13,8 @@ use App\Services\DeudorService;
 use App\Services\TarjetaService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -35,7 +38,7 @@ class ContactoTest extends TestCase
         }
         $saldo = $this->user->categoriasPersonales()->create(['nombre' => 'Saldo inicial', 'tipo' => 'ingreso']);
         $this->user->movimientosEfectivo()->create(['categoria_personal_id' => $saldo->id, 'descripcion' => 'Saldo inicial', 'monto' => 100, 'fecha' => '2026-09-23', 'tipo' => 'ingreso']);
-        $this->aquino = $this->user->contactos()->create(['nombre' => 'Aquino', 'tipo' => 'persona']);
+        $this->aquino = $this->user->contactos()->create(['nombre' => 'Aquino', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')]);
     }
 
     protected function tearDown(): void
@@ -65,8 +68,8 @@ class ContactoTest extends TestCase
 
     public function test_crear_contacto_y_ver_pantallas(): void
     {
-        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])->assertOk();
-        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])
+        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')])->assertOk();
+        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')])
             ->assertUnprocessable()->assertJsonValidationErrors('nombre');
 
         $this->prestar([]);
@@ -174,12 +177,12 @@ class ContactoTest extends TestCase
 
     public function test_foto_privada_solo_para_el_hogar(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
-        $foto = \Illuminate\Http\UploadedFile::fake()->image('karen.jpg', 200, 200);
-        $this->actingAs($this->user)->post(route('contactos.store'), ['nombre' => 'Karen', 'apellido' => 'López', 'tipo' => 'persona', 'foto' => $foto],
+        Storage::fake('local');
+        $foto = UploadedFile::fake()->image('karen.jpg', 200, 200);
+        $this->actingAs($this->user)->post(route('contactos.store'), ['nombre' => 'Karen', 'apellido' => 'López', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id'), 'foto' => $foto],
             ['Accept' => 'application/json'])->assertOk();
         $karen = Contacto::where('nombre', 'Karen')->firstOrFail();
-        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($karen->foto);
+        Storage::disk('local')->assertExists($karen->foto);
         $this->assertStringNotContainsString('/storage/', $karen->urlFoto()); // no es pública
 
         $this->actingAs($this->user)->get($karen->urlFoto())->assertOk();
@@ -187,7 +190,18 @@ class ContactoTest extends TestCase
         $otro->givePermissionTo('contactos.view');
         $this->actingAs($otro)->get($karen->urlFoto())->assertNotFound();
 
-        $this->actingAs($this->user)->post(route('contactos.update', $karen), ['_method' => 'PUT', 'nombre' => 'Karen', 'apellido' => 'López', 'tipo' => 'persona', 'quitar_foto' => '1', 'activo' => '1'],
+        // Editar y cambiar la foto (recortada en el navegador: llega como JPG)
+        $anterior = $karen->foto;
+        $nueva = UploadedFile::fake()->image('logo.jpg', 512, 512);
+        $this->actingAs($this->user)->post(route('contactos.update', $karen), ['_method' => 'PUT', 'nombre' => 'Karen', 'apellido' => 'López', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id'),
+            'telefono' => '7777-0000', 'email' => '', 'notas' => '', 'activo' => '1', 'foto' => $nueva], ['Accept' => 'application/json'])->assertOk();
+        $karen->refresh();
+        $this->assertNotSame($anterior, $karen->foto);
+        $this->assertSame('7777-0000', $karen->telefono);
+        Storage::disk('local')->assertExists($karen->foto);
+        Storage::disk('local')->assertMissing($anterior);
+
+        $this->actingAs($this->user)->post(route('contactos.update', $karen), ['_method' => 'PUT', 'nombre' => 'Karen', 'apellido' => 'López', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id'), 'quitar_foto' => '1', 'activo' => '1'],
             ['Accept' => 'application/json'])->assertOk();
         $this->assertNull($karen->fresh()->foto);
     }
@@ -215,7 +229,7 @@ class ContactoTest extends TestCase
         $this->actingAs($this->user)->get(route('efectivo.index'))->assertOk()->assertSee('Colegio de Gaby');
 
         // Un contacto de otro hogar no se puede usar
-        $ajeno = User::factory()->create()->contactos()->create(['nombre' => 'Ajeno', 'tipo' => 'persona']);
+        $ajeno = User::factory()->create()->contactos()->create(['nombre' => 'Ajeno', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')]);
         $this->actingAs($this->user)->post(route('efectivo.store'), [
             'descripcion' => 'X', 'monto' => '1.00', 'fecha' => '2026-10-17', 'tipo' => 'egreso', 'categoria_personal_id' => $categoria->id, 'contacto_id' => (string) $ajeno->id,
         ])->assertSessionHasErrors('contacto_id');
@@ -223,7 +237,7 @@ class ContactoTest extends TestCase
 
     public function test_el_contacto_del_compromiso_pasa_a_sus_pagos(): void
     {
-        $vigilancia = $this->user->contactos()->create(['nombre' => 'Vigilancia', 'tipo' => 'empresa']);
+        $vigilancia = $this->user->contactos()->create(['nombre' => 'Vigilancia', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Empresa')->value('id')]);
         $this->actingAs($this->user)->postJson(route('compromisos.store'), [
             'descripcion' => 'Vigilancia', 'monto' => '20.00', 'medio_pago' => 'efectivo', 'recurrencia_tipo' => 'recurrente', 'frecuencia' => 'mensual',
             'dia_pago' => 21, 'fecha_inicio' => '2026-10-01', 'finalizacion' => 'indefinido', 'contacto_id' => (string) $vigilancia->id,

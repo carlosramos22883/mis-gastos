@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Catalogos\TipoPrestamo;
 use App\Models\Compromiso;
 use App\Models\Prestamo;
 use App\Models\TipoCuenta;
@@ -50,7 +51,7 @@ class PrestamoTest extends TestCase
     private function consumo(array $extra = [], bool $conCompromiso = false): Prestamo
     {
         return $this->servicio()->crear($this->user, $extra + [
-            'nombre' => 'Préstamo de consumo', 'tipo' => 'consumo', 'monto_original' => 21550, 'tasa_anual' => 8.10, 'plazo_meses' => 120,
+            'nombre' => 'Préstamo de consumo', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Consumo / personal')->value('id'), 'monto_original' => 21550, 'tasa_anual' => 8.10, 'plazo_meses' => 120,
             'dia_pago' => 8, 'cuota' => 262.60, 'saldo_inicial' => 17642.63, 'fecha_saldo' => '2026-09-08', 'medio_pago' => 'transferencia',
         ], [['nombre' => 'Seguros', 'monto' => 24.97], ['nombre' => 'IVA', 'monto' => 1.12]], $conCompromiso);
     }
@@ -66,10 +67,10 @@ class PrestamoTest extends TestCase
 
     public function test_interes_acumulado_coincide_con_la_app_del_banco(): void
     {
-        $casa = $this->servicio()->crear($this->user, ['nombre' => 'Casa', 'tipo' => 'hipotecario', 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
+        $casa = $this->servicio()->crear($this->user, ['nombre' => 'Casa', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Hipotecario')->value('id'), 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
             'plazo_meses' => 360, 'fecha_otorgamiento' => '2023-03-16', 'dia_pago' => 26, 'cuota' => 728.00, 'saldo_inicial' => 105840.39,
             'fecha_saldo' => '2026-09-28', 'medio_pago' => 'planilla']);
-        $personal = $this->servicio()->crear($this->user, ['nombre' => 'Personal', 'tipo' => 'consumo', 'monto_original' => 23161.36, 'tasa_anual' => 9.50,
+        $personal = $this->servicio()->crear($this->user, ['nombre' => 'Personal', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Consumo / personal')->value('id'), 'monto_original' => 23161.36, 'tasa_anual' => 9.50,
             'plazo_meses' => 102, 'dia_pago' => 26, 'cuota' => 331.81, 'saldo_inicial' => 15599.44, 'fecha_saldo' => '2026-09-26', 'medio_pago' => 'planilla']);
 
         // "Saldo de intereses" que mostraban las apps el 19/10/2026
@@ -101,7 +102,7 @@ class PrestamoTest extends TestCase
 
     public function test_prestamo_de_persona_sin_interes_se_proyecta_con_lo_que_puedo_pagar(): void
     {
-        $eve = $this->servicio()->crear($this->user, ['nombre' => 'Evelyn', 'tipo' => 'persona', 'acreedor' => 'Evelyn', 'monto_original' => 4000,
+        $eve = $this->servicio()->crear($this->user, ['nombre' => 'Evelyn', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'De una persona')->value('id'), 'acreedor' => 'Evelyn', 'monto_original' => 4000,
             'tasa_anual' => 0, 'saldo_inicial' => 4000, 'fecha_saldo' => '2026-08-31', 'medio_pago' => 'por_definir']);
 
         $this->assertNull($this->servicio()->escenarios($eve)['base']);
@@ -171,7 +172,7 @@ class PrestamoTest extends TestCase
     public function test_pantallas_y_formulario(): void
     {
         $this->actingAs($this->user)->postJson(route('prestamos.store'), [
-            'nombre' => 'Casa', 'tipo' => 'hipotecario', 'monto_original' => '109979.10', 'tasa_anual' => '6.95', 'plazo_meses' => 360,
+            'nombre' => 'Casa', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Hipotecario')->value('id'), 'monto_original' => '109979.10', 'tasa_anual' => '6.95', 'plazo_meses' => 360,
             'dia_pago' => 26, 'cuota' => '728.00', 'saldo_inicial' => '105840.39', 'fecha_saldo' => '28/09/2026', 'medio_pago' => 'planilla',
             'cargos' => [['nombre' => 'Seguro de vida', 'monto' => '65.99'], ['nombre' => 'Daños', 'monto' => '48.95'], ['nombre' => '', 'monto' => '']],
             'crear_compromiso' => '1',
@@ -194,7 +195,7 @@ class PrestamoTest extends TestCase
     public function test_casa_mixta_planilla_y_ventanilla(): void
     {
         // $842.93 al mes: $526.50 se descuentan del sueldo y $316.43 se pagan en ventanilla
-        $casa = $this->servicio()->crear($this->user, ['nombre' => 'Casa', 'tipo' => 'hipotecario', 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
+        $casa = $this->servicio()->crear($this->user, ['nombre' => 'Casa', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Hipotecario')->value('id'), 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
             'plazo_meses' => 360, 'dia_pago' => 26, 'cuota' => 727.99, 'saldo_inicial' => 105840.39, 'fecha_saldo' => '2026-09-28',
             'medio_pago' => 'efectivo', 'monto_planilla' => 526.50], [['nombre' => 'Vida', 'monto' => 65.99], ['nombre' => 'Daños', 'monto' => 48.95]], true);
         Carbon::setTestNow('2026-10-20 10:00:00');

@@ -16,13 +16,13 @@
                 <x-secondary-button type="button" x-on:click="$dispatch('load-prestamo-modal-form', '{{ route('prestamos.edit', $prestamo) }}'); $dispatch('open-modal', 'prestamo-modal')">Editar</x-secondary-button>
             @endcan
             @can('prestamos.delete')
-                <x-danger-button type="button" x-on:click="deleteItem({{ $prestamo->id }}, @js($prestamo->nombre), '{{ route('prestamos.destroy', $prestamo) }}')">Eliminar</x-danger-button>
+                <x-danger-button type="button" x-on:click="deleteItem({{ $prestamo->id }}, {{ \Illuminate\Support\Js::from($prestamo->nombre) }}, '{{ route('prestamos.destroy', $prestamo) }}')">Eliminar</x-danger-button>
             @endcan
         </div>
 
         <p class="flex flex-wrap items-center gap-x-1 text-sm text-gray-600 dark:text-gray-300">
             <x-logo-banco :banco="$prestamo->banco" class="mr-2" />
-            @include('hogar._por', ['id' => $prestamo->user_id]){{ \App\Models\Prestamo::TIPOS[$prestamo->tipo] ?? $prestamo->tipo }} · {{ $prestamo->nombreAcreedor() }}
+            @include('hogar._por', ['id' => $prestamo->user_id]){{ $prestamo->tipoPrestamo?->nombre }} · {{ $prestamo->nombreAcreedor() }}
             · {{ (float) $prestamo->tasa_anual > 0 ? rtrim(rtrim(number_format((float) $prestamo->tasa_anual, 3), '0'), '.').' % anual' : 'sin interés' }}
             · {{ \App\Models\Prestamo::MEDIOS[$prestamo->medio_pago] ?? '' }}@if ((float) $prestamo->monto_planilla > 0) ({{ $simbolo }} {{ number_format((float) $prestamo->monto_planilla, 2) }} por planilla)@endif
             @if ($prestamo->recurrente) · <a class="text-primary-600 hover:underline dark:text-primary-400" href="{{ route('compromisos.index') }}">cuota en Compromisos</a>@endif

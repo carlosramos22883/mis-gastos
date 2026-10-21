@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompromisoRequest;
+use App\Http\Requests\PagoCompromisoRequest;
 use App\Http\Resources\CompromisoResource;
 use App\Models\Compromiso;
 use App\Services\CompromisoService;
+use App\Services\PagoCompromisoService;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -85,6 +87,31 @@ class CompromisoController extends Controller
         $this->compromisos->cancelar($compromiso, $request->query('alcance') === 'serie');
 
         return response()->noContent();
+    }
+
+    #[OA\Get(path: '/api/compromisos/{id}/origenes-pago', summary: 'Desde dónde se puede pagar (efectivo, cuentas y tarjetas con su saldo)', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'Opciones {valor: etiqueta}')])]
+    public function origenesPago(Request $request, Compromiso $compromiso)
+    {
+        $this->own($request, $compromiso);
+
+        return response()->json(['data' => app(PagoCompromisoService::class)->origenes($request->user(), $compromiso)]);
+    }
+
+    #[OA\Post(path: '/api/compromisos/{id}/pagar', summary: 'Pagar (completo o abono) desde efectivo, una cuenta o una tarjeta', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        description: 'origen: "efectivo" | "cuenta:{id}" | "tarjeta:{id}" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría.',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'origen', type: 'string', example: 'tarjeta:5'), new OA\Property(property: 'monto', type: 'string', example: '96.62'),
+            new OA\Property(property: 'fecha', type: 'string', format: 'date'), new OA\Property(property: 'descripcion', type: 'string'),
+            new OA\Property(property: 'categoria_personal_id', type: 'integer'), new OA\Property(property: 'user_id', type: 'integer'),
+        ])),
+        responses: [new OA\Response(response: 200, description: 'Compromiso actualizado'), new OA\Response(response: 422, description: 'Supera el saldo o el disponible')])]
+    public function pagar(PagoCompromisoRequest $request, Compromiso $compromiso)
+    {
+        $this->own($request, $compromiso);
+        abort_unless($compromiso->estado === Compromiso::PENDIENTE, 422, 'Este compromiso ya no está pendiente.');
+
+        return new CompromisoResource(app(PagoCompromisoService::class)->pagar($request->user(), $compromiso, $request->validated()));
     }
 
     private function own(Request $request, Compromiso $compromiso): void

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Catalogos\TipoContacto;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
@@ -38,7 +39,7 @@ class ContactoApiTest extends TestCase
     {
         $user = $this->usuario();
 
-        $id = $this->postJson('/api/contactos', ['nombre' => 'Aquino', 'tipo' => 'persona'])->assertCreated()->json('data.id');
+        $id = $this->postJson('/api/contactos', ['nombre' => 'Aquino', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')])->assertCreated()->json('data.id');
         $this->postJson("/api/contactos/{$id}/deudas", ['descripcion' => 'Refri', 'monto' => '8.86', 'fecha' => '2026-08-01', 'origen' => 'ninguno'])
             ->assertCreated()->assertJsonPath('data.pendiente', '8.86');
         $this->postJson("/api/contactos/{$id}/deudas", ['descripcion' => 'Camiseta', 'monto' => '5.00', 'fecha' => '2026-10-17', 'origen' => 'efectivo'])
@@ -57,10 +58,10 @@ class ContactoApiTest extends TestCase
     public function test_permisos_y_aislamiento(): void
     {
         $dueno = $this->usuario();
-        $contacto = $dueno->contactos()->create(['nombre' => 'Aquino', 'tipo' => 'persona']);
+        $contacto = $dueno->contactos()->create(['nombre' => 'Aquino', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')]);
 
         $this->usuario(['deudores.view', 'contactos.view']);
         $this->getJson("/api/contactos/{$contacto->id}")->assertNotFound();
-        $this->postJson('/api/contactos', ['nombre' => 'X', 'tipo' => 'persona'])->assertForbidden();
+        $this->postJson('/api/contactos', ['nombre' => 'X', 'tipo_contacto_id' => TipoContacto::where('nombre', 'Persona')->value('id')])->assertForbidden();
     }
 }

@@ -29,7 +29,7 @@
                         <x-avatar-contacto :contacto="$c" />
                         <div class="min-w-0 flex-1">
                             <p class="truncate font-semibold text-gray-900 dark:text-gray-100">{{ $c->nombreCompleto() }}</p>
-                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ \App\Models\Contacto::TIPOS[$c->tipo] ?? $c->tipo }}{{ $c->telefono ? ' · '.$c->telefono : '' }}{{ $c->activo ? '' : ' · inactivo' }}</p>
+                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $c->tipoContacto?->nombre }}{{ $c->telefono ? ' · '.$c->telefono : '' }}{{ $c->activo ? '' : ' · inactivo' }}</p>
                         </div>
                         @if ($c->pendiente > 0)
                             <div class="shrink-0 text-right">

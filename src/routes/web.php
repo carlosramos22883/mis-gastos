@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BancoController;
+use App\Http\Controllers\Admin\CatalogoGenericoController;
 use App\Http\Controllers\Admin\MarcaRedController;
 use App\Http\Controllers\Admin\MonedaController;
 use App\Http\Controllers\Admin\RoleManagementController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TarjetaCreditoController;
 use App\Http\Controllers\TransferenciaController;
+use App\Support\CatalogosAdmin;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -239,6 +241,19 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('admin.')
             Route::get("{$uri}/{{$param}}/edit", [$controller, 'edit'])->name("{$uri}.edit")->middleware("can:{$permiso}.edit");
             Route::put("{$uri}/{{$param}}", [$controller, 'update'])->name("{$uri}.update")->middleware("can:{$permiso}.edit");
             Route::delete("{$uri}/{{$param}}", [$controller, 'destroy'])->name("{$uri}.destroy")->middleware("can:{$permiso}.delete");
+        }
+
+        // Catálogos simples con un CRUD genérico (App\Support\CatalogosAdmin)
+        foreach (CatalogosAdmin::DEFINICIONES as $uri => $def) {
+            $permiso = $def['permiso'];
+            Route::controller(CatalogoGenericoController::class)->group(function () use ($uri, $permiso) {
+                Route::get($uri, 'index')->defaults('catalogo', $uri)->name("{$uri}.index")->middleware("can:{$permiso}.view");
+                Route::get("{$uri}/create", 'create')->defaults('catalogo', $uri)->name("{$uri}.create")->middleware("can:{$permiso}.create");
+                Route::post($uri, 'store')->defaults('catalogo', $uri)->name("{$uri}.store")->middleware("can:{$permiso}.create");
+                Route::get("{$uri}/{id}/edit", 'edit')->defaults('catalogo', $uri)->name("{$uri}.edit")->middleware("can:{$permiso}.edit")->whereNumber('id');
+                Route::put("{$uri}/{id}", 'update')->defaults('catalogo', $uri)->name("{$uri}.update")->middleware("can:{$permiso}.edit")->whereNumber('id');
+                Route::delete("{$uri}/{id}", 'destroy')->defaults('catalogo', $uri)->name("{$uri}.destroy")->middleware("can:{$permiso}.delete")->whereNumber('id');
+            });
         }
     });
 });

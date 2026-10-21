@@ -23,7 +23,7 @@
                         <span class="absolute inset-y-0 left-0 w-1.5" style="background-color: {{ $fuente->color }}"></span>
                         <a href="{{ route('ingresos.show', $fuente) }}" class="block p-5 pl-6 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                             <p class="truncate font-semibold text-gray-900 dark:text-gray-100">@include('hogar._por', ['id' => $fuente->user_id]){{ $fuente->nombre }}</p>
-                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ \App\Models\FuenteIngreso::TIPOS[$fuente->tipo] ?? $fuente->tipo }}{{ $fuente->pagador ? ' · '.$fuente->pagador : '' }}</p>
+                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $fuente->tipoIngreso?->nombre }}{{ $fuente->pagador ? ' · '.$fuente->pagador : '' }}</p>
                             <p class="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $fuente->ultimo ? $simbolo.' '.number_format((float) $fuente->ultimo->neto, 2) : '—' }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 {{ $fuente->ultimo ? 'último neto ('.$fuente->ultimo->fecha->format('d/m/Y').')' : 'sin pagos registrados' }}

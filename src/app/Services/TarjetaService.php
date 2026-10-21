@@ -184,6 +184,31 @@ class TarjetaService
         });
     }
 
+    /**
+     * Paga (o abona) un compromiso cargándolo a una tarjeta: una compra en la tarjeta que paga y el abono al
+     * compromiso. Sirve para pagar con una tarjeta el estado de cuenta de otra (NPE) o cualquier factura.
+     *
+     * @param  array{monto: numeric, fecha: string, descripcion: string, categoria_personal_id?: ?int, user_id?: ?int}  $data
+     */
+    public function pagarCompromiso(TarjetaCredito $tarjeta, Compromiso $compromiso, array $data): MovimientoTarjeta
+    {
+        if ((int) $compromiso->tarjeta_credito_id === (int) $tarjeta->id) {
+            throw ValidationException::withMessages(['origen' => 'Una tarjeta no puede pagar su propio estado de cuenta.']);
+        }
+
+        return DB::transaction(function () use ($tarjeta, $compromiso, $data) {
+            $movimiento = $this->registrarMovimiento($tarjeta, [
+                'tipo' => 'compra', 'descripcion' => $data['descripcion'], 'monto' => $data['monto'], 'fecha' => $data['fecha'],
+                // Pagar otra tarjeta no es un gasto nuevo (sus compras ya tienen categoría); una factura sí
+                'categoria_personal_id' => $compromiso->tarjeta_credito_id ? null : ($data['categoria_personal_id'] ?? null),
+                'user_id' => $data['user_id'] ?? null, 'contacto_id' => $compromiso->contacto_id, 'pago_compromiso_id' => $compromiso->id,
+            ]);
+            $this->compromisos->abonar($compromiso, (float) $data['monto']);
+
+            return $movimiento;
+        });
+    }
+
     public function actualizarMovimiento(MovimientoTarjeta $movimiento, array $data): MovimientoTarjeta
     {
         $this->asegurarEditable($movimiento);
@@ -191,6 +216,9 @@ class TarjetaService
         return DB::transaction(function () use ($movimiento, $data) {
             $tarjeta = TarjetaCredito::whereKey($movimiento->tarjeta_credito_id)->lockForUpdate()->firstOrFail();
             $this->validarMovimiento($tarjeta, $data, $movimiento->id);
+            if ($movimiento->pagoCompromiso) { // el abono sigue al nuevo monto
+                $this->compromisos->abonar($movimiento->pagoCompromiso, (float) $data['monto'] - (float) $movimiento->monto);
+            }
             $movimiento->update($data);
 
             return $movimiento;
@@ -200,7 +228,12 @@ class TarjetaService
     public function eliminarMovimiento(MovimientoTarjeta $movimiento): void
     {
         $this->asegurarEditable($movimiento);
-        $movimiento->delete();
+        DB::transaction(function () use ($movimiento) {
+            if ($movimiento->pagoCompromiso) { // ese monto vuelve a quedar pendiente en el compromiso
+                $this->compromisos->abonar($movimiento->pagoCompromiso, -(float) $movimiento->monto);
+            }
+            $movimiento->delete();
+        });
     }
 
     /** Solo lo que aún no se ha facturado; los avances se gestionan desde su transferencia y la mora desde su compromiso. */

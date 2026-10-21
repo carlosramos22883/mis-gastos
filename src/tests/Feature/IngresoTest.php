@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Catalogos\TipoIngreso;
+use App\Models\Catalogos\TipoPrestamo;
 use App\Models\FuenteIngreso;
 use App\Models\Ingreso;
 use App\Models\TipoCuenta;
@@ -44,14 +46,14 @@ class IngresoTest extends TestCase
         $tipo = TipoCuenta::create(['nombre' => 'Cuenta Planillera', 'activo' => true]);
         $cuenta = $this->user->cuentas()->create(['nombre' => 'Agrícola Stefany', 'tipo_cuenta_id' => $tipo->id, 'saldo_inicial' => 0, 'fecha_inicial' => '2026-09-01', 'color' => '#DB2777']);
         $prestamos = app(PrestamoService::class);
-        $personal = $prestamos->crear($this->user, ['nombre' => 'Consumo portafolio', 'tipo' => 'consumo', 'monto_original' => 23161.36, 'tasa_anual' => 9.5,
+        $personal = $prestamos->crear($this->user, ['nombre' => 'Consumo portafolio', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Consumo / personal')->value('id'), 'monto_original' => 23161.36, 'tasa_anual' => 9.5,
             'dia_pago' => 26, 'cuota' => 331.81, 'saldo_inicial' => 15599.44, 'fecha_saldo' => '2026-09-26', 'medio_pago' => 'planilla'],
             [['nombre' => 'Vida', 'monto' => 7.90], ['nombre' => 'Desempleo', 'monto' => 10.53]]);
-        $casa = $prestamos->crear($this->user, ['nombre' => 'Casa', 'tipo' => 'hipotecario', 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
+        $casa = $prestamos->crear($this->user, ['nombre' => 'Casa', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Hipotecario')->value('id'), 'monto_original' => 109979.10, 'tasa_anual' => 6.95,
             'dia_pago' => 26, 'cuota' => 727.99, 'saldo_inicial' => 105840.39, 'fecha_saldo' => '2026-09-28', 'medio_pago' => 'efectivo', 'monto_planilla' => 526.50]);
 
         $this->actingAs($this->user)->postJson(route('ingresos.store'), [
-            'nombre' => 'Sueldo Stefany', 'tipo' => 'planilla', 'frecuencia' => 'mensual', 'dia_pago' => 22, 'monto_bruto' => '1920.00', 'destino' => 'cuenta:'.$cuenta->id,
+            'nombre' => 'Sueldo Stefany', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Sueldo (planilla)')->value('id'), 'frecuencia' => 'mensual', 'dia_pago' => 22, 'monto_bruto' => '1920.00', 'destino' => 'cuenta:'.$cuenta->id,
             'conceptos' => [
                 ['nombre' => 'Renta', 'tipo' => 'descuento', 'monto' => '231.16'],
                 ['nombre' => 'AFP', 'tipo' => 'descuento', 'porcentaje' => '7.25'],
@@ -107,7 +109,7 @@ class IngresoTest extends TestCase
     public function test_servicios_profesionales_con_comision(): void
     {
         $this->actingAs($this->user)->postJson(route('ingresos.store'), [
-            'nombre' => 'Servicios profesionales', 'tipo' => 'servicios', 'frecuencia' => 'mensual', 'dia_pago' => 30, 'destino' => 'efectivo',
+            'nombre' => 'Servicios profesionales', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Servicios profesionales')->value('id'), 'frecuencia' => 'mensual', 'dia_pago' => 30, 'destino' => 'efectivo',
             'conceptos' => [['nombre' => 'Comisión por transferencia', 'tipo' => 'descuento']],
         ])->assertOk();
         $fuente = FuenteIngreso::firstOrFail();

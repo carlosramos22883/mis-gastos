@@ -17,7 +17,8 @@ class FuenteIngresoResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id, // quién lo recibe
             'nombre' => $this->nombre,
-            'tipo' => $this->tipo,
+            'tipo_ingreso_id' => $this->tipo_ingreso_id,
+            'tipo' => $this->tipoIngreso?->nombre,
             'pagador' => $this->pagador,
             'frecuencia' => $this->frecuencia,
             'dia_pago' => $this->dia_pago,

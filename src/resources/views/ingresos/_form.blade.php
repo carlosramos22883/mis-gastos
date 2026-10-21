@@ -13,7 +13,7 @@
     </div>
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-input id="nombre" label="Nombre (ej. Sueldo Stefany)" maxlength="100" :value="$fuente->nombre ?? ''" required />
-        <x-floating-select id="tipo" label="Tipo" :allowEmpty="false" :options="\App\Models\FuenteIngreso::TIPOS" :value="$fuente->tipo ?? 'planilla'" required />
+        <x-floating-select id="tipo_ingreso_id" label="Tipo" :allowEmpty="false" :options="\App\Models\Catalogos\TipoIngreso::opciones($fuente->tipo_ingreso_id ?? null)" :value="$fuente->tipo_ingreso_id ?? \App\Models\Catalogos\TipoIngreso::predeterminado()" required />
     </div>
     <div class="grid gap-4 sm:grid-cols-2">
         @include('hogar._quien', ['valor' => $fuente->user_id ?? null, 'label' => '¿Quién lo recibe?'])
@@ -44,11 +44,10 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Descuentos y adiciones de cada pago</p>
             <div class="flex flex-wrap gap-2 text-xs">
-                <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({ nombre: 'ISSS', porcentaje: 3, tope: '30.00' })">+ ISSS 3 %</button>
-                <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({ nombre: 'AFP', porcentaje: 7.25 })">+ AFP 7.25 %</button>
-                <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({ nombre: 'Renta' })">+ Renta</button>
-                <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({ nombre: 'Comisión por transferencia' })">+ Comisión</button>
-                <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({ nombre: 'Bono', tipo: 'adicion' })">+ Adición</button>
+                {{-- Atajos del catálogo "Conceptos de planilla" (los mantiene el administrador: ISSS, AFP…) --}}
+                @foreach (\App\Models\Catalogos\ConceptoPlanilla::atajos() as $atajo)
+                    <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({{ \Illuminate\Support\Js::from($atajo) }})">+ {{ $atajo['nombre'] }}{{ $atajo['porcentaje'] !== '' ? ' '.$atajo['porcentaje'].' %' : '' }}</button>
+                @endforeach
                 <button type="button" class="rounded-full bg-gray-100 px-2 py-1 hover:bg-gray-200 dark:bg-gray-700" x-on:click="agregar({})">+ Otro</button>
             </div>
         </div>

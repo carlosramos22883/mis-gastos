@@ -92,7 +92,8 @@
     </form>
 
     <!-- Modal Croppie -->
-    <x-modal name="crop-marca-logo" :show="false">
+    <template x-teleport="body">
+    <x-modal name="crop-marca-logo" :show="false" maxWidth="md">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Recortar Logo</h3>
             <div id="marca-crop-container" class="mb-4"></div>
@@ -102,4 +103,5 @@
             </div>
         </div>
     </x-modal>
+    </template>
 </div>

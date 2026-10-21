@@ -7,7 +7,7 @@
                         alt="{{ $banco->nombre }}"
                         class="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-600 shrink-0">
                     <span class="font-medium text-gray-900 dark:text-gray-100">{{ $banco->nombre }}
-                        @if (($banco->tipo ?? 'banco') !== 'banco')<span class="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ \App\Models\Banco::TIPOS[$banco->tipo] ?? $banco->tipo }}</span>@endif
+                        @if ($banco->tipoEmisor && $banco->tipoEmisor->nombre !== 'Banco')<span class="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $banco->tipoEmisor->nombre }}</span>@endif
                     </span>
                 </div>
             </td>            

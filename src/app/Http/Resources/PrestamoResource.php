@@ -20,7 +20,8 @@ class PrestamoResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id, // titular
             'nombre' => $this->nombre,
-            'tipo' => $this->tipo,
+            'tipo_prestamo_id' => $this->tipo_prestamo_id,
+            'tipo' => $this->tipoPrestamo?->nombre,
             'banco_id' => $this->banco_id,
             'acreedor' => $this->nombreAcreedor(),
             'monto_original' => $dinero($this->monto_original),

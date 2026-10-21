@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
-use App\Models\FuenteIngreso;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
@@ -25,7 +24,7 @@ class FuenteIngresoRequest extends FormRequest
         return [
             'user_id' => $this->reglaMiembro(),
             'nombre' => ['required', 'string', 'max:100'],
-            'tipo' => ['required', Rule::in(array_keys(FuenteIngreso::TIPOS))],
+            'tipo_ingreso_id' => ['required', 'integer', Rule::exists('tipos_ingreso', 'id')->where('activo', true)],
             'pagador' => ['nullable', 'string', 'max:100'],
             'frecuencia' => ['required', Rule::in(['mensual', 'quincenal'])],
             'dia_pago' => ['nullable', 'integer', 'between:1,31'],

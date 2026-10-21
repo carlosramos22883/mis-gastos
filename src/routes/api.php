@@ -1,19 +1,19 @@
 <?php
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Api\Admin\RoleController;
+use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
-use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ContactoController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EfectivoController;
 use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
 use App\Http\Controllers\Api\PrestamoController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\Admin\UserController;
-use App\Http\Controllers\Api\Admin\RoleController;
+use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
 Route::post('/register', [AuthController::class, 'register']);
@@ -28,12 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     // Actualizar Información del Perfil (Protegido por permiso de Spatie)
     Route::patch('/profile', [ProfileController::class, 'update'])
-         ->middleware('can:profile.update')
-         ->name('api.profile.update');
+        ->middleware('can:profile.update')
+        ->name('api.profile.update');
     // Actualizar Avatar (Protegido por permiso de Spatie)
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])
-         ->middleware('can:profile.avatar.update')
-         ->name('api.profile.avatar.update');
+        ->middleware('can:profile.avatar.update')
+        ->name('api.profile.avatar.update');
 
     // Módulos financieros (mismas reglas que la web, vía servicios compartidos)
     Route::name('api.')->group(function () {
@@ -99,6 +99,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('update', 'can:efectivo.edit')
             ->middlewareFor('destroy', 'can:efectivo.delete');
 
+        Route::get('compromisos/{compromiso}/origenes-pago', [CompromisoController::class, 'origenesPago'])->middleware('can:compromisos.view')->name('compromisos.origenes-pago');
+        Route::post('compromisos/{compromiso}/pagar', [CompromisoController::class, 'pagar'])->middleware('can:compromisos.view')->name('compromisos.pagar');
         Route::apiResource('compromisos', CompromisoController::class)
             ->middlewareFor(['index', 'show'], 'can:compromisos.view')
             ->middlewareFor('store', 'can:compromisos.create')
@@ -108,10 +110,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
-    
+
     // Gestión de Usuarios
     Route::apiResource('usuarios', UserController::class)->except('show');
-    
+
     // Gestión de Roles
     Route::apiResource('roles', RoleController::class)->except('show');
 });

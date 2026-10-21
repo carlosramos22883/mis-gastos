@@ -13,7 +13,7 @@
                 </p>
                 <div class="flex gap-2">
                     <x-secondary-button type="button" x-data x-on:click="confirmAction('¿Rechazar invitación?', '', '{{ route('hogar.rechazar', $invitacion) }}')">Rechazar</x-secondary-button>
-                    <x-primary-button type="button" x-data x-on:click="confirmAction('¿Unirte al hogar?', @js('Compartirás el efectivo, las cuentas, las tarjetas y los compromisos de «'.$invitacion->hogar->nombre.'».'), '{{ route('hogar.aceptar', $invitacion) }}')">Aceptar</x-primary-button>
+                    <x-primary-button type="button" x-data x-on:click="confirmAction('¿Unirte al hogar?', {{ \Illuminate\Support\Js::from('Compartirás el efectivo, las cuentas, las tarjetas y los compromisos de «'.$invitacion->hogar->nombre.'».') }}, '{{ route('hogar.aceptar', $invitacion) }}')">Aceptar</x-primary-button>
                 </div>
             </div>
         @endforeach
@@ -61,7 +61,7 @@
                                 @endif
                             @elseif ($esAdmin)
                                 @can('hogar.edit')
-                                    <x-danger-button type="button" x-data x-on:click="confirmAction(@js('¿Quitar a '.$miembro->name.'?'), 'Lo que registró se queda en el hogar.', '{{ route('hogar.quitar', $miembro) }}', 'DELETE')">Quitar</x-danger-button>
+                                    <x-danger-button type="button" x-data x-on:click="confirmAction({{ \Illuminate\Support\Js::from('¿Quitar a '.$miembro->name.'?') }}, 'Lo que registró se queda en el hogar.', '{{ route('hogar.quitar', $miembro) }}', 'DELETE')">Quitar</x-danger-button>
                                 @endcan
                             @endif
                         </div>

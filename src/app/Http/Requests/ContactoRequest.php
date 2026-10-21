@@ -29,7 +29,7 @@ class ContactoRequest extends FormRequest
                 }
             }],
             'apellido' => ['nullable', 'string', 'max:100'],
-            'tipo' => ['required', Rule::in(array_keys(Contacto::TIPOS))],
+            'tipo_contacto_id' => ['required', 'integer', Rule::exists('tipos_contacto', 'id')->where('activo', true)],
             'telefono' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:150'],
             'notas' => ['nullable', 'string', 'max:1000'],

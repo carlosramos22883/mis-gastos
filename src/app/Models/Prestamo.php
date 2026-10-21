@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Catalogos\TipoPrestamo;
 use App\Models\Concerns\PerteneceAHogar;
 use App\Support\Color;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -12,13 +13,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Préstamo que el hogar debe (a un banco o a una persona). Saldo, intereses y proyecciones en PrestamoService.
  */
-#[Fillable(['user_id', 'contacto_id', 'nombre', 'tipo', 'banco_id', 'acreedor', 'monto_original', 'tasa_anual', 'tasa_mora', 'plazo_meses', 'fecha_otorgamiento',
+#[Fillable(['user_id', 'contacto_id', 'nombre', 'tipo_prestamo_id', 'banco_id', 'acreedor', 'monto_original', 'tasa_anual', 'tasa_mora', 'plazo_meses', 'fecha_otorgamiento',
     'dia_pago', 'cuota', 'saldo_inicial', 'fecha_saldo', 'medio_pago', 'monto_planilla', 'compromiso_recurrente_id', 'color', 'notas', 'activo'])]
 class Prestamo extends Model
 {
     use PerteneceAHogar;
-
-    public const TIPOS = ['consumo' => 'Consumo / personal', 'hipotecario' => 'Hipotecario', 'vehiculo' => 'Vehículo', 'persona' => 'De una persona', 'otro' => 'Otro'];
 
     public const MEDIOS = ['transferencia' => 'Desde una cuenta', 'efectivo' => 'En efectivo', 'planilla' => 'Descuento de planilla', 'por_definir' => 'Por definir'];
 
@@ -72,5 +71,11 @@ class Prestamo extends Model
     public function contacto(): BelongsTo
     {
         return $this->belongsTo(Contacto::class);
+    }
+
+    /** Tipo (catálogo que mantiene el administrador). */
+    public function tipoPrestamo(): BelongsTo
+    {
+        return $this->belongsTo(TipoPrestamo::class, 'tipo_prestamo_id');
     }
 }
