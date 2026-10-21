@@ -55,7 +55,7 @@ class CuentaService
         $search = $filtros['search'] ?? null;
         $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $filtros['sort'] : 'fecha';
 
-        return MovimientoCuenta::with('categoria', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')
+        return MovimientoCuenta::with('categoria', 'contacto', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')
             ->where('cuenta_id', $cuenta->id)
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->when($search, fn ($q) => $q->where('descripcion', 'like', "%{$search}%"))

@@ -8,6 +8,7 @@
     </div>
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$movimiento->descripcion ?? ''" :error="$errors->first('descripcion')" required />
     @include('hogar._quien', ['valor' => $movimiento->user_id ?? null])
+    @include('contactos._quien', ['valor' => $movimiento->contacto_id ?? null, 'label' => '¿Con quién? (opcional)'])
     <x-floating-money id="monto" label="Monto" :value="$movimiento->monto ?? ''" :error="$errors->first('monto')" :symbol="auth()->user()->monedaPreferida?->simbolo ?? '$'" required />
     <x-floating-date id="fecha" label="Fecha" :value="isset($movimiento) ? $movimiento->fecha : now()" :min="$cycleStart" :max="$cycleEnd" :error="$errors->first('fecha')" required />
     <x-floating-select id="tipo" label="Tipo" :options="['ingreso'=>'Ingreso','egreso'=>'Egreso']" :value="$movimiento->tipo ?? 'egreso'" :error="$errors->first('tipo')" required />

@@ -8,7 +8,7 @@ use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Préstamo a un deudor (web y API). Si sale de efectivo, cuenta o tarjeta, la fecha debe ser del ciclo actual. */
+/** Préstamo a un contacto (web y API). Si sale de efectivo, cuenta o tarjeta, la fecha debe ser del ciclo actual. */
 class DeudaRequest extends FormRequest
 {
     use NormalizaFechas, ValidaMiembroHogar;

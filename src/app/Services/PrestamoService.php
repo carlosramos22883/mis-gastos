@@ -291,7 +291,7 @@ class PrestamoService
             if ($pagado <= 0 && $data['origen'] !== 'ninguno') {
                 $data['origen'] = 'planilla'; // todo se descontó del sueldo: no hay egreso
             }
-            $movimiento = ['descripcion' => $descripcion, 'monto' => $pagado, 'fecha' => $data['fecha'], 'tipo' => 'egreso', 'user_id' => $quien,
+            $movimiento = ['descripcion' => $descripcion, 'monto' => $pagado, 'fecha' => $data['fecha'], 'tipo' => 'egreso', 'user_id' => $quien, 'contacto_id' => $prestamo->contacto_id,
                 'categoria_personal_id' => $this->categoria($user)];
 
             if ($data['origen'] === 'efectivo') {
@@ -349,6 +349,7 @@ class PrestamoService
         $planilla = (float) $prestamo->monto_planilla > 0 ? ' Otros $ '.number_format((float) $prestamo->monto_planilla, 2).' se descuentan de planilla.' : '';
         $recurrente = $this->compromisos->crearRecurrente($user, [
             'user_id' => $prestamo->user_id,
+            'contacto_id' => $prestamo->contacto_id,
             'descripcion' => "Cuota {$prestamo->nombre}",
             'comentario' => 'Se paga desde Préstamos para llevar el desglose (capital, interés y seguros).'.$planilla,
             'monto' => $monto,

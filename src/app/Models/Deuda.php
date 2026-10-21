@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** Lo prestado a un deudor. Pagado = suma de sus pagos; pendiente = monto − pagado (no se guarda). */
-#[Fillable(['user_id', 'deudor_id', 'descripcion', 'comentario', 'monto', 'fecha', 'origen', 'movimiento_efectivo_id', 'movimiento_cuenta_id', 'movimiento_tarjeta_id'])]
+/** Lo prestado a un contacto (lo que nos debe). Pagado = suma de sus pagos; pendiente = monto − pagado (no se guarda). */
+#[Fillable(['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'fecha', 'origen', 'movimiento_efectivo_id', 'movimiento_cuenta_id', 'movimiento_tarjeta_id'])]
 class Deuda extends Model
 {
     use PerteneceAHogar;
@@ -24,9 +24,9 @@ class Deuda extends Model
 
     protected $casts = ['monto' => 'decimal:2', 'fecha' => 'date'];
 
-    public function deudor(): BelongsTo
+    public function contacto(): BelongsTo
     {
-        return $this->belongsTo(Deudor::class);
+        return $this->belongsTo(Contacto::class);
     }
 
     public function user(): BelongsTo

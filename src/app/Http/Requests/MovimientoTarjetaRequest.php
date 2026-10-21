@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ResuelveContacto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 /** Compra (al contado o en cuotas a tasa cero), cargo o crédito de una tarjeta. */
 class MovimientoTarjetaRequest extends FormRequest
 {
-    use NormalizaFechas, ValidaMiembroHogar;
+    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -32,6 +33,7 @@ class MovimientoTarjetaRequest extends FormRequest
 
         return [
             'user_id' => $this->reglaMiembro(),
+            'contacto_id' => $this->reglaContacto(),
             'tipo' => ['required', Rule::in(['compra', 'cargo', 'credito'])],
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],

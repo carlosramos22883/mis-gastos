@@ -18,6 +18,7 @@ class CompromisoResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id, // quién lo hizo (miembro del hogar)
+            'contacto' => $this->contacto ? ['id' => $this->contacto->id, 'nombre' => $this->contacto->nombreCompleto(), 'foto_url' => $this->contacto->urlFoto(true)] : null,
             'descripcion' => $this->descripcion,
             'comentario' => $this->comentario,
             'monto' => number_format((float) $this->monto, 2, '.', ''),

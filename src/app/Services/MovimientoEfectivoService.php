@@ -97,7 +97,7 @@ class MovimientoEfectivoService
         $monto = $filtros['monto'] ?? null;
         $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'fecha', 'tipo'], true) ? $filtros['sort'] : 'fecha';
 
-        return MovimientoEfectivo::with('categoria', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')->where('hogar_id', $user->hogar_id)
+        return MovimientoEfectivo::with('categoria', 'contacto', 'transferencia.origenCuenta', 'transferencia.destinoCuenta', 'transferencia.origenTarjeta')->where('hogar_id', $user->hogar_id)
             ->when($search !== null && $search !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('descripcion', 'like', "%{$search}%")->orWhere('monto', 'like', "%{$search}%")))
             ->when($monto !== null && $monto !== '', fn ($q) => $q->where('monto', 'like', '%'.$monto.'%'))

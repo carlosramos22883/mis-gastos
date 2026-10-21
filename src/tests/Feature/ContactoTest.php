@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Deuda;
-use App\Models\Deudor;
+use App\Models\Contacto;
 use App\Models\TipoCuenta;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
@@ -15,27 +15,27 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
-class DeudorTest extends TestCase
+class ContactoTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
 
-    private Deudor $aquino;
+    private Contacto $aquino;
 
     protected function setUp(): void
     {
         parent::setUp();
         Carbon::setTestNow('2026-10-17 15:00:00');
         $this->user = User::factory()->create(['email_verified_at' => now(), 'fecha_corte_dia' => 22, 'zona_horaria' => 'America/El_Salvador', 'onboarding_completed' => true]);
-        foreach (['deudores', 'efectivo', 'cuentas', 'tarjetas'] as $modulo) {
+        foreach (['deudores', 'contactos', 'efectivo', 'cuentas', 'tarjetas', 'compromisos'] as $modulo) {
             foreach (['view', 'create', 'edit', 'delete'] as $accion) {
                 $this->user->givePermissionTo(Permission::firstOrCreate(['name' => "{$modulo}.{$accion}", 'guard_name' => 'web']));
             }
         }
         $saldo = $this->user->categoriasPersonales()->create(['nombre' => 'Saldo inicial', 'tipo' => 'ingreso']);
         $this->user->movimientosEfectivo()->create(['categoria_personal_id' => $saldo->id, 'descripcion' => 'Saldo inicial', 'monto' => 100, 'fecha' => '2026-09-23', 'tipo' => 'ingreso']);
-        $this->aquino = $this->user->deudores()->create(['nombre' => 'Aquino', 'tipo' => 'persona']);
+        $this->aquino = $this->user->contactos()->create(['nombre' => 'Aquino', 'tipo' => 'persona']);
     }
 
     protected function tearDown(): void
@@ -46,14 +46,14 @@ class DeudorTest extends TestCase
 
     private function prestar(array $datos)
     {
-        return $this->actingAs($this->user)->postJson(route('deudores.deudas.store', $this->aquino), $datos + [
+        return $this->actingAs($this->user)->postJson(route('contactos.deudas.store', $this->aquino), $datos + [
             'descripcion' => 'Camiseta', 'monto' => '15.00', 'fecha' => '17/10/2026', 'origen' => 'efectivo',
         ]);
     }
 
     private function pagar(array $datos)
     {
-        return $this->actingAs($this->user)->postJson(route('deudores.pagos.store', $this->aquino), $datos + [
+        return $this->actingAs($this->user)->postJson(route('contactos.pagos.store', $this->aquino), $datos + [
             'monto' => '10.00', 'fecha' => '2026-10-17', 'destino' => 'efectivo',
         ]);
     }
@@ -63,17 +63,17 @@ class DeudorTest extends TestCase
         return app(CicloEfectivoService::class)->balance($this->user);
     }
 
-    public function test_crear_deudor_y_ver_pantallas(): void
+    public function test_crear_contacto_y_ver_pantallas(): void
     {
-        $this->actingAs($this->user)->postJson(route('deudores.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])->assertOk();
-        $this->actingAs($this->user)->postJson(route('deudores.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])
+        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])->assertOk();
+        $this->actingAs($this->user)->postJson(route('contactos.store'), ['nombre' => 'Karen', 'tipo' => 'persona'])
             ->assertUnprocessable()->assertJsonValidationErrors('nombre');
 
         $this->prestar([]);
-        $this->actingAs($this->user)->get(route('deudores.index'))->assertOk()->assertSee('Aquino')->assertSee('15.00');
-        $this->actingAs($this->user)->get(route('deudores.show', $this->aquino))->assertOk()->assertSee('Camiseta');
-        $this->actingAs($this->user)->get(route('deudores.deudas.create', $this->aquino))->assertOk()->assertSee('Solo anotar');
-        $this->actingAs($this->user)->get(route('deudores.pagos.create', $this->aquino))->assertOk()->assertSee('Te debe');
+        $this->actingAs($this->user)->get(route('contactos.index', ['filtro' => 'deben']))->assertOk()->assertSee('Aquino')->assertSee('15.00');
+        $this->actingAs($this->user)->get(route('contactos.show', $this->aquino))->assertOk()->assertSee('Camiseta');
+        $this->actingAs($this->user)->get(route('contactos.deudas.create', $this->aquino))->assertOk()->assertSee('Solo anotar');
+        $this->actingAs($this->user)->get(route('contactos.pagos.create', $this->aquino))->assertOk()->assertSee('Te debe');
     }
 
     public function test_prestar_desde_efectivo_crea_el_egreso(): void
@@ -152,7 +152,7 @@ class DeudorTest extends TestCase
         $this->assertSame(0, $this->user->movimientosEfectivo()->where('descripcion', 'like', '%Aquino%')->count());
     }
 
-    public function test_el_movimiento_de_un_deudor_no_se_edita_desde_efectivo(): void
+    public function test_el_movimiento_de_una_deuda_no_se_edita_desde_efectivo(): void
     {
         $this->prestar([]);
         $movimiento = Deuda::firstOrFail()->movimientoEfectivo;
@@ -161,14 +161,81 @@ class DeudorTest extends TestCase
         $this->assertSame(85.0, $this->efectivo());
     }
 
-    public function test_deudor_con_historial_no_se_elimina_y_otro_hogar_no_lo_ve(): void
+    public function test_contacto_con_historial_no_se_elimina_y_otro_hogar_no_lo_ve(): void
     {
         $this->prestar([]);
-        $this->actingAs($this->user)->deleteJson(route('deudores.destroy', $this->aquino))->assertUnprocessable();
+        $this->actingAs($this->user)->deleteJson(route('contactos.destroy', $this->aquino))->assertUnprocessable();
 
         $otro = User::factory()->create(['email_verified_at' => now(), 'onboarding_completed' => true]);
-        $otro->givePermissionTo('deudores.view');
-        $this->actingAs($otro)->get(route('deudores.show', $this->aquino))->assertNotFound();
-        $this->actingAs($otro)->get(route('deudores.index'))->assertOk()->assertDontSee('Aquino');
+        $otro->givePermissionTo(['deudores.view', 'contactos.view']);
+        $this->actingAs($otro)->get(route('contactos.show', $this->aquino))->assertNotFound();
+        $this->actingAs($otro)->get(route('contactos.index', ['filtro' => 'deben']))->assertOk()->assertDontSee('Aquino');
+    }
+
+    public function test_foto_privada_solo_para_el_hogar(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $foto = \Illuminate\Http\UploadedFile::fake()->image('karen.jpg', 200, 200);
+        $this->actingAs($this->user)->post(route('contactos.store'), ['nombre' => 'Karen', 'apellido' => 'López', 'tipo' => 'persona', 'foto' => $foto],
+            ['Accept' => 'application/json'])->assertOk();
+        $karen = Contacto::where('nombre', 'Karen')->firstOrFail();
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($karen->foto);
+        $this->assertStringNotContainsString('/storage/', $karen->urlFoto()); // no es pública
+
+        $this->actingAs($this->user)->get($karen->urlFoto())->assertOk();
+        $otro = User::factory()->create();
+        $otro->givePermissionTo('contactos.view');
+        $this->actingAs($otro)->get($karen->urlFoto())->assertNotFound();
+
+        $this->actingAs($this->user)->post(route('contactos.update', $karen), ['_method' => 'PUT', 'nombre' => 'Karen', 'apellido' => 'López', 'tipo' => 'persona', 'quitar_foto' => '1', 'activo' => '1'],
+            ['Accept' => 'application/json'])->assertOk();
+        $this->assertNull($karen->fresh()->foto);
+    }
+
+    public function test_con_quien_crea_el_contacto_y_aparece_en_su_ficha(): void
+    {
+        $categoria = $this->user->categoriasPersonales()->create(['nombre' => 'Gaby', 'tipo' => 'egreso']);
+        $this->actingAs($this->user)->post(route('efectivo.store'), [
+            'descripcion' => 'Cuota del colegio', 'monto' => '50.00', 'fecha' => '2026-10-17', 'tipo' => 'egreso',
+            'categoria_personal_id' => $categoria->id, 'contacto_id' => 'nuevo:Colegio de Gaby',
+        ])->assertSessionHasNoErrors();
+
+        $colegio = Contacto::where('nombre', 'Colegio')->firstOrFail();
+        $this->assertSame('de Gaby', $colegio->apellido);
+        $this->assertSame($colegio->id, $this->user->movimientosEfectivo()->where('descripcion', 'Cuota del colegio')->value('contacto_id'));
+
+        // Escribir el mismo nombre no lo duplica
+        $this->actingAs($this->user)->post(route('efectivo.store'), [
+            'descripcion' => 'Uniforme', 'monto' => '20.00', 'fecha' => '2026-10-17', 'tipo' => 'egreso',
+            'categoria_personal_id' => $categoria->id, 'contacto_id' => 'nuevo:colegio de gaby',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(1, Contacto::where('nombre', 'Colegio')->count());
+
+        $this->actingAs($this->user)->get(route('contactos.show', $colegio))->assertOk()->assertSee('Cuota del colegio')->assertSee('70.00');
+        $this->actingAs($this->user)->get(route('efectivo.index'))->assertOk()->assertSee('Colegio de Gaby');
+
+        // Un contacto de otro hogar no se puede usar
+        $ajeno = User::factory()->create()->contactos()->create(['nombre' => 'Ajeno', 'tipo' => 'persona']);
+        $this->actingAs($this->user)->post(route('efectivo.store'), [
+            'descripcion' => 'X', 'monto' => '1.00', 'fecha' => '2026-10-17', 'tipo' => 'egreso', 'categoria_personal_id' => $categoria->id, 'contacto_id' => (string) $ajeno->id,
+        ])->assertSessionHasErrors('contacto_id');
+    }
+
+    public function test_el_contacto_del_compromiso_pasa_a_sus_pagos(): void
+    {
+        $vigilancia = $this->user->contactos()->create(['nombre' => 'Vigilancia', 'tipo' => 'empresa']);
+        $this->actingAs($this->user)->postJson(route('compromisos.store'), [
+            'descripcion' => 'Vigilancia', 'monto' => '20.00', 'medio_pago' => 'efectivo', 'recurrencia_tipo' => 'recurrente', 'frecuencia' => 'mensual',
+            'dia_pago' => 21, 'fecha_inicio' => '2026-10-01', 'finalizacion' => 'indefinido', 'contacto_id' => (string) $vigilancia->id,
+        ])->assertSuccessful();
+
+        $compromiso = $this->user->compromisos()->firstOrFail();
+        $this->assertSame($vigilancia->id, $compromiso->contacto_id);
+        $categoria = $this->user->categoriasPersonales()->create(['nombre' => 'Servicios', 'tipo' => 'egreso']);
+        $this->actingAs($this->user)->postJson(route('compromisos.pagar.store', $compromiso), [
+            'origen' => 'efectivo', 'monto' => '20.00', 'fecha' => '2026-10-17', 'descripcion' => 'Vigilancia', 'categoria_personal_id' => $categoria->id,
+        ])->assertOk();
+        $this->assertSame($vigilancia->id, $this->user->movimientosEfectivo()->where('descripcion', 'Vigilancia')->value('contacto_id'));
+        $this->actingAs($this->user)->deleteJson(route('contactos.destroy', $vigilancia))->assertUnprocessable(); // tiene historial
     }
 }

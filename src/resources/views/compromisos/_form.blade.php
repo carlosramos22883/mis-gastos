@@ -30,6 +30,7 @@
 
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="old('descripcion', $compromiso->descripcion ?? '')" :error="$errors->first('descripcion')" required />
     @include('hogar._quien', ['valor' => $compromiso->user_id ?? null, 'label' => 'Responsable'])
+    @include('contactos._quien', ['valor' => $compromiso->contacto_id ?? null, 'label' => '¿A quién se le paga? (opcional)'])
 
     @unless ($editing)
         <x-floating-select id="recurrencia_tipo" label="Tipo de compromiso" :allowEmpty="false" :options="['unica' => 'Una sola vez', 'recurrente' => 'Se repite']" value="unica" required />

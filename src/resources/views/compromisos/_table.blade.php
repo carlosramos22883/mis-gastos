@@ -3,7 +3,7 @@
 @php($estado = $compromiso->estadoVisual($hoy, $inicio))
 <tr data-record-id="{{ $compromiso->id }}" class="border-t border-gray-200 dark:border-gray-700">
     <td class="px-6 py-4">
-        <div class="font-medium text-gray-900 dark:text-gray-100">@include('hogar._por', ['id' => $compromiso->user_id]){{ $compromiso->descripcion }}</div>
+        <div class="font-medium text-gray-900 dark:text-gray-100">@include('hogar._por', ['id' => $compromiso->user_id]){{ $compromiso->descripcion }}@include('contactos._chip', ['contacto' => $compromiso->contacto])</div>
         <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             {{ collect([
                 $compromiso->categoria?->nombre,

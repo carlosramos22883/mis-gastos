@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
+use App\Models\Contacto;
 use App\Models\Cuenta;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
-use App\Models\Deudor;
 use App\Models\FuenteIngreso;
 use App\Models\Hogar;
 use App\Models\HogarInvitacion;
@@ -37,7 +37,7 @@ class HogarService
     public const MODELOS = [
         CategoriaPersonal::class, MovimientoEfectivo::class, CompromisoRecurrente::class, Compromiso::class,
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
-        Deudor::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
+        Contacto::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
         FuenteIngreso::class, Ingreso::class,
     ];
 

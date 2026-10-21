@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo', 'es_saldo_arrastrado', 'transferencia_id'])]
+#[Fillable(['user_id', 'contacto_id', 'categoria_personal_id', 'compromiso_id', 'compromiso_cuota', 'descripcion', 'monto', 'fecha', 'tipo', 'es_saldo_arrastrado', 'transferencia_id'])]
 class MovimientoEfectivo extends Model
 {
     use HasFactory, PerteneceAHogar;
@@ -44,5 +44,11 @@ class MovimientoEfectivo extends Model
     public function transferencia(): BelongsTo
     {
         return $this->belongsTo(Transferencia::class);
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

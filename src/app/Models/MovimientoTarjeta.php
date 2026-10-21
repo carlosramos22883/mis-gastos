@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * cuenta, vía transferencia), cargo (intereses, seguro, comisión o mora) y credito (devolución o promoción).
  * Un cargo con compromiso_id (mora) se cobra en su propio compromiso y no entra en los cortes.
  */
-#[Fillable(['user_id', 'tarjeta_credito_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'tipo', 'descripcion', 'comentario', 'monto', 'fecha', 'cuotas'])]
+#[Fillable(['user_id', 'contacto_id', 'tarjeta_credito_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'tipo', 'descripcion', 'comentario', 'monto', 'fecha', 'cuotas'])]
 class MovimientoTarjeta extends Model
 {
     use PerteneceAHogar;
@@ -55,5 +55,11 @@ class MovimientoTarjeta extends Model
     public function esEnCuotas(): bool
     {
         return $this->tipo === 'compra' && $this->cuotas > 1;
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

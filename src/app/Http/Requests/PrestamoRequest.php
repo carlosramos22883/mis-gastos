@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ResuelveContacto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Models\Prestamo;
 use Carbon\Carbon;
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rule;
 /** Datos de un préstamo (web y API). user_id = titular. */
 class PrestamoRequest extends FormRequest
 {
-    use NormalizaFechas, ValidaMiembroHogar;
+    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -32,6 +33,7 @@ class PrestamoRequest extends FormRequest
 
         return [
             'user_id' => $this->reglaMiembro(),
+            'contacto_id' => $this->reglaContacto(),
             'nombre' => ['required', 'string', 'max:100'],
             'tipo' => ['required', Rule::in(array_keys(Prestamo::TIPOS))],
             'banco_id' => ['nullable', 'integer', Rule::exists('bancos', 'id')],

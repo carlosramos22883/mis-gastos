@@ -48,7 +48,7 @@ class TarjetaCreditoController extends Controller
         return view('tarjetas.show', [
             'tarjeta' => $tarjeta,
             'porFacturar' => $this->tarjetas->porFacturar($tarjeta),
-            'movimientos' => $tarjeta->movimientos()->with('categoria', 'transferencia.destinoCuenta')->withCount('items')
+            'movimientos' => $tarjeta->movimientos()->with('categoria', 'contacto', 'transferencia.destinoCuenta')->withCount('items')
                 ->whereDate('fecha', '>=', $this->tarjetas->inicioPeriodoAbierto($tarjeta)->toDateString())
                 ->orderByDesc('fecha')->orderByDesc('id')->get(),
             'enCuotas' => $tarjeta->movimientos()->where('tipo', 'compra')->where('cuotas', '>', 1)->withCount('items')->get()

@@ -10,6 +10,7 @@
     'error' => null,
     'required' => false,
     'submitForm' => false,
+    'creatable' => false,
 ])
 
 @php
@@ -26,7 +27,7 @@
     if ($multiple) {
         $plugins[] = 'remove_button';
     }
-    if ($searchable) {
+    if ($searchable && ! $creatable) {
         $plugins[] = 'dropdown_input';
     }
 @endphp
@@ -45,17 +46,27 @@
     <div class="w-full flex items-center">
         {{-- SIEMPRE Tom Select, buscable o no --}}
         <div class="w-full" wire:ignore x-init="const tom = new TomSelect($refs.select, {
-            create: false,
             maxItems: {{ $multiple ? 'null' : '1' }},
             allowEmptyOption: {{ $allowEmpty ? 'true' : 'false' }},
             placeholder: '',
+            @if ($creatable)
+            create: (input) => ({ value: 'nuevo:' + input, text: input }),
+            createOnBlur: true,
+            render: {
+                option_create: (data, escape) => `<div class='create py-1'>Crear <strong>${escape(data.input)}</strong>…</div>`,
+                option: (data, escape) => `<div class='flex items-center gap-2 py-1'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-6 w-6 rounded-full object-cover'>` : ''}<span>${escape(data.text)}</span></div>`,
+                item: (data, escape) => `<div class='flex items-center gap-2'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-5 w-5 rounded-full object-cover'>` : ''}<span>${escape(data.text)}</span></div>`
+            },
+            @else
+            create: false,
             render: {
                 option: (data, escape) => `<div class='flex items-center gap-2 py-1'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-6 w-6 rounded object-contain'>` : ''}<span>${escape(data.text)}</span></div>`,
                 item: (data, escape) => `<div class='flex items-center gap-2'>${data.logo ? `<img src='${escape(data.logo)}' alt='' class='h-5 w-5 rounded object-contain'>` : ''}<span>${escape(data.text)}</span></div>`
             },
+            @endif
             dropdownParent: 'body',
             plugins: {{ json_encode($plugins) }},
-            @if(!$searchable)
+            @if(!$searchable && !$creatable)
             controlInput: null,
             @endif
             @if(!$allowEmpty)

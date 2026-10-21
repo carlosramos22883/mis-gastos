@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Regla de un compromiso que se repite (ej. "Cuota de Gaby, $150 mensual el día 5").
  * No se paga directamente: genera un Compromiso por cada fecha de pago.
  */
-#[Fillable(['user_id', 'categoria_personal_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'frecuencia', 'dia_semana', 'dia_pago', 'dia_pago_2', 'fecha_inicio', 'fecha_fin', 'total_cuotas', 'cuotas_generadas', 'generado_hasta', 'activo'])]
+#[Fillable(['user_id', 'contacto_id', 'categoria_personal_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'frecuencia', 'dia_semana', 'dia_pago', 'dia_pago_2', 'fecha_inicio', 'fecha_fin', 'total_cuotas', 'cuotas_generadas', 'generado_hasta', 'activo'])]
 class CompromisoRecurrente extends Model
 {
     use PerteneceAHogar;
@@ -63,5 +63,11 @@ class CompromisoRecurrente extends Model
             'quincenal' => 'Quincenal: '.$dia($this->dia_pago).' y '.$dia($this->dia_pago_2),
             default => 'Mensual: '.$dia($this->dia_pago),
         };
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

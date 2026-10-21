@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Un pago concreto por realizar. Puede ser de una sola vez o una cuota generada
  * por un CompromisoRecurrente.
  */
-#[Fillable(['user_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
+#[Fillable(['user_id', 'contacto_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
 class Compromiso extends Model
 {
     use PerteneceAHogar;
@@ -122,5 +122,11 @@ class Compromiso extends Model
             'pendiente' => $query->where('estado', self::PENDIENTE)->tap($noAntiguo)->tap($noVencido)->whereColumn('saldo_pendiente', '>=', 'monto'),
             default => $query,
         };
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

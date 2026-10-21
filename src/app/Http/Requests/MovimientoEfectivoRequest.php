@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\ResuelveContacto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Models\Compromiso;
 use App\Services\CicloEfectivoService;
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rule;
 /** Validación de movimientos de efectivo para web y API. Acepta la fecha como d/m/Y o Y-m-d. */
 class MovimientoEfectivoRequest extends FormRequest
 {
-    use NormalizaFechas, ValidaMiembroHogar;
+    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -34,6 +35,7 @@ class MovimientoEfectivoRequest extends FormRequest
 
         return [
             'user_id' => $this->reglaMiembro(),
+            'contacto_id' => $this->reglaContacto(),
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$inicio->toDateString(), 'before_or_equal:'.$limite],

@@ -89,7 +89,7 @@
                             @php($m = $linea['movimiento'])
                             <tr class="border-t border-gray-200 dark:border-gray-700">
                                 <td class="px-6 py-3 whitespace-nowrap">{{ $m->fecha->format('d/m/Y') }}</td>
-                                <td class="px-6 py-3">@include('hogar._por', ['id' => $m->user_id]){{ $m->descripcion }}@if ($m->categoria)<span class="ml-2 text-xs text-gray-400">{{ $m->categoria->nombre }}</span>@endif</td>
+                                <td class="px-6 py-3">@include('hogar._por', ['id' => $m->user_id]){{ $m->descripcion }}@include('contactos._chip', ['contacto' => $m->contacto])@if ($m->categoria)<span class="ml-2 text-xs text-gray-400">{{ $m->categoria->nombre }}</span>@endif</td>
                                 <td class="px-6 py-3 whitespace-nowrap">{{ $linea['cuota_numero'] ? 'Cuota '.$linea['cuota_numero'].' de '.$m->cuotas : \App\Models\MovimientoTarjeta::TIPOS[$m->tipo] }}</td>
                                 <td class="px-6 py-3 text-right whitespace-nowrap {{ $linea['monto'] < 0 ? 'text-green-700 dark:text-green-400' : '' }}">{{ $simbolo }} {{ number_format($linea['monto'], 2) }}</td>
                                 <td class="px-6 py-3">

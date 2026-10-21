@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ResuelveContacto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
@@ -13,9 +14,9 @@ use Illuminate\Validation\Rule;
  */
 class CompromisoRequest extends FormRequest
 {
-    use ValidaMiembroHogar;
+    use ResuelveContacto, ValidaMiembroHogar;
 
-    private const COMUNES = ['user_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id'];
+    private const COMUNES = ['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id'];
 
     public function authorize(): bool
     {
@@ -31,6 +32,7 @@ class CompromisoRequest extends FormRequest
     {
         $rules = [
             'user_id' => $this->reglaMiembro(),
+            'contacto_id' => $this->reglaContacto(),
             'descripcion' => ['required', 'string', 'max:255'],
             'comentario' => ['nullable', 'string', 'max:1000'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],

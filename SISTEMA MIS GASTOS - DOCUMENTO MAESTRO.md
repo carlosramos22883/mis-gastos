@@ -229,18 +229,18 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Una tarjeta con historial no se elimina: se desactiva
 - ⏳ API para móviles; foto de la tarjeta (opcional en la especificación)
 
-### 5.6 DEUDORES ("Nos deben") ✅ (web + API)
+### 5.6 CONTACTOS Y "NOS DEBEN" ✅ (web + API)
 
-**Tablas:** `deudores` (nombre único en el hogar, tipo persona/institución/empresa, contacto, notas, activo), `deudas` (descripción, monto, fecha, origen y el movimiento que generó) y `deuda_pagos` (monto, fecha, destino y el ingreso que generó; un ingreso puede tener varias filas).
-**Lógica:** `DeudorService`. Lo pagado y lo pendiente **se calculan** de los pagos (no se guardan); estado de la deuda: pendiente / abonada / pagada.
+**Tablas:** `contactos` (antes `deudores`: nombre, apellido, tipo persona/tienda/empresa/institución, teléfono, correo, **foto privada**, notas, activo), `deudas` (`contacto_id`, descripción, monto, fecha, origen y el movimiento que generó) y `deuda_pagos`. Préstamos, compromisos (y sus reglas) y movimientos de efectivo, cuenta y tarjeta tienen `contacto_id` opcional ("¿con quién?").
+**Lógica:** `ContactoService` (contactos, foto, "¿con quién?", ficha) y `DeudorService` (deudas y pagos).
 
-- **Prestar o anotar:** el dinero sale del efectivo, de una cuenta o de una tarjeta (se crea ese gasto con la categoría "Préstamos a terceros") o se **solo anota** si ya estaba registrado (admite fechas de ciclos anteriores)
-- **Pago:** entra al efectivo o a una cuenta (categoría "Cobros de deudas", un solo ingreso) o se solo anota. Sin elegir deuda se reparte **de la más antigua a la más reciente**; no puede superar lo pendiente
-- Eliminar un pago elimina su ingreso (y todas sus partes); una deuda solo se elimina sin pagos y se lleva su gasto
-- Los movimientos de un deudor no se editan ni eliminan desde efectivo, cuentas o tarjetas (`DeudorService::ligado`): se gestionan desde Deudores
-- Un deudor con historial no se elimina: se desactiva
-- Permisos `deudores.view/create/edit/delete`. Menú "Nos deben"
-- ⏳ Marcar "es préstamo" al registrar un gasto y "es pago de un deudor" al registrar un ingreso (hoy se hace desde Deudores); pantallas móviles
+- **Ficha del contacto:** lo que te debe (deudas y pagos), lo que le debes (préstamos), sus compromisos y todos los movimientos con él; le pagaste / te pagó en el año
+- **"¿Con quién?"** en efectivo, cuentas, tarjetas, compromisos y préstamos: selector con búsqueda y fotos; al **escribir un nombre nuevo** se crea el contacto al guardar (no se duplica si ya existe con ese nombre). Se ve como una ficha pequeña en las listas. El contacto de un compromiso pasa a los pagos generados y a su egreso; el de un préstamo, a sus pagos
+- **Foto** en el disco privado (`local`), servida solo a miembros del hogar (`contactos.foto` en web, `api.contactos.foto` con token)
+- **Nos deben:** vista filtrada de contactos con deudas. Prestar desde efectivo, cuenta o tarjeta ("Préstamos a terceros") o solo anotar; un pago se reparte de la deuda más antigua a la más reciente; lo pendiente se calcula de los pagos. Los movimientos de una deuda se gestionan desde el contacto (`MovimientoVinculado`)
+- Un contacto con historial no se elimina: se desactiva
+- Permisos `contactos.view/create/edit/delete` (contactos) y `deudores.view/create/edit/delete` (deudas y pagos). Menú "Contactos" y "Nos deben"
+- ⏳ Pantallas móviles
 
 ### 5.6b PRÉSTAMOS (lo que debemos) ✅ (web + API)
 
@@ -429,7 +429,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
-| Deudores ("Nos deben"): préstamos, pagos repartidos | ✅ |
+| Contactos (foto privada, "¿con quién?") y "Nos deben" | ✅ |
 | Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
 | Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
 | Dashboard (inicio) e intereses de tarjeta | ✅ |
@@ -446,7 +446,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/efectivo` (por ciclo con resumen y navegación; crear, editar, eliminar; pagar compromisos con `compromiso_id`) | ✅ |
 | `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
 | `/api/hogar` (ver, renombrar, invitar, cancelar, aceptar, rechazar, salir, quitar miembro); `user_id` en efectivo y compromisos | ✅ |
-| `/api/deudores` (CRUD, detalle con deudas y pagos), `POST /api/deudores/{id}/deudas`, `POST /api/deudores/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}` | ✅ |
+| `/api/contactos` (CRUD, `?filtro=deben`, detalle con deudas y pagos, `GET /api/contactos/{id}/foto`), `POST /api/contactos/{id}/deudas`, `POST /api/contactos/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}`; `contacto` en efectivo y compromisos | ✅ |
 | `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
 | `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
 | `GET /api/dashboard` (resumen de inicio) | ✅ |
@@ -467,7 +467,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 121 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, deudores, préstamos, ingresos, dashboard, permisos)
+- 124 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, cuentas, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -480,7 +480,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 3. ~~Cuentas bancarias~~ ✅ · ~~Tarjetas de crédito~~ ✅
 4. ~~Hogar (grupos familiares)~~ ✅ (19/10/2026)
 5. ~~Importador de la hoja de cálculo~~ ✅ (19/10/2026) — todo 2026 (efectivo, cuentas, transferencias, 14 tarjetas con estado pendiente y sin facturar, avances, compromisos) a los correos destino; local en `.claude/datos/` (no se sube). Se amplía con cada módulo
-6. ~~Deudores~~ ✅ (19/10/2026)
+6. ~~Deudores~~ ✅ (19/10/2026) → ~~Contactos~~ ✅ (20/10/2026)
 7. ~~Préstamos~~ ✅ (19/10/2026) con tabla de pagos y proyecciones
 8. ~~Ingresos con desglose~~ ✅ (20/10/2026)
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos

@@ -38,7 +38,7 @@ class DeudaPagoRequest extends FormRequest
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fecha' => $fecha,
             'destino' => ['required', 'string', 'regex:/^(efectivo|cuenta:\d+|ninguno)$/'],
-            'deuda_id' => ['nullable', 'integer', Rule::exists('deudas', 'id')->where('deudor_id', $this->route('deudor')?->id)],
+            'deuda_id' => ['nullable', 'integer', Rule::exists('deudas', 'id')->where('contacto_id', $this->route('contacto')?->id)],
             'comentario' => ['nullable', 'string', 'max:1000'],
         ];
     }

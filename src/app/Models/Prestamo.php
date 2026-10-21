@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Préstamo que el hogar debe (a un banco o a una persona). Saldo, intereses y proyecciones en PrestamoService.
  */
-#[Fillable(['user_id', 'nombre', 'tipo', 'banco_id', 'acreedor', 'monto_original', 'tasa_anual', 'tasa_mora', 'plazo_meses', 'fecha_otorgamiento',
+#[Fillable(['user_id', 'contacto_id', 'nombre', 'tipo', 'banco_id', 'acreedor', 'monto_original', 'tasa_anual', 'tasa_mora', 'plazo_meses', 'fecha_otorgamiento',
     'dia_pago', 'cuota', 'saldo_inicial', 'fecha_saldo', 'medio_pago', 'monto_planilla', 'compromiso_recurrente_id', 'color', 'notas', 'activo'])]
 class Prestamo extends Model
 {
@@ -60,11 +60,17 @@ class Prestamo extends Model
 
     public function nombreAcreedor(): string
     {
-        return $this->banco?->nombre ?? $this->acreedor ?? '—';
+        return $this->banco?->nombre ?? $this->contacto?->nombreCompleto() ?? $this->acreedor ?? '—';
     }
 
     public function textColor(): string
     {
         return Color::textoSobre($this->color);
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

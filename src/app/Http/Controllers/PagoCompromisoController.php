@@ -52,7 +52,7 @@ class PagoCompromisoController extends Controller
     public function store(PagoCompromisoRequest $request, Compromiso $compromiso)
     {
         $this->own($request, $compromiso);
-        $data = Arr::except($request->validated(), ['origen']) + ['tipo' => 'egreso', 'compromiso_id' => $compromiso->id];
+        $data = Arr::except($request->validated(), ['origen']) + ['tipo' => 'egreso', 'compromiso_id' => $compromiso->id, 'contacto_id' => $compromiso->contacto_id];
         $origen = $request->validated('origen');
 
         if ($origen === 'efectivo') {

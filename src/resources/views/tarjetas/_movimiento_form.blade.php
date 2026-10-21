@@ -20,6 +20,7 @@
     @endif
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$movimiento->descripcion ?? ''" required />
     @include('hogar._quien', ['valor' => $movimiento->user_id ?? null])
+    @include('contactos._quien', ['valor' => $movimiento->contacto_id ?? null, 'label' => '¿Dónde o a quién? (opcional)'])
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-money id="monto" label="Monto total" :symbol="$simbolo" :value="$movimiento->monto ?? ''" required />
         <x-floating-date id="fecha" label="Fecha" :value="$movimiento->fecha ?? now(auth()->user()->zona_horaria)" :min="$desde" required />

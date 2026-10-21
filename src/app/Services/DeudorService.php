@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\CategoriaPersonal;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
-use App\Models\Deudor;
+use App\Models\Contacto;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
@@ -16,14 +16,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Deudores ("nos deben").
+ * Deudas de contactos ("nos deben").
  *
  *  - Una deuda puede salir del efectivo, de una cuenta o de una tarjeta (se crea ese movimiento con la
  *    categoría "Préstamos a terceros") o solo anotarse ("ninguno") si el dinero ya estaba registrado.
  *  - Un pago entra al efectivo o a una cuenta (categoría "Cobros de deudas") y se reparte entre las deudas
- *    pendientes del deudor, de la más antigua a la más reciente, o se aplica a una sola.
+ *    pendientes del contacto, de la más antigua a la más reciente, o se aplica a una sola.
  *  - Lo pagado y lo pendiente se calculan de los pagos; nunca se guardan.
- *  - Los movimientos ligados a un deudor se modifican desde Deudores (App\Support\MovimientoVinculado).
+ *  - Los movimientos ligados a una deuda se modifican desde el contacto (App\Support\MovimientoVinculado).
  */
 class DeudorService
 {
@@ -37,45 +37,37 @@ class DeudorService
         private readonly TarjetaService $tarjetas,
     ) {}
 
-    /** Deudores del hogar con lo prestado, lo pagado y lo pendiente. */
+    /** Contactos del hogar que tienen deudas, con lo prestado, lo pagado y lo pendiente ("Nos deben"). */
     public function listar(User $user): Collection
     {
-        return $user->deudores()->with(['deudas' => fn ($q) => $q->withSum('pagos', 'monto')])
+        return $user->contactos()->whereHas('deudas')->with(['deudas' => fn ($q) => $q->withSum('pagos', 'monto')])
             ->orderByDesc('activo')->orderBy('nombre')->get()
-            ->each(fn (Deudor $d) => $this->resumir($d));
+            ->each(fn (Contacto $c) => $this->resumir($c));
     }
 
-    /** Agrega prestado, pagado, pendiente y deudas_abiertas al deudor (con sus deudas cargadas). */
-    public function resumir(Deudor $deudor): Deudor
+    /** Agrega prestado, pagado, pendiente y deudas_abiertas al contacto (con sus deudas cargadas). */
+    public function resumir(Contacto $contacto): Contacto
     {
-        $deudas = $deudor->relationLoaded('deudas') ? $deudor->deudas : $deudor->deudas()->withSum('pagos', 'monto')->get();
-        $deudor->setAttribute('prestado', round((float) $deudas->sum('monto'), 2));
-        $deudor->setAttribute('pagado', round($deudas->sum(fn (Deuda $d) => $d->pagado()), 2));
-        $deudor->setAttribute('pendiente', round($deudas->sum(fn (Deuda $d) => $d->pendiente()), 2));
-        $deudor->setAttribute('deudas_abiertas', $deudas->filter(fn (Deuda $d) => $d->pendiente() > 0)->count());
+        $deudas = $contacto->relationLoaded('deudas') ? $contacto->deudas : $contacto->deudas()->withSum('pagos', 'monto')->get();
+        $contacto->setAttribute('prestado', round((float) $deudas->sum('monto'), 2));
+        $contacto->setAttribute('pagado', round($deudas->sum(fn (Deuda $d) => $d->pagado()), 2));
+        $contacto->setAttribute('pendiente', round($deudas->sum(fn (Deuda $d) => $d->pendiente()), 2));
+        $contacto->setAttribute('deudas_abiertas', $deudas->filter(fn (Deuda $d) => $d->pendiente() > 0)->count());
 
-        return $deudor;
-    }
-
-    public function eliminarDeudor(Deudor $deudor): void
-    {
-        if ($deudor->deudas()->exists()) {
-            throw ValidationException::withMessages(['deudor' => 'Este deudor tiene historial. Desactívalo en lugar de eliminarlo.']);
-        }
-        $deudor->delete();
+        return $contacto;
     }
 
     /**
      * @param  array{descripcion: string, monto: numeric, fecha: string, origen: string, comentario?: ?string, user_id?: ?int}  $data
      *                                                                                                                                 origen: "efectivo" | "cuenta:{id}" | "tarjeta:{id}" | "ninguno"
      */
-    public function registrarDeuda(User $user, Deudor $deudor, array $data): Deuda
+    public function registrarDeuda(User $user, Contacto $contacto, array $data): Deuda
     {
         $quien = $data['user_id'] ?? $user->id;
-        $base = ['descripcion' => "Préstamo a {$deudor->nombre}: {$data['descripcion']}", 'monto' => $data['monto'], 'fecha' => $data['fecha'],
+        $base = ['descripcion' => "Préstamo a {$contacto->nombreCompleto()}: {$data['descripcion']}", 'monto' => $data['monto'], 'fecha' => $data['fecha'], 'contacto_id' => $contacto->id,
             'user_id' => $quien, 'categoria_personal_id' => $this->categoria($user, self::CATEGORIA_PRESTAMO, 'egreso')];
 
-        return DB::transaction(function () use ($user, $deudor, $data, $quien, $base) {
+        return DB::transaction(function () use ($user, $contacto, $data, $quien, $base) {
             $deuda = ['user_id' => $quien, 'descripcion' => $data['descripcion'], 'comentario' => $data['comentario'] ?? null,
                 'monto' => $data['monto'], 'fecha' => $data['fecha']];
             $origen = $data['origen'];
@@ -95,7 +87,7 @@ class DeudorService
                 $deuda += ['origen' => 'ninguno'];
             }
 
-            return $deudor->deudas()->create($deuda);
+            return $contacto->deudas()->create($deuda);
         });
     }
 
@@ -114,17 +106,17 @@ class DeudorService
     }
 
     /**
-     * Un pago del deudor. Sin deuda_id se reparte entre sus deudas pendientes, de la más antigua a la más reciente.
+     * Un pago del contacto. Sin deuda_id se reparte entre sus deudas pendientes, de la más antigua a la más reciente.
      *
      * @param  array{monto: numeric, fecha: string, destino: string, deuda_id?: ?int, comentario?: ?string, user_id?: ?int}  $data
      *                                                                                                                              destino: "efectivo" | "cuenta:{id}" | "ninguno"
      * @return Collection<int, DeudaPago>
      */
-    public function registrarPago(User $user, Deudor $deudor, array $data): Collection
+    public function registrarPago(User $user, Contacto $contacto, array $data): Collection
     {
-        return DB::transaction(function () use ($user, $deudor, $data) {
-            Deudor::whereKey($deudor->id)->lockForUpdate()->first();
-            $deudas = $deudor->deudas()->withSum('pagos', 'monto')->orderBy('fecha')->orderBy('id')->get()
+        return DB::transaction(function () use ($user, $contacto, $data) {
+            Contacto::whereKey($contacto->id)->lockForUpdate()->first();
+            $deudas = $contacto->deudas()->withSum('pagos', 'monto')->orderBy('fecha')->orderBy('id')->get()
                 ->filter(fn (Deuda $d) => $d->pendiente() > 0)
                 ->when(! empty($data['deuda_id']), fn ($c) => $c->where('id', (int) $data['deuda_id']));
             $monto = round((float) $data['monto'], 2);
@@ -137,7 +129,7 @@ class DeudorService
             }
 
             $quien = $data['user_id'] ?? $user->id;
-            $mov = ['descripcion' => "Pago de {$deudor->nombre}", 'monto' => $monto, 'fecha' => $data['fecha'], 'tipo' => 'ingreso',
+            $mov = ['descripcion' => "Pago de {$contacto->nombreCompleto()}", 'monto' => $monto, 'fecha' => $data['fecha'], 'tipo' => 'ingreso', 'contacto_id' => $contacto->id,
                 'user_id' => $quien, 'categoria_personal_id' => $this->categoria($user, self::CATEGORIA_COBRO, 'ingreso')];
             $enlace = ['destino' => 'ninguno'];
             if ($data['destino'] === 'efectivo') {

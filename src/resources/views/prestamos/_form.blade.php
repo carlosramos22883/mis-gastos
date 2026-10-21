@@ -16,6 +16,7 @@
         <x-floating-select id="tipo" label="Tipo" :allowEmpty="false" :options="\App\Models\Prestamo::TIPOS" :value="$prestamo->tipo ?? 'consumo'" required />
     </div>
     @include('hogar._quien', ['valor' => $prestamo->user_id ?? null, 'label' => 'Titular'])
+    @include('contactos._quien', ['valor' => $prestamo->contacto_id ?? null, 'label' => 'Si es de una persona o tienda: ¿a quién se le debe?'])
     <div class="grid gap-4 sm:grid-cols-2">
         <x-floating-select id="banco_id" label="Banco (opcional)" :options="$bancos" :value="$prestamo->banco_id ?? ''" />
         <x-floating-input id="acreedor" label="O a quién se le debe (ej. Evelyn)" maxlength="100" :value="$prestamo->acreedor ?? ''" />

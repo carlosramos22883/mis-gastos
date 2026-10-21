@@ -2,8 +2,8 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Contacto;
 use App\Models\Cuenta;
-use App\Models\Deudor;
 use App\Models\FuenteIngreso;
 use App\Models\Hogar;
 use App\Models\Prestamo;
@@ -22,7 +22,7 @@ trait PerteneceAHogar
     private const PADRES = [
         'tarjeta_credito_id' => TarjetaCredito::class,
         'cuenta_id' => Cuenta::class,
-        'deudor_id' => Deudor::class,
+        'contacto_id' => Contacto::class,
         'prestamo_id' => Prestamo::class,
         'fuente_ingreso_id' => FuenteIngreso::class,
     ];

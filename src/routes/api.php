@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
 use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\DeudorController;
+use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\EfectivoController;
 use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
@@ -40,15 +40,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/catalogos', CatalogoController::class)->name('catalogos');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-        Route::apiResource('deudores', DeudorController::class)->parameters(['deudores' => 'deudor'])
-            ->middlewareFor(['index', 'show'], 'can:deudores.view')
-            ->middlewareFor('store', 'can:deudores.create')
-            ->middlewareFor('update', 'can:deudores.edit')
-            ->middlewareFor('destroy', 'can:deudores.delete');
-        Route::controller(DeudorController::class)->group(function () {
-            Route::post('deudores/{deudor}/deudas', 'guardarDeuda')->middleware('can:deudores.create')->name('deudores.deudas.store');
+        Route::apiResource('contactos', ContactoController::class)
+            ->middlewareFor(['index', 'show'], 'can:contactos.view')
+            ->middlewareFor('store', 'can:contactos.create')
+            ->middlewareFor('update', 'can:contactos.edit')
+            ->middlewareFor('destroy', 'can:contactos.delete');
+        Route::controller(ContactoController::class)->group(function () {
+            Route::get('contactos/{contacto}/foto', 'foto')->middleware('can:contactos.view')->name('contactos.foto');
+            Route::post('contactos/{contacto}/deudas', 'guardarDeuda')->middleware('can:deudores.create')->name('contactos.deudas.store');
             Route::delete('deudas/{deuda}', 'eliminarDeuda')->middleware('can:deudores.delete')->name('deudas.destroy');
-            Route::post('deudores/{deudor}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('deudores.pagos.store');
+            Route::post('contactos/{contacto}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('contactos.pagos.store');
             Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
         });
 

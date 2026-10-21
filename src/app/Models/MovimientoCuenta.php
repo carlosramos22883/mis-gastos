@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'cuenta_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'descripcion', 'monto', 'fecha', 'tipo'])]
+#[Fillable(['user_id', 'contacto_id', 'cuenta_id', 'categoria_personal_id', 'compromiso_id', 'transferencia_id', 'descripcion', 'monto', 'fecha', 'tipo'])]
 class MovimientoCuenta extends Model
 {
     use PerteneceAHogar;
@@ -42,5 +42,11 @@ class MovimientoCuenta extends Model
     public function transferencia(): BelongsTo
     {
         return $this->belongsTo(Transferencia::class);
+    }
+
+    /** Con quién (persona, tienda, empresa…). */
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class);
     }
 }

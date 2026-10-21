@@ -27,7 +27,7 @@ class CompromisoService
         $search = $filtros['search'] ?? null;
         $estado = $filtros['estado'] ?? null;
 
-        return Compromiso::query()->where('hogar_id', $user->hogar_id)->with('categoria', 'recurrente')
+        return Compromiso::query()->where('hogar_id', $user->hogar_id)->with('categoria', 'recurrente', 'contacto')
             ->when($search, fn ($q) => $q->where('descripcion', 'like', '%'.$search.'%'))
             ->when($estado, fn ($q) => $q->estadoVisual($estado, $hoy, $inicio))
             ->when($periodo === 'actual', fn ($q) => $q
@@ -105,6 +105,7 @@ class CompromisoService
                 $recurrente->cuotas_generadas++;
                 $user->compromisos()->create([
                     'user_id' => $recurrente->user_id,
+                    'contacto_id' => $recurrente->contacto_id,
                     'compromiso_recurrente_id' => $recurrente->id,
                     'categoria_personal_id' => $recurrente->categoria_personal_id,
                     'descripcion' => $recurrente->descripcion,
