@@ -7,12 +7,15 @@ use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
 use App\Http\Controllers\Api\ContactoController;
+use App\Http\Controllers\Api\CuentaController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EfectivoController;
 use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
 use App\Http\Controllers\Api\PrestamoController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\TarjetaController;
+use App\Http\Controllers\Api\TransferenciaController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -106,6 +109,37 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('store', 'can:compromisos.create')
             ->middlewareFor('update', 'can:compromisos.edit')
             ->middlewareFor('destroy', 'can:compromisos.delete');
+
+        // Cuentas y billeteras, con sus movimientos
+        Route::apiResource('cuentas', CuentaController::class)
+            ->middlewareFor(['index', 'show'], 'can:cuentas.view')
+            ->middlewareFor('store', 'can:cuentas.create')
+            ->middlewareFor('update', 'can:cuentas.edit')
+            ->middlewareFor('destroy', 'can:cuentas.delete');
+        Route::prefix('cuentas/{cuenta}/movimientos')->name('cuentas.movimientos.')->controller(CuentaController::class)->group(function () {
+            Route::post('/', 'guardarMovimiento')->middleware('can:cuentas.create')->name('store');
+            Route::put('{movimiento}', 'actualizarMovimiento')->middleware('can:cuentas.edit')->name('update');
+            Route::delete('{movimiento}', 'eliminarMovimiento')->middleware('can:cuentas.delete')->name('destroy');
+        });
+
+        // Transferencias entre efectivo y cuentas (desde una tarjeta = avance)
+        Route::controller(TransferenciaController::class)->prefix('transferencias')->name('transferencias.')->group(function () {
+            Route::get('opciones', 'opciones')->middleware('can:cuentas.view')->name('opciones');
+            Route::post('/', 'store')->middleware('can:cuentas.create')->name('store');
+            Route::delete('{transferencia}', 'destroy')->middleware('can:cuentas.delete')->name('destroy');
+        });
+
+        // Tarjetas de crédito, con sus movimientos
+        Route::apiResource('tarjetas', TarjetaController::class)
+            ->middlewareFor(['index', 'show'], 'can:tarjetas.view')
+            ->middlewareFor('store', 'can:tarjetas.create')
+            ->middlewareFor('update', 'can:tarjetas.edit')
+            ->middlewareFor('destroy', 'can:tarjetas.delete');
+        Route::prefix('tarjetas/{tarjeta}/movimientos')->name('tarjetas.movimientos.')->controller(TarjetaController::class)->group(function () {
+            Route::post('/', 'guardarMovimiento')->middleware('can:tarjetas.create')->name('store');
+            Route::put('{movimiento}', 'actualizarMovimiento')->middleware('can:tarjetas.edit')->name('update');
+            Route::delete('{movimiento}', 'eliminarMovimiento')->middleware('can:tarjetas.delete')->name('destroy');
+        });
     });
 });
 

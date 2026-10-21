@@ -468,18 +468,24 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
 | `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
 | `GET /api/dashboard` (resumen de inicio) | ✅ |
+| `/api/cuentas` (lista con saldo, detalle por ciclo con resumen y movimientos, CRUD), `POST/PUT/DELETE /api/cuentas/{id}/movimientos/{mov}` | ✅ |
+| `GET /api/transferencias/opciones`, `POST /api/transferencias` (origen tarjeta = avance), `DELETE /api/transferencias/{id}` | ✅ |
+| `/api/tarjetas` (lista con deuda, disponible, próximo corte y pago; detalle con lo que entra al corte, cuotas, estados de cuenta y costo de no pagar; CRUD), `POST/PUT/DELETE /api/tarjetas/{id}/movimientos/{mov}` | ✅ |
 | Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
 | Pantalla | Estado |
 |---|---|
 | Login, registro, Google, olvido/reset de contraseña; la sesión se restaura sola y un 401 regresa al login | ✅ |
-| Navegación inferior: Inicio · Efectivo · Compromisos · Más | ✅ |
+| Navegación inferior: Inicio · Efectivo · Tarjetas · Compromisos · Más | ✅ |
 | Inicio (`/api/dashboard`): disponible real, avisos, próximos pagos, tarjetas, cuentas con logo, deudas, gastos por categoría, historial | ✅ |
 | Efectivo: ciclos anterior/siguiente, resumen, filtro, registrar/editar/eliminar con categoría, "¿quién?" y "¿con quién?" | ✅ |
 | Compromisos: filtros por período y estado, detalle, pagar desde efectivo/cuenta/otra tarjeta, cancelar pago o serie | ✅ |
-| Más: usuario, hogar y miembros, cerrar sesión | ✅ |
-| Crear compromisos, cuentas, tarjetas, contactos, préstamos, ingresos, perfil | ⏳ |
+| Cuentas: lista con logo y saldo, detalle por ciclo, registrar/editar/eliminar movimientos, eliminar transferencias | ✅ |
+| Transferencias desde Efectivo, Cuentas y Tarjetas (avance) | ✅ |
+| Tarjetas: lista con su color, detalle (por pagar con costo de no pagar, próximo corte, sin facturar, cuotas, estados de cuenta), compras en cuotas, cargos y créditos | ✅ |
+| Más: usuario, hogar y miembros, acceso a cuentas, cerrar sesión | ✅ |
+| Crear compromisos; crear/editar cuentas y tarjetas; contactos, préstamos, ingresos, perfil | ⏳ |
 
 ### iOS (Swift)
 | Pantalla | Estado |
@@ -489,7 +495,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Todo lo demás | ⏳ |
 
 ### Calidad
-- 134 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
+- 139 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -508,7 +514,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026). Falta: **API de cuentas, transferencias y tarjetas** (hoy solo existen en la web) → sus pantallas en Android → contactos, préstamos, ingresos → iOS
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). Falta en Android: contactos y "nos deben", préstamos, ingresos, crear compromisos → luego iOS
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 

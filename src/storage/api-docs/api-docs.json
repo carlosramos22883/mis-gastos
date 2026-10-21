@@ -637,7 +637,7 @@
                 "tags": [
                     "Catálogos"
                 ],
-                "summary": "Monedas, bancos, tipos de cuenta y marcas de red activos",
+                "summary": "Monedas, bancos y emisores, tipos (cuenta, contacto, emisor, préstamo, ingreso), marcas de red y conceptos de planilla activos",
                 "operationId": "f450d26c5031a51a64bc7dfdf8ccfd09",
                 "responses": {
                     "200": {
@@ -906,6 +906,519 @@
                 ]
             }
         },
+        "/api/compromisos/{id}/origenes-pago": {
+            "get": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Desde dónde se puede pagar (efectivo, cuentas y tarjetas con su saldo)",
+                "operationId": "0d34cadea862647dbba52fe9c0374f60",
+                "responses": {
+                    "200": {
+                        "description": "Opciones {valor: etiqueta}"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compromisos/{id}/pagar": {
+            "post": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Pagar (completo o abono) desde efectivo, una cuenta o una tarjeta",
+                "description": "origen: \"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría.",
+                "operationId": "88b8e9a271a5d5a3ba4368abcacfeeb1",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "origen": {
+                                        "type": "string",
+                                        "example": "tarjeta:5"
+                                    },
+                                    "monto": {
+                                        "type": "string",
+                                        "example": "96.62"
+                                    },
+                                    "fecha": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "descripcion": {
+                                        "type": "string"
+                                    },
+                                    "categoria_personal_id": {
+                                        "type": "integer"
+                                    },
+                                    "user_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compromiso actualizado"
+                    },
+                    "422": {
+                        "description": "Supera el saldo o el disponible"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contactos": {
+            "get": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Contactos con lo que deben",
+                "operationId": "f78385f042cdd9221c11a42c20c170b5",
+                "parameters": [
+                    {
+                        "name": "filtro",
+                        "in": "query",
+                        "description": "\"deben\": solo los que tienen deudas",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Crear contacto (multipart si lleva foto)",
+                "operationId": "a5f0e367dc7052ea351cc12ed7776b28",
+                "responses": {
+                    "201": {
+                        "description": "Creado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contactos/{id}": {
+            "get": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Contacto con sus deudas y pagos",
+                "operationId": "79a453f2c4567871d8ae3e94090d169b",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No existe o es de otro hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Actualizar contacto (para cambiar la foto: POST con _method=PUT y multipart)",
+                "operationId": "c504bb803bc05172b84d0aa71bfa28fb",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Eliminar contacto (solo sin historial)",
+                "operationId": "1b6ab274c05e69bea20c30ac970d5ab3",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "422": {
+                        "description": "Tiene historial: desactivarlo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contactos/{id}/foto": {
+            "get": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Foto del contacto (privada)",
+                "operationId": "8a96833161e4533c7ea0d42a49ccb071",
+                "responses": {
+                    "200": {
+                        "description": "Imagen"
+                    },
+                    "404": {
+                        "description": "Sin foto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contactos/{id}/deudas": {
+            "post": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Prestar o anotar una deuda",
+                "description": "origen: \"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" (crea ese gasto) | \"ninguno\" (solo anotar).",
+                "operationId": "6f86039d80f2eb06a85fdfe29d91e944",
+                "responses": {
+                    "201": {
+                        "description": "Contacto actualizado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/deudas/{id}": {
+            "delete": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Eliminar una deuda sin pagos (y el gasto que generó)",
+                "operationId": "c609e0c730892d69b94bc8d217621c10",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "Tiene pagos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contactos/{id}/pagos": {
+            "post": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Registrar un pago del contacto",
+                "description": "destino: \"efectivo\" | \"cuenta:{id}\" | \"ninguno\". Sin deuda_id se reparte de la deuda más antigua a la más reciente.",
+                "operationId": "efcbbfa3632ebbacbd044acc44dbf98c",
+                "responses": {
+                    "201": {
+                        "description": "Contacto actualizado"
+                    },
+                    "422": {
+                        "description": "Supera lo pendiente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/deuda-pagos/{id}": {
+            "delete": {
+                "tags": [
+                    "Contactos"
+                ],
+                "summary": "Eliminar un pago (y su ingreso)",
+                "operationId": "b187b3d707249b2fd6645faef2317360",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cuentas": {
+            "get": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Cuentas con su saldo actual",
+                "operationId": "a4981d38fdd340af086bec78d8cfd22f",
+                "responses": {
+                    "200": {
+                        "description": "Cuentas (activas primero)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Crear cuenta",
+                "description": "saldo_inicial y fecha_inicial solo se fijan al crear.",
+                "operationId": "5e9b76ea7602482e0edb2d889845e61c",
+                "responses": {
+                    "201": {
+                        "description": "Creada"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cuentas/{id}": {
+            "get": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Cuenta con los movimientos de un ciclo y su resumen",
+                "description": "\"ciclo\" acepta cualquier fecha (Y-m-d) dentro del ciclo deseado; sin él, el actual.",
+                "operationId": "5c419760f1b3a0e93a2880d91314995a",
+                "parameters": [
+                    {
+                        "name": "ciclo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "tipo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ingreso",
+                                "egreso"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data (movimientos) + cuenta + ciclo + resumen + meta"
+                    },
+                    "404": {
+                        "description": "No encontrada o ciclo no válido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Editar cuenta",
+                "operationId": "ef77209fca53f80f80ea9954fbcebb2b",
+                "responses": {
+                    "200": {
+                        "description": "Actualizada"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Eliminar cuenta sin movimientos",
+                "operationId": "4ef50d76bdbcffc5343061c800ff2723",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "Tiene movimientos: desactívala"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cuentas/{id}/movimientos": {
+            "post": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Registrar ingreso o egreso en la cuenta",
+                "operationId": "a1aab51270eef5ec3b61ed8a7c75fa11",
+                "responses": {
+                    "201": {
+                        "description": "Registrado"
+                    },
+                    "422": {
+                        "description": "Validación (ej. saldo insuficiente)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cuentas/{id}/movimientos/{movimiento}": {
+            "put": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Editar movimiento del ciclo actual",
+                "operationId": "fa7c408878da75cac18c21233e9f8b06",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "403": {
+                        "description": "De otro ciclo, de una transferencia o de otro módulo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Cuentas"
+                ],
+                "summary": "Eliminar movimiento del ciclo actual",
+                "operationId": "a8eb9406c50c8014967f5f6281ecafbd",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "403": {
+                        "description": "No editable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Página de inicio: ciclo, efectivo, cuentas, tarjetas, liquidez, deudas, gastos por categoría, historial y alertas",
+                "operationId": "de6c688e05d760f6cc5ea6518dbec04f",
+                "responses": {
+                    "200": {
+                        "description": "Resumen"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/efectivo": {
             "get": {
                 "tags": [
@@ -1026,6 +1539,561 @@
                     },
                     "422": {
                         "description": "El efectivo quedaría en negativo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar": {
+            "get": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Hogar del usuario: miembros e invitaciones",
+                "operationId": "37e1d99012b84164637cca02d8c61fe0",
+                "responses": {
+                    "200": {
+                        "description": "Hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Renombrar el hogar (solo quien lo administra)",
+                "operationId": "34d146a1e7a4e178199a8d27a7e8a595",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nombre": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "403": {
+                        "description": "No administra el hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/invitaciones": {
+            "post": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Invitar por correo (solo quien administra)",
+                "operationId": "5592ec0bb6157aa139ed7c59d798cc78",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "email": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Invitación enviada"
+                    },
+                    "422": {
+                        "description": "Ya es miembro o ya hay una pendiente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/invitaciones/{id}": {
+            "delete": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Cancelar una invitación enviada",
+                "operationId": "381daf9f8778ee3ece1b0a2d7105cd08",
+                "responses": {
+                    "204": {
+                        "description": "Cancelada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/invitaciones/{id}/aceptar": {
+            "post": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Aceptar una invitación recibida",
+                "description": "Si el usuario era el único miembro de su hogar, sus registros se suman al nuevo.",
+                "operationId": "0523adaf2adbf4ec8ea380e1aad9c0ca",
+                "responses": {
+                    "200": {
+                        "description": "Nuevo hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/invitaciones/{id}/rechazar": {
+            "post": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Rechazar una invitación recibida",
+                "operationId": "4cecfe6f1fe59525a82d2d26580fc31f",
+                "responses": {
+                    "204": {
+                        "description": "Rechazada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/salir": {
+            "post": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Salir del hogar (los registros se quedan en él)",
+                "operationId": "8b41b4a95b331ff258609d5f7dd7b2f5",
+                "responses": {
+                    "200": {
+                        "description": "Nuevo hogar propio, vacío"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/miembros/{id}": {
+            "delete": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Quitar a un miembro (solo quien administra)",
+                "operationId": "046b4cb94a0d651c5363bc6c164002f2",
+                "responses": {
+                    "204": {
+                        "description": "Quitado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ingresos": {
+            "get": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Fuentes de ingreso con su plantilla",
+                "operationId": "ff29e2a2beb92a1ef65fc0f09627829e",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Crear fuente de ingreso",
+                "description": "destino: \"efectivo\" | \"cuenta:{id}\". conceptos: [{nombre, tipo: descuento|adicion, monto?, porcentaje?, tope?, prestamo_id?}].",
+                "operationId": "99391d61c81a408006e6924b990d3e91",
+                "responses": {
+                    "201": {
+                        "description": "Creada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ingresos/{id}": {
+            "get": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Fuente con sus pagos recibidos",
+                "operationId": "08cabd47a0273e58a12d2ca7bf76ca36",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No existe o es de otro hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Actualizar fuente (sin \"conceptos\" no se toca la plantilla)",
+                "operationId": "556744dd3cc663a972d45e872817b6bd",
+                "responses": {
+                    "200": {
+                        "description": "Actualizada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Eliminar fuente (solo sin pagos)",
+                "operationId": "21647faefc3d41151078eb0dd2afb991",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "Tiene pagos: desactivarla"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ingresos/{id}/propuesta": {
+            "get": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Líneas y neto propuestos para un bruto",
+                "operationId": "742b0992fb90a5795a48c5190ef8fe00",
+                "parameters": [
+                    {
+                        "name": "bruto",
+                        "in": "query",
+                        "schema": {
+                            "type": "number"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Propuesta"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ingresos/{id}/recibos": {
+            "post": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Registrar un pago recibido con su desglose",
+                "description": "destino: \"efectivo\" | \"cuenta:{id}\" | \"ninguno\". lineas: [{nombre, tipo, monto, prestamo_id?}]. El neto entra como ingreso; los préstamos 100 % de planilla se pagan solos.",
+                "operationId": "ded2b8b1ccda08c95ff02de8a99f2114",
+                "responses": {
+                    "201": {
+                        "description": "Fuente actualizada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/recibos/{id}": {
+            "delete": {
+                "tags": [
+                    "Ingresos"
+                ],
+                "summary": "Eliminar un pago recibido (y lo que registró)",
+                "operationId": "fa559bb9c0638a6ae8f1eff28e7e8c57",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/prestamos": {
+            "get": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Préstamos con saldo, cuota y fecha estimada de fin",
+                "operationId": "4ac9692aa94fdf81d7df1072148bb462",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Registrar préstamo",
+                "description": "saldo_inicial = saldo de capital a fecha_saldo (normalmente el último pago). cargos: [{nombre, monto}] por cuota. crear_compromiso: genera el compromiso mensual (no aplica a planilla).",
+                "operationId": "2f394cb7b51fad195cc9c2decad984fa",
+                "responses": {
+                    "201": {
+                        "description": "Creado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/prestamos/{id}": {
+            "get": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Préstamo con sus pagos y el desglose sugerido para el próximo pago",
+                "operationId": "e5355d3cdd0737e0f3fcfb73247fb4cc",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No existe o es de otro hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Actualizar préstamo",
+                "operationId": "d08d56c61ffde4f185ef5cd7fc54cfd4",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Eliminar préstamo (solo sin pagos)",
+                "operationId": "994472194707b1991f1a0c35bc1da7b6",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "422": {
+                        "description": "Tiene pagos: desactivarlo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/prestamos/{id}/proyeccion": {
+            "get": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Tabla de pagos y escenarios: pagar hoy, abono extra mensual, abono único",
+                "operationId": "717ca29b69fde5b2f3705539314e22ca",
+                "parameters": [
+                    {
+                        "name": "extra_mensual",
+                        "in": "query",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "abono",
+                        "in": "query",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "modo",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "plazo",
+                                "cuota"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "cuota",
+                        "in": "query",
+                        "description": "Probar otra cuota (préstamos sin cuota fija)",
+                        "schema": {
+                            "type": "number"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Escenarios"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/prestamos/{id}/pagos": {
+            "post": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Registrar un pago con su desglose",
+                "description": "origen: \"efectivo\" | \"cuenta:{id}\" (crea el egreso y abona el compromiso del mes) | \"planilla\" | \"ninguno\".",
+                "operationId": "5f14ccf2b1673ba42212b891e7be2e6a",
+                "responses": {
+                    "201": {
+                        "description": "Préstamo actualizado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/prestamo-pagos/{id}": {
+            "delete": {
+                "tags": [
+                    "Préstamos"
+                ],
+                "summary": "Eliminar el último pago (revierte su egreso y el compromiso)",
+                "operationId": "96af43c1d850e7b3a9ee69e37def7daa",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "422": {
+                        "description": "No es el último pago"
                     }
                 },
                 "security": [
@@ -1259,6 +2327,237 @@
                     }
                 ]
             }
+        },
+        "/api/tarjetas": {
+            "get": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Tarjetas con deuda, disponible, próximo corte y próximo pago",
+                "operationId": "81e987b64b0b8892d08ed6ce2fe12502",
+                "responses": {
+                    "200": {
+                        "description": "Tarjetas (activas primero)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Crear tarjeta",
+                "description": "disponible (requerido) fija la deuda inicial; tiene_pendiente + pendiente_monto + pendiente_fecha registran un estado de cuenta por pagar.",
+                "operationId": "c9e3dcb2c00f5d867de5bd69b5de9372",
+                "responses": {
+                    "201": {
+                        "description": "Creada"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tarjetas/{id}": {
+            "get": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Detalle: movimientos sin facturar, lo que entra al próximo corte, cuotas, estados de cuenta y pagos pendientes",
+                "operationId": "d17bd1b807b35bda7ddd8e3769ebcb9d",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Editar tarjeta",
+                "operationId": "6d1d10d2d19aa3f8a6047d00d183d34c",
+                "responses": {
+                    "200": {
+                        "description": "Actualizada"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Eliminar tarjeta sin historial",
+                "operationId": "6ed6ec9b0a14df6b39d762206e7d4b76",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "Tiene historial: desactívala"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tarjetas/{id}/movimientos": {
+            "post": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Registrar compra (cuotas > 1 = a plazos), cargo o crédito",
+                "description": "Los avances se registran como transferencia (POST /api/transferencias con origen \"tarjeta:{id}\").",
+                "operationId": "ca7ae15f90ce169ad195a9d822ac3668",
+                "responses": {
+                    "201": {
+                        "description": "Registrado"
+                    },
+                    "422": {
+                        "description": "Validación (ej. supera el disponible)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tarjetas/{id}/movimientos/{movimiento}": {
+            "put": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Editar movimiento sin facturar",
+                "operationId": "6e6d7a3c57ca4cf01079d89f183eba1e",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "403": {
+                        "description": "Ya facturado, avance o de otro módulo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Eliminar movimiento sin facturar",
+                "operationId": "16b179279055e7993ba31fab27bb3999",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "403": {
+                        "description": "No editable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/transferencias/opciones": {
+            "get": {
+                "tags": [
+                    "Transferencias"
+                ],
+                "summary": "Orígenes y destinos posibles",
+                "description": "origen: \"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" (avance) · destino: \"efectivo\" | \"cuenta:{id}\"",
+                "operationId": "bc7abb01d3f1a2d422cff7d98b1dbb6c",
+                "responses": {
+                    "200": {
+                        "description": "origenes y destinos: [{valor, nombre, saldo}]"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/transferencias": {
+            "post": {
+                "tags": [
+                    "Transferencias"
+                ],
+                "summary": "Registrar transferencia o avance",
+                "operationId": "5de50437bee5fb3b1f8817bed804abd4",
+                "responses": {
+                    "201": {
+                        "description": "Registrada"
+                    },
+                    "422": {
+                        "description": "Validación (ej. saldo insuficiente)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/transferencias/{id}": {
+            "delete": {
+                "tags": [
+                    "Transferencias"
+                ],
+                "summary": "Eliminar transferencia (revierte sus dos movimientos)",
+                "operationId": "404f18ce33fa8ea9e01e32cc498f0e60",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "No se puede (ej. de un ciclo cerrado)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -1292,16 +2591,48 @@
             "description": "Pagos programados: de una sola vez o recurrentes"
         },
         {
+            "name": "Contactos",
+            "description": "Personas, tiendas, empresas e instituciones del hogar, y lo que nos deben"
+        },
+        {
+            "name": "Cuentas",
+            "description": "Cuentas bancarias y billeteras digitales del hogar, con sus movimientos por ciclo"
+        },
+        {
             "name": "Efectivo",
             "description": "Ingresos y egresos de efectivo por ciclo"
+        },
+        {
+            "name": "Hogar",
+            "description": "Miembros que comparten un solo fondo (efectivo, ciclo, cuentas, tarjetas y compromisos)"
+        },
+        {
+            "name": "Ingresos",
+            "description": "Fuentes de ingreso (sueldos, servicios…) y pagos recibidos con desglose"
+        },
+        {
+            "name": "Préstamos",
+            "description": "Lo que debe el hogar: saldo, pagos con desglose y proyecciones"
         },
         {
             "name": "Perfil",
             "description": "Endpoints para la gestión del perfil de usuario"
         },
         {
+            "name": "Tarjetas",
+            "description": "Tarjetas de crédito: deuda, disponible, cortes, cuotas y movimientos"
+        },
+        {
+            "name": "Transferencias",
+            "description": "Mover dinero entre efectivo y cuentas; desde una tarjeta es un avance"
+        },
+        {
             "name": "Autenticación",
             "description": "Autenticación"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Dashboard"
         }
     ]
 }
