@@ -43,6 +43,16 @@ class PrestamoResource extends JsonResource
             'meses_restantes' => $r['meses_restantes'],
             'intereses_restantes' => $dinero($r['intereses_restantes']),
             'compromiso_recurrente_id' => $this->compromiso_recurrente_id,
+            // Datos tal como se guardaron (para editar el préstamo desde las apps)
+            'datos' => [
+                'contacto_id' => $this->contacto_id,
+                'acreedor' => $this->acreedor,
+                'tasa_mora' => $this->tasa_mora !== null ? (string) (float) $this->tasa_mora : null,
+                'cuota' => $dinero($this->cuota),
+                'saldo_inicial' => $dinero($this->saldo_inicial),
+                'fecha_saldo' => $this->fecha_saldo?->toDateString(),
+                'notas' => $this->notas,
+            ],
             'pagos' => $this->when((bool) $this->con_detalle, fn () => $this->pagos->sortByDesc('fecha')->map(fn ($p) => [
                 'id' => $p->id, 'user_id' => $p->user_id, 'fecha' => $p->fecha->toDateString(), 'origen' => $p->origen,
                 'planilla' => $dinero($p->planilla), 'capital' => $dinero($p->capital), 'interes' => $dinero($p->interes), 'cargos' => $dinero($p->cargos), 'mora' => $dinero($p->mora),

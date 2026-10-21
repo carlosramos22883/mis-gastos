@@ -40,7 +40,7 @@ class PrestamoApiTest extends TestCase
             'nombre' => 'Préstamo de consumo', 'tipo_prestamo_id' => TipoPrestamo::where('nombre', 'Consumo / personal')->value('id'), 'monto_original' => '21550.00', 'tasa_anual' => '8.10', 'plazo_meses' => 120,
             'dia_pago' => 8, 'cuota' => '262.60', 'saldo_inicial' => '17642.63', 'fecha_saldo' => '2026-09-08', 'medio_pago' => 'planilla',
             'cargos' => [['nombre' => 'Seguros', 'monto' => '24.97'], ['nombre' => 'IVA', 'monto' => '1.12']],
-        ])->assertCreated()->assertJsonPath('data.cuota_total', '288.69')->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.cuota_total', '288.69')->assertJsonPath('data.datos.saldo_inicial', '17642.63')->assertJsonPath('data.datos.fecha_saldo', '2026-09-08')->json('data.id');
 
         $this->postJson("/api/prestamos/{$id}/pagos", ['fecha' => '2026-10-08', 'capital' => '145.14', 'interes' => '117.46', 'cargos' => '26.09', 'origen' => 'planilla'])
             ->assertCreated()->assertJsonPath('data.saldo', '17497.49')->assertJsonPath('data.pagos.0.total', '288.69');

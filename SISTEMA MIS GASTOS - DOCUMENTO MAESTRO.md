@@ -465,7 +465,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/compromisos` (listar por período/estado, detalle con abonos, crear único o recurrente, editar pago, cancelar pago o serie) | ✅ |
 | `/api/hogar` (ver, renombrar, invitar, cancelar, aceptar, rechazar, salir, quitar miembro); `user_id` en efectivo y compromisos | ✅ |
 | `/api/contactos` (CRUD, `?filtro=deben`, detalle con deudas y pagos, `GET /api/contactos/{id}/foto`), `POST /api/contactos/{id}/deudas`, `POST /api/contactos/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}`; `contacto` en efectivo y compromisos | ✅ |
-| `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
+| `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido, `datos` con lo guardado para editar), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
 | `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
 | `GET /api/dashboard` (resumen de inicio) | ✅ |
 | `/api/cuentas` (lista con saldo, detalle por ciclo con resumen y movimientos, CRUD), `POST/PUT/DELETE /api/cuentas/{id}/movimientos/{mov}` | ✅ |
@@ -488,7 +488,9 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Préstamos: lista con saldo y avance, detalle con cuota y cargos, registrar pago con la sugerencia del sistema, eliminar el último, simulador (pagar hoy, extra mensual, abono único) | ✅ |
 | Ingresos: fuentes con su plantilla, registrar pago recibido con desglose calculado y editable (los préstamos de planilla se pagan solos), eliminar recibos | ✅ |
 | Más: usuario, hogar y miembros, acceso a cuentas, contactos, préstamos e ingresos, cerrar sesión | ✅ |
-| Crear compromisos; crear/editar cuentas, tarjetas, préstamos y fuentes de ingreso; foto de contacto; perfil | ⏳ |
+| Crear compromisos (único o recurrente: semanal, quincenal, mensual; fin indefinido, por fecha o por número de pagos) y editar un pago | ✅ |
+| Crear, editar y eliminar cuentas, tarjetas (con disponible y estado pendiente al registrarla), préstamos (con cargos mensuales y compromiso mensual) y fuentes de ingreso | ✅ |
+| Foto de contacto, plantilla de descuentos de una fuente, editar la regla de una serie, perfil, categorías | ⏳ |
 
 ### iOS (Swift)
 | Pantalla | Estado |
@@ -517,7 +519,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos e ingresos (21/10/2026). Falta en Android: crear compromisos y los formularios de alta (cuentas, tarjetas, préstamos, fuentes) → luego iOS
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos y formularios de alta (21/10/2026). Falta en Android: foto de contacto, plantilla de una fuente, perfil y categorías → luego **iOS**
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
@@ -533,6 +535,10 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
   - Tests: `docker compose exec app php artisan test`
   - Estilo: `docker compose exec app ./vendor/bin/pint`
   - Migraciones: `docker compose exec app php artisan migrate`
+
+### Apps móviles: notas
+- `GET /api/catalogos` responde sin la envoltura `data` (el resto de recursos sí la usan).
+- Gson omite los nulos: al editar, lo que no se envía no cambia (no sirve para vaciar un campo opcional).
 
 ### Frontend: reglas aprendidas
 - Los ayudantes de formulario (`validateDateInput`, `syncDateInput`, `applyClientFieldLimits`, formato de dinero) son **globales** en `resources/js/app.js`: no dependen de que la pantalla tenga una tabla de datos.
