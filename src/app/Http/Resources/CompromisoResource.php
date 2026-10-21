@@ -29,6 +29,8 @@ class CompromisoResource extends JsonResource
             'numero_cuota' => $this->numero_cuota,
             'total_cuotas' => $this->total_cuotas,
             'medio_pago' => $this->medio_pago,
+            // Estado de cuenta de una tarjeta: se paga sin categoría (cada compra ya tiene la suya)
+            'tarjeta' => $this->tarjeta_credito_id ? ['id' => $this->tarjeta_credito_id, 'nombre' => $this->tarjeta?->nombre, 'color' => $this->tarjeta?->color] : null,
             'estado' => $this->estado,
             'estado_visual' => $estado,
             'estado_texto' => Compromiso::ESTADOS_VISUALES[$estado] ?? $estado,

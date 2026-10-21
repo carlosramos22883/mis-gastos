@@ -473,9 +473,13 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 ### Android (Kotlin)
 | Pantalla | Estado |
 |---|---|
-| Login, registro, Google, olvido/reset de contraseña | ✅ |
-| Dashboard | Vacío |
-| Todo lo demás | ⏳ |
+| Login, registro, Google, olvido/reset de contraseña; la sesión se restaura sola y un 401 regresa al login | ✅ |
+| Navegación inferior: Inicio · Efectivo · Compromisos · Más | ✅ |
+| Inicio (`/api/dashboard`): disponible real, avisos, próximos pagos, tarjetas, cuentas con logo, deudas, gastos por categoría, historial | ✅ |
+| Efectivo: ciclos anterior/siguiente, resumen, filtro, registrar/editar/eliminar con categoría, "¿quién?" y "¿con quién?" | ✅ |
+| Compromisos: filtros por período y estado, detalle, pagar desde efectivo/cuenta/otra tarjeta, cancelar pago o serie | ✅ |
+| Más: usuario, hogar y miembros, cerrar sesión | ✅ |
+| Crear compromisos, cuentas, tarjetas, contactos, préstamos, ingresos, perfil | ⏳ |
 
 ### iOS (Swift)
 | Pantalla | Estado |
@@ -504,7 +508,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** pantallas de Android e iOS (perfil, categorías, efectivo, compromisos, cuentas, tarjetas, hogar)
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026). Falta: **API de cuentas, transferencias y tarjetas** (hoy solo existen en la web) → sus pantallas en Android → contactos, préstamos, ingresos → iOS
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 

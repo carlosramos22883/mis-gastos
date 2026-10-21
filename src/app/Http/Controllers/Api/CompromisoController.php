@@ -34,7 +34,7 @@ class CompromisoController extends Controller
 
         return CompromisoResource::collection(
             $this->compromisos->consultar($user, $request->only(['search', 'estado', 'periodo', 'sort', 'direction']))
-                ->paginate(min(100, max(1, $request->integer('per_page', 20))))->withQueryString()
+                ->with('tarjeta')->paginate(min(100, max(1, $request->integer('per_page', 20))))->withQueryString()
         )->additional(['ciclo' => ['inicio' => $inicio->toDateString(), 'fin' => $fin->toDateString()]]);
     }
 
@@ -44,7 +44,7 @@ class CompromisoController extends Controller
     {
         $this->own($request, $compromiso);
 
-        return new CompromisoResource($compromiso->load(['categoria', 'recurrente', 'movimientos' => fn ($q) => $q->where('tipo', 'egreso')->latest('fecha')]));
+        return new CompromisoResource($compromiso->load(['categoria', 'recurrente', 'tarjeta', 'movimientos' => fn ($q) => $q->where('tipo', 'egreso')->latest('fecha')]));
     }
 
     #[OA\Post(path: '/api/compromisos', summary: 'Crear compromiso', description: 'recurrencia_tipo=recurrente crea una serie (frecuencia, dia_pago, dia_pago_2, dia_semana, fecha_inicio, finalizacion, fecha_fin, total_cuotas). dia_pago=31 significa "último día del mes".', tags: ['Compromisos'], security: [['bearerAuth' => []]],

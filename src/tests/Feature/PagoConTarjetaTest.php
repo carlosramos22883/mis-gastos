@@ -103,6 +103,7 @@ class PagoConTarjetaTest extends TestCase
     public function test_por_api(): void
     {
         Sanctum::actingAs($this->user);
+        $this->getJson("/api/compromisos/{$this->estado->id}")->assertOk()->assertJsonPath('data.tarjeta.id', $this->credisiman->id);
         $this->getJson("/api/compromisos/{$this->estado->id}/origenes-pago")->assertOk()->assertJsonPath('data.tarjeta:'.$this->atlantida->id, 'Tarjeta Atlantida (disponible $ 500.00)');
         $this->postJson("/api/compromisos/{$this->estado->id}/pagar", ['origen' => 'tarjeta:'.$this->atlantida->id, 'monto' => '96.62', 'fecha' => '2026-10-19', 'descripcion' => 'NPE'])
             ->assertOk()->assertJsonPath('data.estado', 'pagado');
