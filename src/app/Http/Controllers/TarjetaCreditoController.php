@@ -18,12 +18,42 @@ class TarjetaCreditoController extends Controller
 
     public function __construct(private readonly TarjetaService $tarjetas) {}
 
+    /** Formas de ordenar la lista (la elegida se recuerda en la sesión). */
+    public const ORDENES = [
+        'disponible' => 'Más disponible',
+        'deuda' => 'Más endeudada',
+        'uso' => 'Más usada (% del límite)',
+        'corte' => 'Corte más próximo',
+        'pago' => 'Pago más próximo',
+        'limite' => 'Límite más alto',
+        'nombre' => 'Nombre',
+    ];
+
     public function index(Request $request)
     {
         $this->tarjetas->generarPendientes($request->user());
-        $tarjetas = $this->conResumen($request->user()->tarjetasCredito()->with('banco', 'marcaRed')->orderByDesc('activo')->orderBy('nombre')->get());
+        $orden = array_key_exists($request->query('orden'), self::ORDENES) ? $request->query('orden') : session('tarjetas_orden', 'nombre');
+        session(['tarjetas_orden' => $orden]);
+        $tarjetas = $this->ordenar($this->conResumen($request->user()->tarjetasCredito()->with('banco', 'marcaRed')->get()), $orden);
 
-        return view('tarjetas.index', compact('tarjetas'));
+        return view('tarjetas.index', ['tarjetas' => $tarjetas, 'orden' => $orden, 'ordenes' => self::ORDENES]);
+    }
+
+    /** Activas primero (las inactivas siempre al final) y dentro de cada grupo, según el orden elegido; empata por nombre. */
+    private function ordenar($tarjetas, string $orden)
+    {
+        $lejos = '9999-12-31';
+        $clave = fn (TarjetaCredito $t) => match ($orden) {
+            'disponible' => -$t->disponible,
+            'deuda' => -$t->deuda,
+            'uso' => (float) $t->limite_credito > 0 ? -($t->deuda / (float) $t->limite_credito) : 0,
+            'corte' => $t->proximo_corte->toDateString(),
+            'pago' => $t->por_pagar?->fecha_esperada?->toDateString() ?? $lejos,
+            'limite' => -(float) $t->limite_credito,
+            default => mb_strtolower($t->nombre),
+        };
+
+        return $tarjetas->sort(fn ($a, $b) => [! $a->activo, $clave($a), mb_strtolower($a->nombre)] <=> [! $b->activo, $clave($b), mb_strtolower($b->nombre)])->values();
     }
 
     public function create()
@@ -57,6 +87,8 @@ class TarjetaCreditoController extends Controller
             'otrosCompromisos' => $tarjeta->compromisos()->whereNull('estado_cuenta_tarjeta_id')->where('estado', 'pendiente')->get(),
             'porPagar' => $tarjeta->compromisos()->where('estado', 'pendiente')->orderBy('fecha_esperada')->get()
                 ->map(fn ($c) => ['compromiso' => $c, 'costo' => $this->tarjetas->costoDeNoPagar($tarjeta, $c)]),
+            'pagos' => $this->tarjetas->pagos($tarjeta),
+            'cargosProximos' => $this->tarjetas->cargosFijosDelProximoCorte($tarjeta),
             'hoy' => $hoy,
             'inicioCiclo' => $inicioCiclo,
         ]);

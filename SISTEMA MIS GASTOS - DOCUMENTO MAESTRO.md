@@ -442,7 +442,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; falta editar la regla de una serie) |
+| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie) |
 | Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
@@ -490,17 +490,29 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Más: usuario, hogar y miembros, acceso a cuentas, contactos, préstamos e ingresos, cerrar sesión | ✅ |
 | Crear compromisos (único o recurrente: semanal, quincenal, mensual; fin indefinido, por fecha o por número de pagos) y editar un pago | ✅ |
 | Crear, editar y eliminar cuentas, tarjetas (con disponible y estado pendiente al registrarla), préstamos (con cargos mensuales y compromiso mensual) y fuentes de ingreso | ✅ |
-| Foto de contacto, plantilla de descuentos de una fuente, editar la regla de una serie, perfil, categorías | ⏳ |
+| Mi perfil (nombre, correo y foto), categorías (crear, editar, desactivar, eliminar), foto de un contacto (se toca la foto; recorte cuadrado de 512 px) | ✅ |
+| Editar la regla de una serie de compromisos; ordenar tarjetas; foto del contacto en préstamos de una persona | ✅ |
+| Plantilla de descuentos de una fuente | ⏳ |
 
 ### iOS (Swift)
+SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token del Keychain, 401 → login, imágenes privadas con token y caché). Mismas pestañas que Android: Inicio, Efectivo, Tarjetas, Compromisos y Más. En DEBUG se abre directo en una pantalla con `SIMCTL_CHILD_MG_TOKEN`, `MG_PESTANA` y `MG_ABRIR` (ver `ArranqueDebug.swift`).
+
 | Pantalla | Estado |
 |---|---|
 | Login, registro, Google, olvido/reset de contraseña | ✅ |
-| Perfil | Básico |
-| Todo lo demás | ⏳ |
+| Inicio (disponible real, próximos pagos, tarjetas, cuentas, deudas, gastos del ciclo) con acceso a cada cuenta, tarjeta y "nos deben" | ✅ (21/10/2026) |
+| Efectivo por ciclo: registrar, editar, eliminar; movimientos ligados con candado | ✅ |
+| Compromisos: lista por período y estado, pagar (efectivo, cuenta u otra tarjeta), crear (único o recurrente), editar un pago, editar la serie, cancelar | ✅ |
+| Cuentas: saldo, ciclo, resumen, movimientos (registrar/editar/eliminar), transferir y eliminar transferencias | ✅ |
+| Tarjetas: orden (se recuerda), foto del titular, por pagar con costo de no pagar, próximo corte, sin facturar (compra, cargo, crédito, cuotas), cuotas, cargos fijos, pagos, estados de cuenta, avances | ✅ |
+| Contactos: buscar, "nos deben", ficha con deudas y pagos, prestar/anotar, nos pagó (a una deuda o de la más antigua), foto (recorte 512 px), crear y editar | ✅ |
+| Préstamos: resumen, logo o foto del contacto, detalle, registrar y eliminar el último pago, simulador "¿Y si…?" | ✅ |
+| Ingresos: fuentes, plantilla, pago recibido con propuesta de descuentos del servidor, eliminar | ✅ |
+| Alta y edición de cuentas, tarjetas, préstamos y fuentes; Mi perfil (nombre, correo, foto); categorías | ✅ |
+| Plantilla de descuentos de una fuente; cargos fijos de tarjeta (se administran en la web) | ⏳ |
 
 ### Calidad
-- 142 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
+- 152 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -519,7 +531,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos y formularios de alta (21/10/2026). Falta en Android: foto de contacto, plantilla de una fuente, perfil y categorías → luego **iOS**
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos, formularios de alta, perfil, categorías y fotos (21/10/2026). iOS ✅ a la par de Android (21/10/2026). Falta en ambos: editar la plantilla de descuentos de una fuente y administrar cargos fijos de tarjeta (hoy en la web)
 12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
@@ -542,8 +554,24 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 - La ficha del contacto enlaza cada movimiento, compromiso, préstamo, deuda y pago con su detalle.
 - Las tarjetas muestran la foto del titular (web y Android) en hogares de varios miembros.
 
+### Pagos de tarjeta
+- Todo pago a un estado de cuenta (desde efectivo, una cuenta u otra tarjeta) lleva la categoría **"Pago de tarjeta"** (`TarjetaService::CATEGORIA_PAGO`, se crea por hogar). No cuenta como gasto en el Inicio (`DashboardService::NO_SON_GASTO`): las compras de la tarjeta ya lo son.
+- La pantalla de la tarjeta (web, API `data.pagos` y Android) lista los "Pagos realizados" (`TarjetaService::pagos`).
+- **Cargos fijos de tarjeta** (`cargos_fijos_tarjeta`: seguro, membresía…): al generarse cada corte, `TarjetaService::aplicarCargosFijos` crea el cargo con fecha del corte (una vez por corte, `movimientos_tarjeta.cargo_fijo_id`). "Por facturar" muestra los que se sumarán. Se administran en la pantalla de la tarjeta (web); API y Android los muestran.
+- **Ordenar tarjetas** (web): más disponible, más endeudada, más usada, corte más próximo, pago más próximo, límite, nombre; se recuerda en la sesión. Inactivas siempre al final.
+- Préstamos de una persona (sin banco): se muestra la foto del contacto en lugar del logo.
+
+### Series de compromisos
+- **Editar la serie** (web: botón en el detalle y enlace al editar un pago; API `PUT /api/compromisos/{id}/serie`; Android): `CompromisoService::actualizarSerie` cambia la regla y la aplica a los pagos de hoy en adelante **sin abonos** (los pagados, abonados o cancelados no cambian). Si cambia el calendario (frecuencia o días) esos pagos se regeneran; si se le pone fin o menos cuotas, se quitan los que sobran; si se extiende, se reactiva.
+- Las reglas generan sus pagos al empezar cada ciclo (`sincronizar`); un compromiso se paga de una vez o en abonos, desde efectivo, cuenta o tarjeta.
+
+### Colores del modo claro
+- Fondo de página `fondo` (#E4E7EC) y encabezados de tabla `cabecera` (#E9ECF1) en `tailwind.config.js`; tarjetas en blanco. Android usa los mismos (`FondoClaro`, `CabeceraClara` en `ui/theme`).
+- Tarjetas de resumen que se actualizan solas al guardar: `data-cash-card="clave"` + `data-cash-value`; el JSON de la tabla trae `clave` (efectivo y cuentas).
+
 ### Apps móviles: notas
 - `GET /api/catalogos` responde sin la envoltura `data` (el resto de recursos sí la usan).
+- Subir archivos: PHP no lee multipart en PATCH/PUT → `POST` con `_method=PATCH|PUT`. El interceptor no debe fijar `Content-Type` (rompe el multipart).
 - Gson omite los nulos: al editar, lo que no se envía no cambia (no sirve para vaciar un campo opcional).
 
 ### Frontend: reglas aprendidas

@@ -31,7 +31,7 @@
             @if ($isCurrentCycle)
                 @can('cuentas.create')
                     @if (auth()->user()->cuentas()->where('activo', true)->exists())
-                        <x-secondary-button type="button" x-data x-on:click="$dispatch('load-transferencia-modal-form', '{{ route('transferencias.create') }}'); $dispatch('open-modal', 'transferencia-modal')">Transferir a una cuenta</x-secondary-button>
+                        <x-secondary-button type="button" x-data x-on:click="$dispatch('load-transferencia-modal-form', '{{ route('transferencias.create') }}'); $dispatch('open-modal', 'transferencia-modal')">Transferir</x-secondary-button>
                     @endif
                 @endcan
             @else

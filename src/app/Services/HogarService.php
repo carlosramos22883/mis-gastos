@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CargoFijoTarjeta;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
@@ -38,12 +39,12 @@ class HogarService
         CategoriaPersonal::class, MovimientoEfectivo::class, CompromisoRecurrente::class, Compromiso::class,
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
         Contacto::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
-        FuenteIngreso::class, Ingreso::class,
+        FuenteIngreso::class, Ingreso::class, CargoFijoTarjeta::class,
     ];
 
     /** Modelos con categoría (para unificar categorías al fusionar hogares). */
     private const CON_CATEGORIA = [
-        MovimientoEfectivo::class, MovimientoCuenta::class, MovimientoTarjeta::class, Compromiso::class, CompromisoRecurrente::class,
+        MovimientoEfectivo::class, MovimientoCuenta::class, MovimientoTarjeta::class, Compromiso::class, CompromisoRecurrente::class, CargoFijoTarjeta::class,
     ];
 
     public function crearPara(User $user): Hogar

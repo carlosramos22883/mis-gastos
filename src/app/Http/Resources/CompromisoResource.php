@@ -44,6 +44,17 @@ class CompromisoResource extends JsonResource
                 'frecuencia' => $this->recurrente->frecuencia,
                 'descripcion_frecuencia' => $this->recurrente->descripcionFrecuencia(),
                 'activo' => (bool) $this->recurrente->activo,
+                // La regla completa (para editar la serie desde las apps)
+                'descripcion' => $this->recurrente->descripcion,
+                'monto' => number_format((float) $this->recurrente->monto, 2, '.', ''),
+                'dia_semana' => $this->recurrente->dia_semana,
+                'dia_pago' => $this->recurrente->dia_pago,
+                'dia_pago_2' => $this->recurrente->dia_pago_2,
+                'fecha_inicio' => $this->recurrente->fecha_inicio?->toDateString(),
+                'fecha_fin' => $this->recurrente->fecha_fin?->toDateString(),
+                'total_cuotas' => $this->recurrente->total_cuotas,
+                'categoria_personal_id' => $this->recurrente->categoria_personal_id,
+                'medio_pago' => $this->recurrente->medio_pago,
             ] : null),
             'abonos' => MovimientoEfectivoResource::collection($this->whenLoaded('movimientos')),
         ];

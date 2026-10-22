@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\TipoCuentaController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\CargoFijoController;
 use App\Http\Controllers\CategoriaPersonalController;
 use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\ContactoController;
@@ -49,6 +50,11 @@ Route::middleware('auth')->group(function () {
         ->middlewareFor(['create', 'store'], 'can:compromisos.create')
         ->middlewareFor(['edit', 'update'], 'can:compromisos.edit')
         ->middlewareFor('destroy', 'can:compromisos.delete');
+    // La regla de la serie a la que pertenece un pago (se aplica a los pagos futuros sin tocar)
+    Route::get('compromisos/{compromiso}/serie/edit', [CompromisoController::class, 'editSerie'])
+        ->middleware('can:compromisos.edit')->name('compromisos.serie.edit');
+    Route::put('compromisos/{compromiso}/serie', [CompromisoController::class, 'updateSerie'])
+        ->middleware('can:compromisos.edit')->name('compromisos.serie.update');
     Route::get('compromisos/{compromiso}/pagar', [PagoCompromisoController::class, 'create'])
         ->middleware('can:compromisos.view')->name('compromisos.pagar');
     Route::post('compromisos/{compromiso}/pagar', [PagoCompromisoController::class, 'store'])
@@ -93,6 +99,14 @@ Route::middleware('auth')->group(function () {
         Route::get('{movimiento}/edit', 'edit')->middleware('can:tarjetas.edit')->name('edit');
         Route::put('{movimiento}', 'update')->middleware('can:tarjetas.edit')->name('update');
         Route::delete('{movimiento}', 'destroy')->middleware('can:tarjetas.delete')->name('destroy');
+    });
+    // Cargos fijos de una tarjeta (seguro, membresía…): se agregan solos en cada corte
+    Route::prefix('tarjetas/{tarjeta}/cargos-fijos')->name('tarjetas.cargos.')->controller(CargoFijoController::class)->group(function () {
+        Route::get('create', 'create')->middleware('can:tarjetas.edit')->name('create');
+        Route::post('/', 'store')->middleware('can:tarjetas.edit')->name('store');
+        Route::get('{cargo}/edit', 'edit')->middleware('can:tarjetas.edit')->name('edit');
+        Route::put('{cargo}', 'update')->middleware('can:tarjetas.edit')->name('update');
+        Route::delete('{cargo}', 'destroy')->middleware('can:tarjetas.edit')->name('destroy');
     });
     Route::prefix('estados-cuenta/{estado}')->name('estados-cuenta.')->controller(EstadoCuentaController::class)->group(function () {
         Route::get('/', 'show')->middleware('can:tarjetas.view')->name('show');

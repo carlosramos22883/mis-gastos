@@ -220,7 +220,7 @@
     <!-- Tabla de Datos -->
     <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-            <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <thead class="text-xs text-gray-600 uppercase bg-cabecera dark:bg-gray-700 dark:text-gray-400">
                 <tr>
                     @foreach ($headers as $header)
                         <th class="px-6 py-3 {{ $header['width'] ?? '' }}">

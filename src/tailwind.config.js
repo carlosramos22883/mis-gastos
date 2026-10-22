@@ -10,6 +10,9 @@ export default {
     theme: {
         extend: {
             colors: {
+                // Modo claro: fondo de página y encabezados de tabla con más contraste contra las tarjetas blancas
+                fondo: '#e4e7ec',
+                cabecera: '#e9ecf1',
                 primary: {
                     50: '#f0f4ff',
                     100: '#e0e7ff',

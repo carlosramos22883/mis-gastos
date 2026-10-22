@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\EstadoCuentaTarjeta;
+use App\Models\MovimientoCuenta;
+use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Models\TarjetaCredito;
 use App\Models\User;
@@ -25,6 +28,9 @@ use Illuminate\Validation\ValidationException;
 class TarjetaService
 {
     private const SUMAN = ['compra', 'avance', 'cargo'];
+
+    /** Categoría de los pagos de una tarjeta: no es gasto (sus compras ya lo son), solo ordena el historial. */
+    public const CATEGORIA_PAGO = 'Pago de tarjeta';
 
     public function __construct(
         private readonly CicloEfectivoService $ciclos,
@@ -199,8 +205,8 @@ class TarjetaService
         return DB::transaction(function () use ($tarjeta, $compromiso, $data) {
             $movimiento = $this->registrarMovimiento($tarjeta, [
                 'tipo' => 'compra', 'descripcion' => $data['descripcion'], 'monto' => $data['monto'], 'fecha' => $data['fecha'],
-                // Pagar otra tarjeta no es un gasto nuevo (sus compras ya tienen categoría); una factura sí
-                'categoria_personal_id' => $compromiso->tarjeta_credito_id ? null : ($data['categoria_personal_id'] ?? null),
+                // Pagar otra tarjeta no es un gasto nuevo (sus compras ya tienen categoría): "Pago de tarjeta"; una factura sí lleva la suya
+                'categoria_personal_id' => $compromiso->tarjeta_credito_id ? $this->categoriaPago($tarjeta->hogar_id, $tarjeta->user_id) : ($data['categoria_personal_id'] ?? null),
                 'user_id' => $data['user_id'] ?? null, 'contacto_id' => $compromiso->contacto_id, 'pago_compromiso_id' => $compromiso->id,
             ]);
             $this->compromisos->abonar($compromiso, (float) $data['monto']);
@@ -241,6 +247,62 @@ class TarjetaService
     {
         return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && ! $movimiento->items()->exists()
             && MovimientoVinculado::modulo($movimiento) === null; // los de un deudor o un préstamo se gestionan desde su módulo
+    }
+
+    /**
+     * Agrega al período los cargos fijos activos (seguro, membresía…) con fecha del corte, una sola vez por corte.
+     * Se llama al generar el estado de cuenta, así el cargo entra en ese corte como cualquier otro movimiento.
+     */
+    private function aplicarCargosFijos(TarjetaCredito $tarjeta, Carbon $inicio, Carbon $corte): void
+    {
+        $cargos = $tarjeta->cargosFijos()->where('activo', true)->whereDate('desde', '<=', $corte->toDateString())->get();
+        foreach ($cargos as $cargo) {
+            $yaEsta = $cargo->movimientos()->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $corte->toDateString())->exists();
+            if (! $yaEsta) {
+                $tarjeta->movimientos()->create([
+                    'user_id' => $tarjeta->user_id, 'tipo' => 'cargo', 'descripcion' => $cargo->descripcion, 'monto' => $cargo->monto,
+                    'fecha' => $corte->toDateString(), 'categoria_personal_id' => $cargo->categoria_personal_id, 'cargo_fijo_id' => $cargo->id,
+                ]);
+            }
+        }
+    }
+
+    /** Cargos fijos que se sumarán al próximo corte (aún no aplicados), para mostrarlos en "por facturar". */
+    public function cargosFijosDelProximoCorte(TarjetaCredito $tarjeta): Collection
+    {
+        $inicio = $this->inicioPeriodoAbierto($tarjeta);
+        $corte = $this->proximoCorte($tarjeta, $inicio);
+
+        return $tarjeta->cargosFijos()->where('activo', true)->whereDate('desde', '<=', $corte->toDateString())
+            ->whereDoesntHave('movimientos', fn ($q) => $q->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $corte->toDateString()))
+            ->orderBy('descripcion')->get();
+    }
+
+    /** Id de la categoría "Pago de tarjeta" del hogar (se crea la primera vez). */
+    public function categoriaPago(int $hogarId, ?int $userId = null): int
+    {
+        return CategoriaPersonal::firstOrCreate(
+            ['hogar_id' => $hogarId, 'nombre' => self::CATEGORIA_PAGO, 'tipo' => 'egreso'],
+            ['user_id' => $userId, 'color' => '#475569', 'activo' => true],
+        )->id;
+    }
+
+    /**
+     * Pagos hechos a los estados de cuenta de la tarjeta (desde efectivo, una cuenta u otra tarjeta), del más reciente al más antiguo.
+     *
+     * @return Collection<int, array{clase: string, id: int, fecha: Carbon, descripcion: string, desde: string, monto: float, user_id: ?int, compromiso_id: int}>
+     */
+    public function pagos(TarjetaCredito $tarjeta, int $limite = 30): Collection
+    {
+        $ids = $tarjeta->compromisos()->pluck('id');
+        $fila = fn (string $clase, string $desde) => fn ($m) => ['clase' => $clase, 'id' => $m->id, 'fecha' => $m->fecha, 'descripcion' => $m->descripcion,
+            'desde' => $desde, 'monto' => (float) $m->monto, 'user_id' => $m->user_id, 'compromiso_id' => (int) ($m->compromiso_id ?? $m->pago_compromiso_id)];
+
+        return collect()
+            ->concat(MovimientoEfectivo::whereIn('compromiso_id', $ids)->where('tipo', 'egreso')->get()->map($fila('efectivo', 'Efectivo')))
+            ->concat(MovimientoCuenta::with('cuenta')->whereIn('compromiso_id', $ids)->where('tipo', 'egreso')->get()->map(fn ($m) => $fila('cuenta', $m->cuenta->nombre)($m)))
+            ->concat(MovimientoTarjeta::with('tarjeta')->whereIn('pago_compromiso_id', $ids)->get()->map(fn ($m) => $fila('tarjeta', 'Tarjeta '.$m->tarjeta->nombre)($m)))
+            ->sortByDesc(fn ($p) => $p['fecha']->toDateString().sprintf('%010d', $p['id']))->take($limite)->values();
     }
 
     /** Avance a efectivo o a una cuenta (lo crea TransferenciaService). */
@@ -301,6 +363,7 @@ class TarjetaService
     private function generarEstado(TarjetaCredito $tarjeta, Carbon $inicio, Carbon $corte): EstadoCuentaTarjeta
     {
         return DB::transaction(function () use ($tarjeta, $inicio, $corte) {
+            $this->aplicarCargosFijos($tarjeta, $inicio, $corte);
             $lineas = $this->lineasDelPeriodo($tarjeta, $inicio, $corte);
             $total = round($lineas->sum('monto'), 2);
             $limite = $this->fechaLimite($tarjeta, $corte);

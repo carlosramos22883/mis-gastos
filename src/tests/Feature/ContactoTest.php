@@ -141,6 +141,19 @@ class ContactoTest extends TestCase
         $this->assertSame('activa', Deuda::where('descripcion', 'Refri')->first()->estado());
     }
 
+    public function test_quien_ya_pago_todo_sale_de_nos_deben(): void
+    {
+        $this->prestar(['descripcion' => 'Camiseta', 'monto' => '5.00']);
+        $this->actingAs($this->user)->get(route('contactos.index', ['filtro' => 'deben']))->assertSee('Aquino');
+
+        $this->pagar(['monto' => '5.00'])->assertOk();
+
+        // Ni en la web ni en la API (la app) aparece quien ya no debe nada; en "Todos" sí sigue
+        $this->actingAs($this->user)->get(route('contactos.index', ['filtro' => 'deben']))->assertOk()->assertDontSee('Aquino');
+        $this->actingAs($this->user)->getJson('/api/contactos?filtro=deben')->assertOk()->assertJsonCount(0, 'data');
+        $this->actingAs($this->user)->get(route('contactos.index'))->assertSee('Aquino');
+    }
+
     public function test_eliminar_pago_y_deuda_revierte_los_movimientos(): void
     {
         $this->prestar([]);

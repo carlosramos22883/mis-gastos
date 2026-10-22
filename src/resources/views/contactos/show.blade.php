@@ -67,7 +67,7 @@
                 <h2 class="border-b border-gray-200 px-6 py-4 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">Lo que te debe</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                        <thead class="bg-cabecera text-left text-xs uppercase text-gray-600 dark:bg-gray-700/50 dark:text-gray-400">
                             <tr><th class="px-6 py-3">Fecha</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Salió de</th><th class="px-6 py-3 text-right">Monto</th><th class="px-6 py-3 text-right">Pendiente</th><th class="px-6 py-3">Estado</th><th class="px-6 py-3"></th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">

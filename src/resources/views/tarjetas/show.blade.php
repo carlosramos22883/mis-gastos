@@ -81,11 +81,16 @@
         <section class="rounded-lg bg-white shadow dark:bg-gray-800">
             <div class="flex flex-wrap items-center justify-between gap-2 px-6 pt-5">
                 <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Por facturar en el corte del {{ $tarjeta->proximo_corte->format('d/m/Y') }}</h2>
-                <span class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format($porFacturar->sum('monto'), 2) }}</span>
+                <span class="text-right">
+                    <span class="block text-lg font-bold text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format($porFacturar->sum('monto') + $cargosProximos->sum('monto'), 2) }}</span>
+                    @if ($cargosProximos->isNotEmpty())
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">incluye {{ $cargosProximos->pluck('descripcion')->join(', ') }} ({{ $simbolo }} {{ number_format($cargosProximos->sum('monto'), 2) }}) que se suma al cortar</span>
+                    @endif
+                </span>
             </div>
             <div class="overflow-x-auto">
                 <table class="mt-3 w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                    <thead class="text-xs uppercase bg-cabecera text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                         <tr><th class="px-6 py-3">Fecha</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Tipo</th><th class="px-6 py-3 text-right">Monto</th><th class="px-6 py-3 text-right">Acciones</th></tr>
                     </thead>
                     <tbody>
@@ -147,7 +152,7 @@
             <h2 class="px-6 pt-5 text-base font-semibold text-gray-900 dark:text-gray-100">Estados de cuenta</h2>
             <div class="overflow-x-auto">
                 <table class="mt-3 w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                    <thead class="text-xs uppercase bg-cabecera text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                         <tr><th class="px-6 py-3">Corte</th><th class="px-6 py-3">Total</th><th class="px-6 py-3">Fecha límite</th><th class="px-6 py-3">Pago</th><th class="px-6 py-3 text-right">Acciones</th></tr>
                     </thead>
                     <tbody>
@@ -210,8 +215,61 @@
                 </table>
             </div>
         </section>
+
+        {{-- Cargos fijos: se agregan solos en cada corte --}}
+        <section class="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-gray-100">Cargos fijos</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Seguro, membresía… se agregan solos a cada estado de cuenta.</p>
+                </div>
+                @can('tarjetas.edit')
+                    <x-secondary-button type="button" x-on:click="$dispatch('load-cargo-modal-form', '{{ route('tarjetas.cargos.create', $tarjeta) }}'); $dispatch('open-modal', 'cargo-modal')">Agregar</x-secondary-button>
+                @endcan
+            </div>
+            <ul class="divide-y divide-gray-100 text-sm dark:divide-gray-700">
+                @forelse ($tarjeta->cargosFijos()->with('categoria')->orderByDesc('activo')->orderBy('descripcion')->get() as $cargo)
+                    <li class="flex items-center justify-between gap-3 px-6 py-3 {{ $cargo->activo ? '' : 'opacity-60' }}">
+                        <span class="min-w-0">
+                            <span class="block text-gray-800 dark:text-gray-200">{{ $cargo->descripcion }}@unless ($cargo->activo) <span class="text-xs text-gray-500">· inactivo</span>@endunless</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Cada corte desde el {{ $cargo->desde->format('d/m/Y') }}{{ $cargo->categoria ? ' · '.$cargo->categoria->nombre : '' }}</span>
+                        </span>
+                        <span class="flex shrink-0 items-center gap-3">
+                            <strong class="text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format((float) $cargo->monto, 2) }}</strong>
+                            @can('tarjetas.edit')
+                                <button type="button" class="text-primary-600 hover:underline dark:text-primary-400" x-on:click="$dispatch('load-cargo-modal-form', '{{ route('tarjetas.cargos.edit', [$tarjeta, $cargo]) }}'); $dispatch('open-modal', 'cargo-modal')">Editar</button>
+                                <button type="button" class="text-red-600 hover:underline dark:text-red-400" x-on:click="deleteItem({{ $cargo->id }}, {{ \Illuminate\Support\Js::from($cargo->descripcion) }}, '{{ route('tarjetas.cargos.destroy', [$tarjeta, $cargo]) }}')">Eliminar</button>
+                            @endcan
+                        </span>
+                    </li>
+                @empty
+                    <li class="px-6 py-6 text-center text-gray-500 dark:text-gray-400">Sin cargos fijos. Si la tarjeta cobra un seguro cada mes, agrégalo aquí.</li>
+                @endforelse
+            </ul>
+        </section>
+
+        {{-- Pagos hechos a sus estados de cuenta (desde efectivo, una cuenta u otra tarjeta); cada uno lleva a su movimiento --}}
+        <section class="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h2 class="font-semibold text-gray-900 dark:text-gray-100">Pagos realizados</h2>
+                @if ($pagos->count() >= 30)<span class="text-sm text-gray-500 dark:text-gray-400">Los 30 más recientes</span>@endif
+            </div>
+            <ul class="divide-y divide-gray-100 text-sm dark:divide-gray-700">
+                @forelse ($pagos as $p)
+                    <li><a href="{{ route('movimientos.ver', [$p['clase'], $p['id'], 'desde' => 'tarjeta:'.$tarjeta->id]) }}" class="flex items-center justify-between gap-3 px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <span class="min-w-0">
+                            <span class="block truncate text-gray-800 dark:text-gray-200">@include('hogar._por', ['id' => $p['user_id']]){{ $p['descripcion'] }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ $p['fecha']->format('d/m/Y') }} · desde {{ $p['desde'] }}</span>
+                        </span>
+                        <strong class="shrink-0 text-green-700 dark:text-green-400">{{ $simbolo }} {{ number_format($p['monto'], 2) }}</strong>
+                    </a></li>
+                @empty
+                    <li class="px-6 py-6 text-center text-gray-500 dark:text-gray-400">Aún no hay pagos registrados a esta tarjeta.</li>
+                @endforelse
+            </ul>
+        </section>
     </div>
-    @foreach (['tarjeta', 'movimiento', 'transferencia', 'estado', 'pago', 'mora'] as $modal)
+    @foreach (['tarjeta', 'movimiento', 'transferencia', 'estado', 'pago', 'mora', 'cargo'] as $modal)
         <x-ajax-modal :name="$modal" />
     @endforeach
 </x-app-layout>

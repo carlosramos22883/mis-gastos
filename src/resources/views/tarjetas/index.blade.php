@@ -14,7 +14,17 @@
                     <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ $simbolo }} {{ number_format($tarjetas->sum('deuda'), 2) }}</p>
                 </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+                @if ($tarjetas->count() > 1)
+                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">Ordenar por
+                        <select class="rounded-lg border-gray-300 py-2 pr-8 text-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                            onchange="window.location='{{ route('tarjetas.index') }}?orden=' + this.value" aria-label="Ordenar tarjetas">
+                            @foreach ($ordenes as $clave => $texto)
+                                <option value="{{ $clave }}" @selected($orden === $clave)>{{ $texto }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
                 @can('tarjetas.export')
                     <x-secondary-button type="button" onclick="window.location='{{ route('tarjetas.export', ['format' => 'xlsx']) }}'">Exportar</x-secondary-button>
                 @endcan

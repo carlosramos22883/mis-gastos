@@ -57,6 +57,8 @@ class CuentaController extends Controller
             return response()->json([
                 'html' => view('cuentas._movimientos', compact('cuenta', 'movimientos', 'inicioActual'))->render(),
                 'pagination' => $movimientos->links()->render(),
+                // Las tarjetas de resumen se actualizan con cada recarga de la tabla (data-cash-card)
+                ...array_map(fn (float $v) => number_format($v, 2, '.', ''), $resumen),
             ]);
         }
 

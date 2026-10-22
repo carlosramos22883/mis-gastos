@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\CompromisosExport;
 use App\Http\Requests\CompromisoRequest;
+use App\Http\Requests\SerieCompromisoRequest;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Services\CicloEfectivoService;
@@ -94,6 +95,24 @@ class CompromisoController extends Controller
         $this->compromisos->actualizarPago($compromiso, $request->datosPago());
 
         return $this->response($request, $compromiso, 'Compromiso actualizado correctamente.');
+    }
+
+    /** Formulario para editar la regla de la serie a la que pertenece este pago. */
+    public function editSerie(Request $request, Compromiso $compromiso)
+    {
+        $this->own($request, $compromiso);
+        abort_unless($compromiso->recurrente, 404);
+
+        return view('compromisos._serie_form', $this->formData($request) + ['compromiso' => $compromiso, 'serie' => $compromiso->recurrente]);
+    }
+
+    public function updateSerie(SerieCompromisoRequest $request, Compromiso $compromiso)
+    {
+        $this->own($request, $compromiso);
+        abort_unless($compromiso->recurrente, 404);
+        $n = $this->compromisos->actualizarSerie($compromiso->recurrente, $request->datosSerie());
+
+        return response()->json(['success' => true, 'message' => 'Serie actualizada'.($n ? ": {$n} pago(s) pendiente(s) al día con la regla." : '. Se aplica a los próximos pagos.')]);
     }
 
     public function destroy(Request $request, Compromiso $compromiso)

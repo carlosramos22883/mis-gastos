@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Compromiso;
 use App\Models\TarjetaCredito;
+use App\Models\TipoCuenta;
 use App\Models\User;
 use App\Services\CompromisoService;
+use App\Services\DashboardService;
 use App\Services\TarjetaService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,7 +81,7 @@ class PagoConTarjetaTest extends TestCase
         $this->assertSame(400.0, $this->disponible($this->credisiman));
 
         $cargo = $this->atlantida->movimientos()->first();
-        $this->assertNull($cargo->categoria_personal_id); // pagar otra tarjeta no es un gasto nuevo
+        $this->assertSame(TarjetaService::CATEGORIA_PAGO, $cargo->categoria->nombre); // "Pago de tarjeta": no es un gasto nuevo
         $this->actingAs($this->user)->get(route('compromisos.show', $this->estado))->assertOk()->assertSee('Tarjeta Atlantida');
 
         // Eliminar el cargo devuelve ese monto al estado de cuenta
@@ -109,5 +111,26 @@ class PagoConTarjetaTest extends TestCase
             ->assertOk()->assertJsonPath('data.estado', 'pagado');
         $this->postJson("/api/compromisos/{$this->estado->id}/pagar", ['origen' => 'efectivo', 'monto' => '1.00', 'fecha' => '2026-10-19', 'descripcion' => 'x'])
             ->assertUnprocessable();
+    }
+
+    public function test_pagar_desde_una_cuenta_lleva_categoria_pago_de_tarjeta_y_se_lista_en_la_tarjeta(): void
+    {
+        TipoCuenta::create(['nombre' => 'Ahorro', 'activo' => true]);
+        $cuenta = $this->user->cuentas()->create(['nombre' => 'Agrícola', 'tipo_cuenta_id' => TipoCuenta::first()->id, 'saldo_inicial' => 100, 'fecha_inicial' => '2026-10-01', 'color' => '#0369A1']);
+
+        $this->pagar(['origen' => 'cuenta:'.$cuenta->id, 'monto' => '5.00', 'descripcion' => 'Abono Credisiman'])->assertOk();
+
+        $mov = $cuenta->movimientos()->first();
+        $this->assertSame(TarjetaService::CATEGORIA_PAGO, $mov->categoria->nombre);
+        $this->assertSame('91.62', $this->estado->fresh()->saldo_pendiente);
+
+        // Se ve en la pantalla de la tarjeta y en la API
+        $this->actingAs($this->user)->get(route('tarjetas.show', $this->credisiman))->assertOk()->assertSee('Pagos realizados')->assertSee('Abono Credisiman')->assertSee('desde Agrícola');
+        Sanctum::actingAs($this->user);
+        $this->getJson("/api/tarjetas/{$this->credisiman->id}")->assertOk()->assertJsonPath('data.pagos.0.desde', 'Agrícola')->assertJsonPath('data.pagos.0.monto', '5.00');
+
+        // No es un gasto del ciclo (las compras de la tarjeta ya lo son)
+        [, $inicio, $fin] = app(CompromisoService::class)->fechas($this->user);
+        $this->assertNotContains(TarjetaService::CATEGORIA_PAGO, array_column(app(DashboardService::class)->gastosPorCategoria($this->user, $inicio, $fin), 'nombre'));
     }
 }

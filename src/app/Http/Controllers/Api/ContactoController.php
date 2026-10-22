@@ -22,7 +22,7 @@ class ContactoController extends Controller
     public function __construct(private readonly ContactoService $contactos, private readonly DeudorService $deudas) {}
 
     #[OA\Get(path: '/api/contactos', summary: 'Contactos con lo que deben', tags: ['Contactos'], security: [['bearerAuth' => []]],
-        parameters: [new OA\Parameter(name: 'filtro', in: 'query', description: '"deben": solo los que tienen deudas', schema: new OA\Schema(type: 'string'))],
+        parameters: [new OA\Parameter(name: 'filtro', in: 'query', description: '"deben": solo los que tienen saldo pendiente', schema: new OA\Schema(type: 'string'))],
         responses: [new OA\Response(response: 200, description: 'Lista')])]
     public function index(Request $request)
     {
@@ -30,6 +30,9 @@ class ContactoController extends Controller
             ->when($request->get('filtro') === 'deben', fn ($q) => $q->whereHas('deudas'))
             ->orderByDesc('activo')->orderBy('nombre')->orderBy('apellido')->get()
             ->each(fn (Contacto $c) => $this->deudas->resumir($c));
+        if ($request->get('filtro') === 'deben') {
+            $lista = $lista->filter(fn (Contacto $c) => $c->pendiente > 0)->values(); // deudas ya pagadas no cuentan
+        }
 
         return ContactoResource::collection($lista);
     }

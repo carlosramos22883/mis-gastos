@@ -62,6 +62,11 @@ class TarjetaController extends Controller
                 ->map(fn ($e) => ['id' => $e->id, 'fecha_inicio' => $e->fecha_inicio->toDateString(), 'fecha_corte' => $e->fecha_corte->toDateString(),
                     'fecha_limite_pago' => $e->fecha_limite_pago?->toDateString(), 'total' => $dinero($e->total),
                     'compromiso_id' => $e->compromiso?->id, 'estado' => $e->compromiso?->estado, 'saldo_pendiente' => $e->compromiso ? $dinero($e->compromiso->saldo_pendiente) : null])->values(),
+            'cargos_fijos' => $tarjeta->cargosFijos()->orderByDesc('activo')->orderBy('descripcion')->get()
+                ->map(fn ($c) => ['id' => $c->id, 'descripcion' => $c->descripcion, 'monto' => $dinero($c->monto), 'desde' => $c->desde->toDateString(), 'activo' => (bool) $c->activo])->values(),
+            'cargos_proximo_corte' => $dinero($this->tarjetas->cargosFijosDelProximoCorte($tarjeta)->sum('monto')),
+            'pagos' => $this->tarjetas->pagos($tarjeta)->map(fn ($p) => ['clase' => $p['clase'], 'id' => $p['id'], 'fecha' => $p['fecha']->toDateString(),
+                'descripcion' => $p['descripcion'], 'desde' => $p['desde'], 'monto' => $dinero($p['monto']), 'user_id' => $p['user_id']])->values(),
             'por_pagar' => $tarjeta->compromisos()->with('tarjeta')->where('estado', Compromiso::PENDIENTE)->orderBy('fecha_esperada')->get()
                 ->map(fn ($c) => ['compromiso' => new CompromisoResource($c), 'costo_de_no_pagar' => $this->tarjetas->costoDeNoPagar($tarjeta, $c)])->values(),
         ]]);

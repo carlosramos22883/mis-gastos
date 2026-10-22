@@ -364,9 +364,13 @@ document.addEventListener('alpine:init', () => {
                     const data = await response.json();
                     this.tableBodyHtml = data.html;
                     this.paginationHtml = data.pagination;
-                    ['balance', 'ingresos', 'egresos'].forEach((key) => {
-                        const value = document.querySelector(`[data-cash-card="${key}"] [data-cash-value]`);
-                        if (value && data[key] !== undefined) value.textContent = `${value.dataset.cashSymbol || ''} ${data[key]}`;
+                    // Tarjetas de resumen (efectivo, cuentas…): data-cash-card="clave" se llena con data[clave]
+                    document.querySelectorAll('[data-cash-card]').forEach((card) => {
+                        const value = card.querySelector('[data-cash-value]');
+                        const nuevo = data[card.dataset.cashCard];
+                        if (!value || nuevo === undefined) return;
+                        const monto = Number(nuevo).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        value.textContent = `${value.dataset.cashSymbol || ''} ${monto}`;
                     });
 
                     window.history.pushState({}, '', url.toString());

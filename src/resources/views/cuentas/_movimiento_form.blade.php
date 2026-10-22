@@ -6,6 +6,9 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
     </div>
+    @unless (isset($movimiento))
+        @include('transferencias._aviso', ['modal' => 'movimiento-modal', 'origen' => 'cuenta:'.$cuenta->id, 'destino' => 'efectivo'])
+    @endunless
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$movimiento->descripcion ?? ''" :error="$errors->first('descripcion')" required />
     @include('hogar._quien', ['valor' => $movimiento->user_id ?? null])
     @include('contactos._quien', ['valor' => $movimiento->contacto_id ?? null, 'label' => '¿Con quién? (opcional)'])

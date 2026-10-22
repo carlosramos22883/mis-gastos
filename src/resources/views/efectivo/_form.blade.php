@@ -14,6 +14,9 @@
             Pendiente: <strong>{{ auth()->user()->monedaPreferida?->simbolo ?? '$' }} {{ number_format((float) $compromiso->saldo_pendiente, 2) }}</strong>. Puedes pagarlo completo o hacer un abono parcial.
         </p>
     @endisset
+    @if (! isset($movimiento) && ! isset($compromiso))
+        @include('transferencias._aviso', ['modal' => 'efectivo-modal', 'origen' => 'efectivo'])
+    @endif
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$movimiento->descripcion ?? ($compromiso->descripcion ?? '')" :error="$errors->first('descripcion')" required />
     @include('hogar._quien', ['valor' => $movimiento->user_id ?? null])
     @include('contactos._quien', ['valor' => $movimiento->contacto_id ?? null, 'label' => '¿Con quién? (a quién le pagaste o quién te pagó)'])

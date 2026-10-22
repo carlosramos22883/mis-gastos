@@ -30,7 +30,8 @@
                     <a href="{{ route('prestamos.show', $prestamo) }}" class="relative block overflow-hidden rounded-lg bg-white p-5 pl-6 shadow hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/40 {{ $prestamo->activo ? '' : 'opacity-60' }}" data-record-id="{{ $prestamo->id }}">
                         <span class="absolute inset-y-0 left-0 w-1.5" style="background-color: {{ $prestamo->color }}"></span>
                         <div class="flex items-center gap-3">
-                            <x-logo-banco :banco="$prestamo->banco" />
+                            {{-- Con un banco: su logo; con una persona (contacto): su foto --}}
+                            @if (! $prestamo->banco && $prestamo->contacto)<x-avatar-contacto :contacto="$prestamo->contacto" />@else<x-logo-banco :banco="$prestamo->banco" />@endif
                             <div class="min-w-0">
                                 <p class="truncate font-semibold text-gray-900 dark:text-gray-100">@include('hogar._por', ['id' => $prestamo->user_id]){{ $prestamo->nombre }}</p>
                                 <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $prestamo->nombreAcreedor() }} · {{ (float) $prestamo->tasa_anual > 0 ? rtrim(rtrim(number_format((float) $prestamo->tasa_anual, 3), '0'), '.').' %' : 'sin interés' }}</p>

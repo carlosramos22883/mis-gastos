@@ -138,6 +138,58 @@ class CompromisoService
     }
 
     /**
+     * Edita la regla de una serie y la aplica a sus pagos futuros que aún no se tocaron (pendientes, sin abonos,
+     * desde hoy). Los pagados, abonados o cancelados no cambian. Si cambia el calendario (frecuencia o días), esos
+     * pagos futuros se vuelven a generar con las fechas nuevas. Devuelve cuántos pagos futuros quedaron actualizados.
+     */
+    public function actualizarSerie(CompromisoRecurrente $recurrente, array $data): int
+    {
+        return DB::transaction(function () use ($recurrente, $data) {
+            $recurrente = CompromisoRecurrente::whereKey($recurrente->id)->lockForUpdate()->first();
+            $user = $recurrente->user;
+            $hoy = $this->hoy($user);
+            $calendario = ['frecuencia', 'dia_semana', 'dia_pago', 'dia_pago_2'];
+            $cambiaCalendario = collect($calendario)->contains(fn ($c) => (string) ($recurrente->{$c} ?? '') !== (string) ($data[$c] ?? ''));
+
+            $recurrente->fill($data);
+            $futuros = fn () => $recurrente->compromisos()->where('estado', Compromiso::PENDIENTE)->whereColumn('saldo_pendiente', 'monto')
+                ->whereDate('fecha_esperada', '>=', $hoy->toDateString());
+
+            // Calendario nuevo, fin más cercano o menos cuotas: los pagos futuros sin tocar se quitan y se regeneran
+            $quitar = $cambiaCalendario ? $futuros()->get()
+                : $futuros()->get()->filter(fn ($c) => $recurrente->fecha_fin && $c->fecha_esperada->toDateString() > $recurrente->fecha_fin->toDateString());
+            if (! $cambiaCalendario && $recurrente->total_cuotas && $recurrente->cuotas_generadas > $recurrente->total_cuotas) {
+                $quitar = $quitar->concat($futuros()->orderByDesc('numero_cuota')->take($recurrente->cuotas_generadas - $recurrente->total_cuotas)->get())->unique('id');
+            }
+            if ($quitar->isNotEmpty()) {
+                Compromiso::whereIn('id', $quitar->pluck('id'))->delete();
+                $recurrente->cuotas_generadas = max(0, $recurrente->cuotas_generadas - $quitar->count());
+            }
+            if ($cambiaCalendario) {
+                $ultimo = $recurrente->compromisos()->max('fecha_esperada');
+                $recurrente->generado_hasta = max($hoy->copy()->subDay()->toDateString(), $ultimo ? Carbon::parse($ultimo)->toDateString() : $recurrente->fecha_inicio->copy()->subDay()->toDateString());
+            }
+
+            // Sigue viva si no llegó a su fin (pudo extenderse)
+            $recurrente->activo = ! ($recurrente->fecha_fin && $recurrente->fecha_fin->toDateString() < $hoy->toDateString())
+                && ! ($recurrente->total_cuotas && $recurrente->cuotas_generadas >= $recurrente->total_cuotas);
+            $recurrente->save();
+
+            // Lo demás (monto, descripción, categoría…) se aplica a los pagos futuros sin tocar
+            $actualizados = $futuros()->update([
+                'user_id' => $recurrente->user_id, 'contacto_id' => $recurrente->contacto_id, 'categoria_personal_id' => $recurrente->categoria_personal_id,
+                'descripcion' => $recurrente->descripcion, 'comentario' => $recurrente->comentario, 'monto' => $recurrente->monto,
+                'saldo_pendiente' => $recurrente->monto, 'medio_pago' => $recurrente->medio_pago, 'total_cuotas' => $recurrente->total_cuotas,
+            ]);
+            if ($recurrente->activo) {
+                $actualizados += $this->generar($recurrente, $this->ciclos->cycleFor($user)[1]);
+            }
+
+            return $actualizados;
+        });
+    }
+
+    /**
      * Fechas de pago en el rango ($desde, $hasta]. El día 31 (ULTIMO_DIA) o cualquier día
      * que el mes no tenga se ajusta al último día del mes (ej. 28 de febrero).
      *

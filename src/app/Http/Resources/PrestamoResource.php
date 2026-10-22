@@ -24,6 +24,9 @@ class PrestamoResource extends JsonResource
             'tipo' => $this->tipoPrestamo?->nombre,
             'banco_id' => $this->banco_id,
             'acreedor' => $this->nombreAcreedor(),
+            // Logo del banco o, si es de una persona, la foto del contacto (requiere el token)
+            'banco' => $this->banco ? ['id' => $this->banco->id, 'nombre' => $this->banco->nombre, 'logo_url' => $this->banco->logo ? asset('storage/'.$this->banco->logo) : null] : null,
+            'contacto' => $this->contacto ? ['id' => $this->contacto->id, 'nombre' => $this->contacto->nombreCompleto(), 'foto_url' => $this->contacto->urlFoto(true)] : null,
             'monto_original' => $dinero($this->monto_original),
             'tasa_anual' => (string) (float) $this->tasa_anual,
             'plazo_meses' => $this->plazo_meses,

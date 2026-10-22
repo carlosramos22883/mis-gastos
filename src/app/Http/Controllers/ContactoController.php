@@ -10,6 +10,7 @@ use App\Models\Deuda;
 use App\Models\DeudaPago;
 use App\Services\ContactoService;
 use App\Services\DeudorService;
+use App\Services\PrestamoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,10 +28,11 @@ class ContactoController extends Controller
             ->orderByDesc('activo')->orderBy('nombre')->orderBy('apellido')->get()
             ->each(fn (Contacto $c) => $this->deudas->resumir($c));
         // Lo que el hogar le debe (préstamos activos de ese contacto)
-        $prestamos = app(\App\Services\PrestamoService::class);
+        $prestamos = app(PrestamoService::class);
         $contactos->each(fn (Contacto $c) => $c->setAttribute('le_debes', round((float) $c->prestamos()->where('activo', true)->get()->sum(fn ($p) => $prestamos->saldo($p)), 2)));
         if ($filtro === 'deben') {
-            $contactos = $contactos->filter(fn ($c) => $c->pendiente > 0 || $c->activo)->values();
+            // Solo quien tiene saldo pendiente: una deuda ya pagada no cuenta (aunque el contacto siga activo)
+            $contactos = $contactos->filter(fn ($c) => $c->pendiente > 0)->values();
         }
 
         return view('contactos.index', compact('contactos', 'filtro'));

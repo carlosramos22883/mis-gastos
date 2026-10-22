@@ -1,7 +1,10 @@
 @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="flex items-center gap-3"><span class="inline-block h-4 w-4 rounded-full" style="background-color: {{ $cuenta->color }}"></span>{{ $cuenta->nombre }}</h1>
+        <h1 class="flex items-center gap-3">
+            @if ($cuenta->banco)<x-logo-banco :banco="$cuenta->banco" size="lg" />@else<span class="inline-block h-4 w-4 rounded-full" style="background-color: {{ $cuenta->color }}"></span>@endif
+            {{ $cuenta->nombre }}
+        </h1>
     </x-slot>
     <div class="max-w-7xl mx-auto space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
@@ -20,15 +23,16 @@
 
         <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Ciclo del {{ $inicio->format('d/m/Y') }} al {{ $fin->format('d/m/Y') }}</p>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {{-- Lo más importante primero: el saldo de hoy. Cada tarjeta se actualiza al guardar (data-cash-card = clave del resumen) --}}
             @foreach ([
-                ['Saldo al iniciar el ciclo', $resumen['saldo_inicial'], 'text-gray-900 dark:text-gray-100'],
-                ['Ingresos', $resumen['ingresos'], 'text-green-600 dark:text-green-400'],
-                ['Egresos', $resumen['egresos'], 'text-red-600 dark:text-red-400'],
-                [$esActual ? 'Saldo actual' : 'Saldo al corte', $resumen['saldo_final'], 'text-primary-600 dark:text-primary-400'],
-            ] as [$label, $valor, $color])
-                <div class="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+                [$esActual ? 'Saldo actual' : 'Saldo al corte', $resumen['saldo_final'], 'text-primary-600 dark:text-primary-400', 'saldo_final'],
+                ['Ingresos', $resumen['ingresos'], 'text-green-600 dark:text-green-400', 'ingresos'],
+                ['Egresos', $resumen['egresos'], 'text-red-600 dark:text-red-400', 'egresos'],
+                ['Saldo al iniciar el ciclo', $resumen['saldo_inicial'], 'text-gray-900 dark:text-gray-100', 'saldo_inicial'],
+            ] as [$label, $valor, $color, $clave])
+                <div class="rounded-lg bg-white p-5 shadow dark:bg-gray-800" data-cash-card="{{ $clave }}">
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ $label }}</p>
-                    <p class="mt-1 text-2xl font-bold {{ $color }}">{{ $simbolo }} {{ number_format($valor, 2) }}</p>
+                    <p class="mt-1 text-2xl font-bold {{ $color }}" data-cash-value data-cash-symbol="{{ $simbolo }}">{{ $simbolo }} {{ number_format($valor, 2) }}</p>
                 </div>
             @endforeach
         </div>

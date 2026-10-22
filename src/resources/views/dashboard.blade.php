@@ -32,7 +32,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <p class="text-sm text-gray-600 dark:text-gray-300">
                 Ciclo del <strong>{{ \Carbon\Carbon::parse($d['ciclo']['inicio'])->format('d/m/Y') }}</strong> al <strong>{{ \Carbon\Carbon::parse($d['ciclo']['fin'])->format('d/m/Y') }}</strong>
-                · {{ $d['ciclo']['dias_restantes'] === 0 ? 'hoy es el corte' : 'faltan '.$d['ciclo']['dias_restantes'].' días para el corte' }}
+                · {{ match ($d['ciclo']['dias_restantes']) { 0 => 'hoy es el corte', 1 => 'mañana es el corte', default => 'faltan '.$d['ciclo']['dias_restantes'].' días para el corte' } }}
             </p>
             <div class="flex flex-wrap gap-2">
                 @can('efectivo.view')<x-secondary-button type="button" onclick="window.location='{{ route('efectivo.index') }}'">Efectivo</x-secondary-button>@endcan
@@ -85,7 +85,7 @@
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                        <thead class="bg-cabecera text-xs uppercase text-gray-600 dark:bg-gray-700/50 dark:text-gray-400">
                             <tr><th class="px-4 py-3 text-left">Tarjeta</th><th class="px-4 py-3 text-center">Corte</th><th class="px-4 py-3 text-center">Pago</th><th class="px-4 py-3 text-right">Límite</th><th class="px-4 py-3 text-right">Disponible</th><th class="px-4 py-3 text-right">Por pagar</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 text-gray-700 dark:divide-gray-700 dark:text-gray-300">
@@ -168,7 +168,7 @@
                     @foreach ($historial as $h)<span class="flex-1">{{ \Carbon\Carbon::parse($h['inicio'])->translatedFormat('M') }}</span>@endforeach
                 </div>
                 <table x-show="tabla" x-cloak class="mt-2 w-full text-sm text-gray-700 dark:text-gray-300">
-                    <thead class="text-xs uppercase text-gray-500"><tr><th class="py-1 text-left">Ciclo</th><th class="py-1 text-right">Ingresos</th><th class="py-1 text-right">Gastos</th><th class="py-1 text-right">Diferencia</th></tr></thead>
+                    <thead class="text-xs uppercase text-gray-600"><tr><th class="py-1 text-left">Ciclo</th><th class="py-1 text-right">Ingresos</th><th class="py-1 text-right">Gastos</th><th class="py-1 text-right">Diferencia</th></tr></thead>
                     <tbody>
                         @foreach ($historial as $h)
                             <tr class="border-t border-gray-100 dark:border-gray-700">

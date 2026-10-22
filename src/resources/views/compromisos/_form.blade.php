@@ -25,6 +25,7 @@
     @if ($editing && $compromiso->recurrente)
         <p class="rounded-lg bg-primary-50 px-4 py-3 text-sm text-primary-700 dark:bg-gray-700 dark:text-primary-300">
             Solo se modifica este pago{{ $compromiso->numero_cuota ? ' (cuota '.$compromiso->numero_cuota.($compromiso->total_cuotas ? ' de '.$compromiso->total_cuotas : '').')' : '' }}. Los siguientes de la serie no cambian.
+            <button type="button" class="ml-1 font-semibold underline hover:no-underline" x-on:click="window.dispatchEvent(new CustomEvent('load-compromiso-modal-form', { detail: '{{ route('compromisos.serie.edit', $compromiso) }}' }))">Editar toda la serie</button>
         </p>
     @endif
 

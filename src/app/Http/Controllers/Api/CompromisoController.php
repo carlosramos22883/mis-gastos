@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompromisoRequest;
 use App\Http\Requests\PagoCompromisoRequest;
+use App\Http\Requests\SerieCompromisoRequest;
 use App\Http\Resources\CompromisoResource;
 use App\Models\Compromiso;
 use App\Services\CompromisoService;
@@ -76,6 +77,17 @@ class CompromisoController extends Controller
         $this->compromisos->actualizarPago($compromiso, $request->datosPago());
 
         return new CompromisoResource($compromiso->load('categoria', 'recurrente'));
+    }
+
+    #[OA\Put(path: '/api/compromisos/{id}/serie', summary: 'Editar la regla de la serie de este pago', description: 'Mismos campos que al crear una serie, sin fecha_inicio. Se aplica a los pagos de hoy en adelante sin abonos; si cambia el calendario se regeneran.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'Serie actualizada (data = este pago)'), new OA\Response(response: 404, description: 'No pertenece a una serie'), new OA\Response(response: 422, description: 'Validación')])]
+    public function actualizarSerie(SerieCompromisoRequest $request, Compromiso $compromiso)
+    {
+        $this->own($request, $compromiso);
+        abort_unless($compromiso->recurrente, 404, 'Este compromiso no pertenece a una serie.');
+        $actualizados = $this->compromisos->actualizarSerie($compromiso->recurrente, $request->datosSerie());
+
+        return (new CompromisoResource($compromiso->fresh(['categoria', 'recurrente', 'tarjeta'])))->additional(['pagos_actualizados' => $actualizados]);
     }
 
     #[OA\Delete(path: '/api/compromisos/{id}', summary: 'Cancelar compromiso', description: 'alcance=serie cancela también los pagos siguientes sin abonos y desactiva la regla.', tags: ['Compromisos'], security: [['bearerAuth' => []]],

@@ -59,6 +59,11 @@ class TarjetaCredito extends Model
         return $this->hasMany(EstadoCuentaTarjeta::class);
     }
 
+    public function cargosFijos(): HasMany
+    {
+        return $this->hasMany(CargoFijoTarjeta::class, 'tarjeta_credito_id');
+    }
+
     public function compromisos(): HasMany
     {
         return $this->hasMany(Compromiso::class);

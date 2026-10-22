@@ -18,7 +18,7 @@ class PrestamoController extends Controller
 
     public function index(Request $request)
     {
-        $prestamos = $request->user()->prestamos()->with('banco', 'cargos')->orderByDesc('activo')->orderBy('nombre')->get()
+        $prestamos = $request->user()->prestamos()->with('banco', 'cargos', 'contacto')->orderByDesc('activo')->orderBy('nombre')->get()
             ->each(fn (Prestamo $p) => $p->setAttribute('resumen', $this->prestamos->resumen($p)));
 
         return view('prestamos.index', compact('prestamos'));

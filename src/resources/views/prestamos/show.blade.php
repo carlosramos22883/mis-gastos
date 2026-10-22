@@ -22,7 +22,7 @@
         </div>
 
         <p class="flex flex-wrap items-center gap-x-1 text-sm text-gray-600 dark:text-gray-300">
-            <x-logo-banco :banco="$prestamo->banco" class="mr-2" />
+            @if (! $prestamo->banco && $prestamo->contacto)<x-avatar-contacto :contacto="$prestamo->contacto" class="mr-2" />@else<x-logo-banco :banco="$prestamo->banco" class="mr-2" />@endif
             @include('hogar._por', ['id' => $prestamo->user_id]){{ $prestamo->tipoPrestamo?->nombre }} · {{ $prestamo->nombreAcreedor() }}
             · {{ (float) $prestamo->tasa_anual > 0 ? rtrim(rtrim(number_format((float) $prestamo->tasa_anual, 3), '0'), '.').' % anual' : 'sin interés' }}
             · {{ \App\Models\Prestamo::MEDIOS[$prestamo->medio_pago] ?? '' }}@if ((float) $prestamo->monto_planilla > 0) ({{ $simbolo }} {{ number_format((float) $prestamo->monto_planilla, 2) }} por planilla)@endif
@@ -72,7 +72,7 @@
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-                        <thead class="bg-gray-50 text-right text-xs uppercase text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                        <thead class="bg-cabecera text-right text-xs uppercase text-gray-600 dark:bg-gray-700/50 dark:text-gray-400">
                             <tr><th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Fecha</th><th class="px-4 py-3">Interés</th><th class="px-4 py-3">Capital</th><th class="px-4 py-3">Cargos</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Saldo</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 text-right text-gray-700 dark:divide-gray-700 dark:text-gray-300">
@@ -97,7 +97,7 @@
             <h2 class="border-b border-gray-200 px-6 py-4 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">Pagos registrados</h2>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-                    <thead class="bg-gray-50 text-right text-xs uppercase text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                    <thead class="bg-cabecera text-right text-xs uppercase text-gray-600 dark:bg-gray-700/50 dark:text-gray-400">
                         <tr><th class="px-4 py-3 text-left">Fecha</th><th class="px-4 py-3 text-left">Desde</th><th class="px-4 py-3">Capital</th><th class="px-4 py-3">Interés</th><th class="px-4 py-3">Cargos</th><th class="px-4 py-3">Mora</th><th class="px-4 py-3">Total</th><th class="px-4 py-3"></th></tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 text-right text-gray-700 dark:divide-gray-700 dark:text-gray-300">

@@ -22,7 +22,7 @@ use Illuminate\Support\Collection;
  */
 class DashboardService
 {
-    public const NO_SON_GASTO = ['Movimientos entre cuentas', 'Ajustes', 'Préstamos a terceros', 'Pago de avances de tarjeta'];
+    public const NO_SON_GASTO = ['Movimientos entre cuentas', 'Ajustes', 'Préstamos a terceros', 'Pago de avances de tarjeta', TarjetaService::CATEGORIA_PAGO];
 
     public const NO_SON_INGRESO = ['Saldo inicial', 'Movimientos entre cuentas', 'Ajustes', 'Avances de tarjeta', 'Préstamos recibidos', 'Cobros de deudas'];
 

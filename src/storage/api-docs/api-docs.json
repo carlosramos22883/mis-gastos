@@ -906,6 +906,32 @@
                 ]
             }
         },
+        "/api/compromisos/{id}/serie": {
+            "put": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Editar la regla de la serie de este pago",
+                "description": "Mismos campos que al crear una serie, sin fecha_inicio. Se aplica a los pagos de hoy en adelante sin abonos; si cambia el calendario se regeneran.",
+                "operationId": "2445cd6d1c41db5d0f00d2f850832003",
+                "responses": {
+                    "200": {
+                        "description": "Serie actualizada (data = este pago)"
+                    },
+                    "404": {
+                        "description": "No pertenece a una serie"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/compromisos/{id}/origenes-pago": {
             "get": {
                 "tags": [
@@ -991,7 +1017,7 @@
                     {
                         "name": "filtro",
                         "in": "query",
-                        "description": "\"deben\": solo los que tienen deudas",
+                        "description": "\"deben\": solo los que tienen saldo pendiente",
                         "schema": {
                             "type": "string"
                         }

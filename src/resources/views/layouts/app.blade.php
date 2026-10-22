@@ -12,7 +12,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="font-sans antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+<body class="font-sans antialiased bg-fondo dark:bg-gray-900 text-gray-900 dark:text-gray-100"
     x-data="{ sidebarOpen: false }">
 
     <!-- Sidebar: menú "off-canvas", oculto por defecto en TODOS los tamaños de pantalla -->
@@ -108,7 +108,7 @@
 
         <!-- Área de Contenido -->
         {{-- pb-28: el footer es fijo; se deja su alto (~4rem) más un respiro para que no tape el final de la página --}}
-        <main class="flex-1 overflow-x-hidden bg-gray-50 dark:bg-gray-900 px-6 pt-6 pb-28">
+        <main class="flex-1 overflow-x-hidden bg-fondo dark:bg-gray-900 px-6 pt-6 pb-28">
             @isset($header)
                 <div class="mb-3 px-6 max-w-7xl mx-auto">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $header }}</h1>

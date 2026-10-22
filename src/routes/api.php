@@ -103,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('destroy', 'can:efectivo.delete');
 
         Route::get('compromisos/{compromiso}/origenes-pago', [CompromisoController::class, 'origenesPago'])->middleware('can:compromisos.view')->name('compromisos.origenes-pago');
+        Route::put('compromisos/{compromiso}/serie', [CompromisoController::class, 'actualizarSerie'])->middleware('can:compromisos.edit')->name('compromisos.serie');
         Route::post('compromisos/{compromiso}/pagar', [CompromisoController::class, 'pagar'])->middleware('can:compromisos.view')->name('compromisos.pagar');
         Route::apiResource('compromisos', CompromisoController::class)
             ->middlewareFor(['index', 'show'], 'can:compromisos.view')

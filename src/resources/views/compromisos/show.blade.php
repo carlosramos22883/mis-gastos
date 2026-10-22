@@ -16,6 +16,11 @@
             <div class="flex gap-2">
                 <x-volver />
                 <x-secondary-button type="button" onclick="window.location='{{ route('compromisos.index') }}'">Todos los compromisos</x-secondary-button>
+                @if ($compromiso->recurrente)
+                    @can('compromisos.edit')
+                        <x-secondary-button type="button" x-data x-on:click="$dispatch('load-compromiso-modal-form', '{{ route('compromisos.serie.edit', $compromiso) }}'); $dispatch('open-modal', 'compromiso-modal')">Editar la serie</x-secondary-button>
+                    @endcan
+                @endif
                 @if ($compromiso->estado === \App\Models\Compromiso::PENDIENTE)
                     @canany(['efectivo.create', 'cuentas.create'])
                         <x-primary-button type="button" x-on:click="$dispatch('load-pago-modal-form', '{{ route('compromisos.pagar', $compromiso) }}'); $dispatch('open-modal', 'pago-modal')">Pagar</x-primary-button>
@@ -40,7 +45,7 @@
         <div class="overflow-x-auto rounded-lg bg-white shadow dark:bg-gray-800">
             <h2 class="px-6 pt-5 text-base font-semibold text-gray-900 dark:text-gray-100">Abonos</h2>
             <table class="mt-3 min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                <thead class="text-xs uppercase bg-cabecera text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                     <tr><th class="px-6 py-3">Fecha</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Medio</th><th class="px-6 py-3 text-right">Monto</th></tr>
                 </thead>
                 <tbody>
