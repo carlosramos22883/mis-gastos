@@ -265,5 +265,5 @@
         </section>
     </div>
 
-    <x-ajax-modal name="escenario" maxWidth="3xl" />
+    <x-ajax-modal name="escenario" maxWidth="6xl" />
 </x-app-layout>

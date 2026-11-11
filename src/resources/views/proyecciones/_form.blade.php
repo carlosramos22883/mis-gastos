@@ -108,7 +108,7 @@
                 'ingreso' => 'Ingreso extra (o menos ingreso) al mes', 'unico' => 'Algo de una vez (aguinaldo, renta…)', 'pagar' => 'Pagar una deuda en un mes',
                 'cuotas' => 'Pasar una deuda a cuotas (ExtraYA, Minicuotas…)',
             ]" />
-            <div class="grid gap-3 sm:grid-cols-2">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div x-show="['venta', 'ingreso', 'unico'].includes(tipo)"><x-floating-input id="p_descripcion" label="Descripción (opcional)" maxlength="100" /></div>
                 <x-floating-input id="p_mes" type="month" x-bind:aria-label="['gasto', 'ingreso'].includes(tipo) ? 'Desde' : 'Mes'" label="Mes (o desde)" :value="$mesInicio" />
                 <div x-show="['gasto', 'ingreso'].includes(tipo)"><x-floating-input id="p_hasta" type="month" label="Hasta (opcional)" /></div>
@@ -120,7 +120,7 @@
                     <x-floating-money id="p_comision" label="Comisión (opcional)" :symbol="$simbolo" />
                 </div>
                 <div x-show="tipo === 'prestamo'"><x-floating-money id="p_cuota" label="Cuota (opcional, si te la dieron)" :symbol="$simbolo" /></div>
-                <div x-show="tipo === 'unico'" class="sm:col-span-2"><x-checkbox id="p_sale" ayuda="Márcalo si es dinero que sale (la renta de abril); sin marcar, entra (aguinaldo).">Es un gasto</x-checkbox></div>
+                <div x-show="tipo === 'unico'" class="sm:col-span-2 lg:col-span-4"><x-checkbox id="p_sale" ayuda="Márcalo si es dinero que sale (la renta de abril); sin marcar, entra (aguinaldo).">Es un gasto</x-checkbox></div>
             </div>
             <div x-show="['prestamo', 'venta'].includes(tipo)"><x-floating-select id="p_destino" label="¿Qué deudas paga primero? (en ese orden)" multiple :options="$opcionesDeudas" /></div>
             <div x-show="['pagar', 'cuotas'].includes(tipo)" x-cloak><x-floating-select id="p_deuda" label="Deuda" :options="$opcionesDeudas" /></div>
