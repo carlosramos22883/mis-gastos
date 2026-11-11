@@ -19,7 +19,7 @@ class MovimientoEfectivoService
 {
     public function __construct(
         private readonly CicloEfectivoService $ciclos,
-        private readonly CompromisoService $compromisos,
+        private readonly TarjetaService $tarjetas,
     ) {}
 
     /** @param array{descripcion: string, monto: numeric, fecha: string, tipo: string, categoria_personal_id: int, compromiso_id?: ?int} $data */
@@ -32,7 +32,7 @@ class MovimientoEfectivoService
             if (! empty($data['compromiso_id'])) {
                 $this->exigirEgreso($data);
                 $compromiso = Compromiso::findOrFail($data['compromiso_id']);
-                $this->compromisos->abonar($compromiso, (float) $data['monto']);
+                $this->tarjetas->abonarPago($compromiso, (float) $data['monto'], $data['fecha'], $data['user_id'] ?? $user->id); // a una tarjeta se le puede pagar de más
                 $data['compromiso_cuota'] = $compromiso->numero_cuota;
             }
 
@@ -50,7 +50,7 @@ class MovimientoEfectivoService
             $this->asegurarSaldo($movimiento->user, $this->efecto($data), $movimiento->id);
             if ($movimiento->compromiso) {
                 $this->exigirEgreso($data);
-                $this->compromisos->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
+                $this->tarjetas->abonarPago($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto, $data['fecha'], $movimiento->user_id);
             }
             $movimiento->update($data);
 
@@ -68,7 +68,7 @@ class MovimientoEfectivoService
         DB::transaction(function () use ($movimiento) {
             // Si era el pago de un compromiso, ese monto vuelve a quedar pendiente
             if ($movimiento->compromiso) {
-                $this->compromisos->abonar($movimiento->compromiso, -(float) $movimiento->monto);
+                $this->tarjetas->abonarPago($movimiento->compromiso, -(float) $movimiento->monto);
             }
             $movimiento->delete();
         });

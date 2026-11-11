@@ -1,18 +1,18 @@
 @forelse($movimientos as $movimiento)
     <tr data-record-id="{{ $movimiento->id }}" class="border-b dark:border-gray-700">
-        <td class="px-5 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}@include('contactos._chip', ['contacto' => $movimiento->contacto])</td>
+        <td class="w-[22rem] max-w-[22rem] px-5 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}@include('contactos._chip', ['contacto' => $movimiento->contacto])</td>
         <td class="px-6 py-4">{{ $simbolo ?? '$' }} {{ number_format((float) $movimiento->monto, 2) }}</td>
         <td class="px-6 py-4">{{ $movimiento->fecha->format('d/m/Y') }}</td>
         <td class="px-6 py-4">
             <span
-                class="rounded-full px-2 py-1 text-xs font-medium {{ $movimiento->tipo === 'ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">{{ ucfirst($movimiento->tipo) }}</span>
+                class="inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium {{ $movimiento->tipo === 'ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">{{ ucfirst($movimiento->tipo) }}</span>
         </td>
         <td class="px-7 py-4">
             @if ($movimiento->transferencia)
                 <span
-                    class="rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">Transferencia</span>
+                    class="inline-block whitespace-nowrap rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">Transferencia</span>
             @elseif ($movimiento->categoria)
-                <span class="rounded-full px-2 py-1 text-xs font-medium"
+                <span class="inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium"
                     style="background-color: {{ $movimiento->categoria->color }}; color: {{ $movimiento->categoria->textColor() }}">{{ $movimiento->categoria->nombre }}</span>
             @else
                 —
@@ -20,6 +20,7 @@
         </td>
         <td class="px-6 py-4 sticky-col-right">
             <div class="flex justify-end gap-2">
+                @include('contactos._me_lo_debe', ['clase' => 'efectivo'])
                 @if (($isCurrentCycle ?? true) && !$movimiento->es_saldo_arrastrado && !$movimiento->transferencia_id)
                     @can('efectivo.edit')
                         <x-secondary-button type="button" class="py-1.5 px-2"

@@ -632,6 +632,68 @@
                 }
             }
         },
+        "/api/tarjetas/{id}/cargos-fijos": {
+            "post": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Agregar un cargo fijo",
+                "description": "Cada mes, el día \"dia\" (1-31; 31 = último día del mes), se crea un movimiento \"cargo\" en la tarjeta, desde \"desde\" y hasta \"hasta\" (opcional). Sin \"dia\" se usa el día de \"desde\".",
+                "operationId": "9f00c40daeeb08dc289328fa619407bb",
+                "responses": {
+                    "201": {
+                        "description": "Agregado"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tarjetas/{id}/cargos-fijos/{cargo}": {
+            "put": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Editar un cargo fijo (aplica desde su próximo cobro)",
+                "operationId": "cbc3affa036b7d3f85ac9c5ae3769558",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "404": {
+                        "description": "No es de esta tarjeta"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Eliminar un cargo fijo (lo ya cobrado queda como movimiento de la tarjeta)",
+                "operationId": "07692e03261f0d1003ff6064f6a86009",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/catalogos": {
             "get": {
                 "tags": [
@@ -916,7 +978,7 @@
                 "operationId": "2445cd6d1c41db5d0f00d2f850832003",
                 "responses": {
                     "200": {
-                        "description": "Serie actualizada (data = este pago)"
+                        "description": "Serie actualizada (data = este pago, o el que lo reemplaza si cambió el calendario: puede traer otro id)"
                     },
                     "404": {
                         "description": "No pertenece a una serie"
@@ -957,7 +1019,7 @@
                     "Compromisos"
                 ],
                 "summary": "Pagar (completo o abono) desde efectivo, una cuenta o una tarjeta",
-                "description": "origen: \"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría.",
+                "description": "origen: \"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría y puede superar el pendiente: el excedente queda como crédito en la tarjeta (campo \"excedente\" de la respuesta).",
                 "operationId": "88b8e9a271a5d5a3ba4368abcacfeeb1",
                 "requestBody": {
                     "content": {
@@ -996,7 +1058,7 @@
                         "description": "Compromiso actualizado"
                     },
                     "422": {
-                        "description": "Supera el saldo o el disponible"
+                        "description": "Supera el saldo (salvo en una tarjeta) o el disponible"
                     }
                 },
                 "security": [
@@ -1574,6 +1636,316 @@
                 ]
             }
         },
+        "/api/eventos": {
+            "get": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Eventos del hogar (del más reciente al más antiguo), con lo que le toca a cada uno",
+                "operationId": "dbb8a21b32603a5b77c27cae644bf4f9",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Crear un evento",
+                "description": "Como una tabla. participantes: [{quien: \"miembro:{id}\" | id de contacto | \"nuevo:Nombre\", es_festejado}]; pagador: posición de quien pagó; consumos (productos): [{descripcion, precio (unitario), cantidades: [cuántos pidió cada participante, en su orden]}]; propina_tipo: ninguna | porcentaje (del consumo de cada uno) | monto (dividido entre todos) con propina_valor. La foto de la cuenta se sube aparte (POST /api/eventos/{id}/foto). Si pagó un miembro del hogar: origen (\"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" | \"ninguno\") y categoria_personal_id (si no es \"ninguno\"). Una tarjeta sin disponible responde 422 \"confirmar\": reenviar con confirmar = true.",
+                "operationId": "8c4bb04a4eb4bfb2aeb768c5d1ce3778",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nombre": {
+                                        "type": "string",
+                                        "example": "Cumpleaños de María"
+                                    },
+                                    "fecha": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "lugar": {
+                                        "type": "string"
+                                    },
+                                    "propina_tipo": {
+                                        "type": "string",
+                                        "example": "porcentaje"
+                                    },
+                                    "propina_valor": {
+                                        "type": "string",
+                                        "example": "10"
+                                    },
+                                    "pagador": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "participantes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "consumos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "origen": {
+                                        "type": "string",
+                                        "example": "tarjeta:5"
+                                    },
+                                    "categoria_personal_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Creado"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/opciones": {
+            "get": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Para el formulario: participantes posibles (\"miembro:{id}\" o id de contacto), de dónde pagar, a dónde cobrar y categorías de gasto",
+                "operationId": "d9f2e69c6108024a42cc6a39c1ec0af0",
+                "responses": {
+                    "200": {
+                        "description": "Opciones"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/{id}": {
+            "get": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Detalle de un evento",
+                "operationId": "f3f57889d4110fc9af8258a517ce74d1",
+                "responses": {
+                    "200": {
+                        "description": "Evento"
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Actualizar un evento (mismos campos que crear; sus deudas y su pago se ajustan)",
+                "operationId": "70f349acbc5b4db72aac5294440f2c75",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "422": {
+                        "description": "Datos inválidos o cobros que lo impiden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Eliminar un evento (y su pago y deudas); si ya hay cobros, primero hay que eliminarlos",
+                "operationId": "d5f6de0c774ac52a9a0c6816442549ec",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "422": {
+                        "description": "Tiene cobros"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/{id}/imagen": {
+            "get": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Imagen PNG del cuadro (lo que le toca a cada uno) para compartir",
+                "operationId": "851526426489c6bf1d262cc269f6248f",
+                "responses": {
+                    "200": {
+                        "description": "image/png"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/{id}/foto": {
+            "get": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "La foto de la cuenta (JPEG)",
+                "operationId": "63ce931075a61fd6373deb3d3d413399",
+                "responses": {
+                    "200": {
+                        "description": "image/jpeg"
+                    },
+                    "404": {
+                        "description": "Sin foto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Adjuntar (o reemplazar) la foto de la cuenta: multipart con \"foto\" (JPG o PNG, hasta 10 MB); se endereza y se reduce",
+                "operationId": "926932ebe74aeea1e9f37c2bb07a1895",
+                "responses": {
+                    "200": {
+                        "description": "Evento actualizado"
+                    },
+                    "422": {
+                        "description": "No es una imagen válida"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Quitar la foto de la cuenta",
+                "operationId": "bb44fff930d22b0648755b7efce6c6d8",
+                "responses": {
+                    "200": {
+                        "description": "Evento actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/{id}/participantes/{participante}/cobro": {
+            "post": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Cobrar a un contacto su parte (pagó el hogar): monto, fecha, destino (\"efectivo\" | \"cuenta:{id}\" | \"ninguno\")",
+                "operationId": "85e172b7024e3fe8c95ed8c3ed74a7de",
+                "responses": {
+                    "200": {
+                        "description": "Evento actualizado"
+                    },
+                    "422": {
+                        "description": "Supera lo pendiente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/eventos/{id}/participantes/{participante}/pagado": {
+            "post": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Pagó otra persona: marcar que un participante ya le pagó (un miembro del hogar puede registrar su egreso con origen y categoria_personal_id)",
+                "operationId": "56329c51213bffef12d699622c229f7c",
+                "responses": {
+                    "200": {
+                        "description": "Evento actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Eventos"
+                ],
+                "summary": "Quitar el pago marcado (y su movimiento)",
+                "operationId": "0ec0ab221acad50c1cc3e6ef858981ed",
+                "responses": {
+                    "200": {
+                        "description": "Evento actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/hogar": {
             "get": {
                 "tags": [
@@ -1618,6 +1990,46 @@
                     },
                     "403": {
                         "description": "No administra el hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/hogar/tope": {
+            "patch": {
+                "tags": [
+                    "Hogar"
+                ],
+                "summary": "Tope de gasto del ciclo",
+                "description": "Monto máximo de gasto por ciclo (sin las cuotas de préstamos). Vacío o 0 = sin tope. El dashboard informa lo gastado, lo que queda y cuánto se puede gastar por día.",
+                "operationId": "01599b7d5839e6509a3c0c85a710cbca",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "tope_gasto_ciclo": {
+                                        "type": "string",
+                                        "example": "1800.00",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "422": {
+                        "description": "Validación"
                     }
                 },
                 "security": [
@@ -2354,6 +2766,118 @@
                 ]
             }
         },
+        "/api/reportes/{reporte}": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Un reporte con su período",
+                "operationId": "f35d93ce9f7a41ad44675fbe6fff6365",
+                "parameters": [
+                    {
+                        "name": "reporte",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ejecucion",
+                                "gastos",
+                                "prestamos",
+                                "estado-cuenta"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ciclo",
+                        "in": "query",
+                        "description": "Fecha Y-m-d dentro del ciclo (vacío = actual)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "desde",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "hasta",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tarjeta",
+                        "in": "query",
+                        "description": "Estado de cuenta: id de la tarjeta (devuelve sus cortes)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "description": "Estado de cuenta: id del corte",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data (null en estado de cuenta sin corte elegido), periodo y, con tarjeta, cortes"
+                    },
+                    "422": {
+                        "description": "Período inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/{reporte}/exportar": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Descargar el reporte (formato pdf, xlsx o csv)",
+                "operationId": "7f430d1c4f27759a29099f382c801d29",
+                "parameters": [
+                    {
+                        "name": "formato",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pdf",
+                                "xlsx",
+                                "csv"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Archivo"
+                    },
+                    "403": {
+                        "description": "Sin permiso de exportar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/tarjetas": {
             "get": {
                 "tags": [
@@ -2462,14 +2986,24 @@
                     "Tarjetas"
                 ],
                 "summary": "Registrar compra (cuotas > 1 = a plazos), cargo o crédito",
-                "description": "Los avances se registran como transferencia (POST /api/transferencias con origen \"tarjeta:{id}\").",
+                "description": "Los avances se registran como transferencia (POST /api/transferencias con origen \"tarjeta:{id}\"). Con ?estado={id} se agrega a ese corte ya facturado (de contado, con fecha dentro de su período): su total y su pago pendiente suben. Una compra que supera el disponible responde 422 con el error \"confirmar\" (mensaje para preguntar al usuario); reenviarla con confirmar = true la registra y sobregira la tarjeta.",
                 "operationId": "ca7ae15f90ce169ad195a9d822ac3668",
+                "parameters": [
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "201": {
                         "description": "Registrado"
                     },
                     "422": {
-                        "description": "Validación (ej. supera el disponible)"
+                        "description": "Validación; error \"confirmar\" = supera el disponible y falta confirmar el sobregiro"
                     }
                 },
                 "security": [
@@ -2484,14 +3018,15 @@
                 "tags": [
                     "Tarjetas"
                 ],
-                "summary": "Editar movimiento sin facturar",
+                "summary": "Editar movimiento",
+                "description": "Uno ya facturado se corrige dentro del período de su corte (de contado): el total del corte y su pago pendiente se ajustan, sin bajar de lo ya pagado. Si supera el disponible, igual que al registrar: error \"confirmar\" y se reenvía con confirmar = true.",
                 "operationId": "6e6d7a3c57ca4cf01079d89f183eba1e",
                 "responses": {
                     "200": {
                         "description": "Actualizado"
                     },
                     "403": {
-                        "description": "Ya facturado, avance o de otro módulo"
+                        "description": "Avance, mora, compra en cuotas ya cobradas o de otro módulo"
                     }
                 },
                 "security": [
@@ -2504,7 +3039,7 @@
                 "tags": [
                     "Tarjetas"
                 ],
-                "summary": "Eliminar movimiento sin facturar",
+                "summary": "Eliminar movimiento (si ya se facturó, sale de su corte)",
                 "operationId": "16b179279055e7993ba31fab27bb3999",
                 "responses": {
                     "204": {
@@ -2512,6 +3047,51 @@
                     },
                     "403": {
                         "description": "No editable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tarjetas/{id}/estados-cuenta/{estado}/intereses": {
+            "patch": {
+                "tags": [
+                    "Tarjetas"
+                ],
+                "summary": "Intereses bonificables de un corte",
+                "description": "El monto que trae el estado de cuenta del banco. Los del último corte se restan del disponible hasta el corte siguiente, aunque ya se haya pagado (igual que en la app del banco). Responde la tarjeta con el disponible nuevo.",
+                "operationId": "aea830edd9c38e0fe47e85983d7bcb8e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "intereses_bonificables"
+                                ],
+                                "properties": {
+                                    "intereses_bonificables": {
+                                        "type": "string",
+                                        "example": "14.54"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tarjeta actualizada"
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    },
+                    "422": {
+                        "description": "Validación"
                     }
                 },
                 "security": [
@@ -2629,6 +3209,10 @@
             "description": "Ingresos y egresos de efectivo por ciclo"
         },
         {
+            "name": "Eventos",
+            "description": "Dividir la cuenta de una comida o celebración: participantes, consumos, propina y festejados"
+        },
+        {
             "name": "Hogar",
             "description": "Miembros que comparten un solo fondo (efectivo, ciclo, cuentas, tarjetas y compromisos)"
         },
@@ -2643,6 +3227,10 @@
         {
             "name": "Perfil",
             "description": "Endpoints para la gestión del perfil de usuario"
+        },
+        {
+            "name": "Reportes",
+            "description": "Ejecución financiera, gastos por categoría, préstamos y estado de cuenta; también en PDF, XLSX o CSV"
         },
         {
             "name": "Tarjetas",

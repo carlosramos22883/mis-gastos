@@ -47,6 +47,9 @@ class PagoCompromisoService
     /** @param array{origen: string, monto: numeric, fecha: string, descripcion: string, categoria_personal_id?: ?int, user_id?: ?int} $data */
     public function pagar(User $user, Compromiso $compromiso, array $data): Compromiso
     {
+        if ($compromiso->es_presupuesto) {
+            throw ValidationException::withMessages(['origen' => 'Un presupuesto no se paga: se descuenta solo al registrar gastos de su categoría.']);
+        }
         $origen = $data['origen'];
         $mov = Arr::except($data, ['origen']) + ['tipo' => 'egreso', 'compromiso_id' => $compromiso->id, 'contacto_id' => $compromiso->contacto_id];
         if ($compromiso->tarjeta_credito_id) {

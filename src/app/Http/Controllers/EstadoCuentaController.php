@@ -7,7 +7,7 @@ use App\Services\TarjetaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-/** Detalle de un estado de cuenta, cambio de su fecha límite y registro de mora. */
+/** Detalle de un estado de cuenta, cambio de su fecha límite y de sus intereses bonificables, y registro de mora. */
 class EstadoCuentaController extends Controller
 {
     public function __construct(private readonly TarjetaService $tarjetas) {}
@@ -26,6 +26,15 @@ class EstadoCuentaController extends Controller
         $this->tarjetas->actualizarFechaLimite($estado, Carbon::parse($data['fecha_limite_pago'])->toDateString());
 
         return response()->json(['success' => true, 'message' => 'Fecha límite actualizada; el compromiso de pago también.']);
+    }
+
+    public function intereses(Request $request, EstadoCuentaTarjeta $estado)
+    {
+        $this->own($request, $estado);
+        $data = $request->validate(['intereses_bonificables' => ['required', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/']]);
+        $this->tarjetas->actualizarInteresesBonificables($estado, (float) $data['intereses_bonificables']);
+
+        return response()->json(['success' => true, 'message' => 'Intereses bonificables actualizados; el disponible de la tarjeta ya los considera.']);
     }
 
     public function moraForm(Request $request, EstadoCuentaTarjeta $estado)

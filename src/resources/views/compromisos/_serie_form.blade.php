@@ -47,6 +47,7 @@
         </div>
 
         <x-floating-select id="categoria_personal_id" label="Categoría (opcional)" :options="$categorias" :value="$serie->categoria_personal_id ?? ''" />
+        <x-checkbox name="es_presupuesto" sinMarcar="0" :checked="$serie->es_presupuesto" ayuda="No se paga: se descuenta solo con los gastos de su categoría en cada ciclo.">Es un presupuesto</x-checkbox>
         <x-floating-select id="medio_pago" label="Medio de pago" :allowEmpty="false" :options="['por_definir' => 'Por definir', 'efectivo' => 'Efectivo', 'tarjeta' => 'Tarjeta', 'transferencia' => 'Transferencia']" :value="$serie->medio_pago" required />
         <x-floating-input id="comentario" label="Comentario (opcional)" maxlength="1000" :value="$serie->comentario ?? ''" />
 

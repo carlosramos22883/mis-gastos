@@ -37,7 +37,9 @@ class CompromisoRequest extends FormRequest
             'comentario' => ['nullable', 'string', 'max:1000'],
             'monto' => ['required', 'numeric', 'gt:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'medio_pago' => ['required', Rule::in(['efectivo', 'tarjeta', 'transferencia', 'por_definir'])],
-            'categoria_personal_id' => ['nullable', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
+            // Presupuesto (súper, gasolina…): no se paga, se descuenta con los egresos de su categoría
+            'es_presupuesto' => ['sometimes', 'boolean'],
+            'categoria_personal_id' => ['nullable', 'required_if_accepted:es_presupuesto', 'integer', Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q
                 ->where('hogar_id', $this->user()->hogar_id)->where('tipo', 'egreso')->where('activo', true))],
             'recurrencia_tipo' => ['nullable', Rule::in(['unica', 'recurrente'])],
             'fecha_esperada' => ['nullable', 'date'],
@@ -64,6 +66,7 @@ class CompromisoRequest extends FormRequest
         return [
             'monto.regex' => 'El monto debe tener máximo dos decimales y ser positivo.',
             'dia_pago_2.different' => 'Los dos días de pago deben ser distintos.',
+            'categoria_personal_id.required_if_accepted' => 'Un presupuesto necesita la categoría de los gastos que lo van descontando.',
         ];
     }
 
@@ -80,6 +83,7 @@ class CompromisoRequest extends FormRequest
         $frecuencia = $data['frecuencia'];
 
         return Arr::only($data, self::COMUNES) + [
+            'es_presupuesto' => (bool) ($data['es_presupuesto'] ?? false),
             'frecuencia' => $frecuencia,
             'dia_semana' => $frecuencia === 'semanal' ? $data['dia_semana'] : null,
             'dia_pago' => $frecuencia === 'semanal' ? null : $data['dia_pago'],

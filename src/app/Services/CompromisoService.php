@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class CompromisoService
 {
-    public function __construct(private readonly CicloEfectivoService $ciclos) {}
+    public function __construct(private readonly CicloEfectivoService $ciclos, private readonly PresupuestoService $presupuestos) {}
 
     /**
      * Lista de compromisos con filtros: search, estado (visual), periodo (actual|proximos|todos),
@@ -21,7 +21,7 @@ class CompromisoService
     public function consultar(User $user, array $filtros = []): Builder
     {
         [$hoy, $inicio, $fin] = $this->fechas($user);
-        $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'saldo_pendiente', 'fecha_esperada'], true) ? $filtros['sort'] : 'fecha_esperada';
+        $sort = in_array($filtros['sort'] ?? null, ['descripcion', 'monto', 'saldo_pendiente', 'fecha_esperada', 'estado'], true) ? $filtros['sort'] : 'estado';
         $direction = ($filtros['direction'] ?? null) === 'desc' ? 'desc' : 'asc';
         $periodo = ($filtros['periodo'] ?? null) ?: 'actual';
         $search = $filtros['search'] ?? null;
@@ -34,8 +34,12 @@ class CompromisoService
                 ->whereDate('ciclo_inicio', '<=', $fin->toDateString())
                 ->where(fn ($q) => $q->whereDate('ciclo_inicio', '>=', $inicio->toDateString())->orWhere('estado', Compromiso::PENDIENTE)))
             ->when($periodo === 'proximos', fn ($q) => $q->whereDate('ciclo_inicio', '>', $fin->toDateString()))
+            // Estado: lo que urge primero (antiguo, vencido), luego lo pendiente, lo pagado y lo cancelado; dentro, por fecha
+            ->when($sort === 'estado', fn ($q) => $q->orderByRaw(
+                "CASE WHEN estado = 'pendiente' AND ciclo_inicio < ? THEN 0 WHEN estado = 'pendiente' AND es_presupuesto = ? AND fecha_esperada < ? THEN 1 WHEN estado = 'pendiente' THEN 2 WHEN estado = 'pagado' THEN 3 ELSE 4 END ".$direction,
+                [$inicio->toDateString(), false, $hoy->toDateString()]))
             ->orderByRaw('fecha_esperada IS NULL')
-            ->orderBy($sort, $direction)
+            ->orderBy($sort === 'estado' ? 'fecha_esperada' : $sort, $sort === 'estado' ? 'asc' : $direction)
             ->orderBy('id');
     }
 
@@ -80,6 +84,7 @@ class CompromisoService
         foreach ($user->compromisosRecurrentes()->where('activo', true)->get() as $recurrente) {
             $this->generar($recurrente, $hasta);
         }
+        $this->presupuestos->sincronizar($user);
     }
 
     public function generar(CompromisoRecurrente $recurrente, Carbon $hasta): int
@@ -112,8 +117,10 @@ class CompromisoService
                     'comentario' => $recurrente->comentario,
                     'monto' => $recurrente->monto,
                     'saldo_pendiente' => $recurrente->monto,
-                    'fecha_esperada' => $fecha->toDateString(),
+                    // Un presupuesto "vence" al cerrar su ciclo
+                    'fecha_esperada' => ($recurrente->es_presupuesto ? $this->ciclos->cycleFor($user, $fecha)[1] : $fecha)->toDateString(),
                     'ciclo_inicio' => $this->ciclos->cycleFor($user, $fecha)[0],
+                    'es_presupuesto' => $recurrente->es_presupuesto,
                     'numero_cuota' => $recurrente->cuotas_generadas,
                     'total_cuotas' => $recurrente->total_cuotas,
                     'medio_pago' => $recurrente->medio_pago,
@@ -167,7 +174,16 @@ class CompromisoService
             }
             if ($cambiaCalendario) {
                 $ultimo = $recurrente->compromisos()->max('fecha_esperada');
-                $recurrente->generado_hasta = max($hoy->copy()->subDay()->toDateString(), $ultimo ? Carbon::parse($ultimo)->toDateString() : $recurrente->fecha_inicio->copy()->subDay()->toDateString());
+                $desde = $hoy->copy()->subDay();
+                // Un pago quitado de este ciclo se repone aunque su fecha nueva ya pasó (queda vencido): no salta al siguiente ciclo
+                [$inicio, $fin] = $this->ciclos->cycleFor($user);
+                $faltan = $quitar->filter(fn ($c) => $c->ciclo_inicio?->toDateString() === $inicio->toDateString())->count()
+                    - count($this->fechasDePago($recurrente, $desde, $fin));
+                $pasadas = $this->fechasDePago($recurrente, $inicio->copy()->subDay(), $desde);
+                if ($faltan > 0 && $pasadas) {
+                    $desde = $pasadas[max(0, count($pasadas) - $faltan)]->copy()->subDay();
+                }
+                $recurrente->generado_hasta = max($desde->toDateString(), $ultimo ? Carbon::parse($ultimo)->toDateString() : $recurrente->fecha_inicio->copy()->subDay()->toDateString());
             }
 
             // Sigue viva si no llegó a su fin (pudo extenderse)
@@ -181,12 +197,39 @@ class CompromisoService
                 'descripcion' => $recurrente->descripcion, 'comentario' => $recurrente->comentario, 'monto' => $recurrente->monto,
                 'saldo_pendiente' => $recurrente->monto, 'medio_pago' => $recurrente->medio_pago, 'total_cuotas' => $recurrente->total_cuotas,
             ]);
+            // Presupuesto (o deja de serlo): sus pagos abiertos se ajustan aunque ya tengan gastos de su categoría
+            if ($recurrente->es_presupuesto || $recurrente->wasChanged('es_presupuesto')) {
+                foreach ($recurrente->compromisos()->where('estado', Compromiso::PENDIENTE)->get() as $abierto) {
+                    $datos = ['es_presupuesto' => $recurrente->es_presupuesto, 'categoria_personal_id' => $recurrente->categoria_personal_id,
+                        'descripcion' => $recurrente->descripcion, 'monto' => $recurrente->monto, 'user_id' => $recurrente->user_id];
+                    $datos += $recurrente->es_presupuesto
+                        ? ['fecha_esperada' => $this->ciclos->cycleFor($user, $abierto->ciclo_inicio ?? $abierto->fecha_esperada)[1]->toDateString()]
+                        : ['saldo_pendiente' => $recurrente->monto];
+                    $abierto->update($datos);
+                    $this->presupuestos->recalcular($abierto);
+                }
+            }
             if ($recurrente->activo) {
                 $actualizados += $this->generar($recurrente, $this->ciclos->cycleFor($user)[1]);
             }
 
             return $actualizados;
         });
+    }
+
+    /**
+     * El pago que ocupa el lugar de $compromiso tras editar su serie: él mismo, o si se regeneró, el de la serie
+     * en su mismo ciclo (o el siguiente pendiente). Null si no queda ninguno.
+     */
+    public function pagoVigente(Compromiso $compromiso): ?Compromiso
+    {
+        if (Compromiso::whereKey($compromiso->id)->exists()) {
+            return $compromiso->fresh();
+        }
+        $serie = Compromiso::where('compromiso_recurrente_id', $compromiso->compromiso_recurrente_id);
+
+        return ($compromiso->ciclo_inicio ? (clone $serie)->whereDate('ciclo_inicio', $compromiso->ciclo_inicio->toDateString())->orderBy('fecha_esperada')->first() : null)
+            ?? $serie->where('estado', Compromiso::PENDIENTE)->orderBy('fecha_esperada')->first();
     }
 
     /**
@@ -273,6 +316,9 @@ class CompromisoService
     /** Igual que aplicarAbono(), pero informa el error como validación del campo "monto". */
     public function abonar(Compromiso $compromiso, float $monto): void
     {
+        if ($compromiso->es_presupuesto) {
+            throw ValidationException::withMessages(['monto' => 'Un presupuesto no se paga: se descuenta solo al registrar gastos de su categoría.']);
+        }
         try {
             $this->aplicarAbono($compromiso, $monto);
         } catch (\InvalidArgumentException $e) {

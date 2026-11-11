@@ -19,19 +19,7 @@
     <x-floating-input id="codigo" name="codigo" label="Código (3 letras)" type="text" :value="isset($moneda) ? old('codigo', $moneda->codigo) : old('codigo')" :error="$errors->first('codigo')" required placeholder="Ej: USD" maxlength="3" />
     <x-floating-input id="simbolo" name="simbolo" label="Símbolo" type="text" maxlength="10" :value="isset($moneda) ? old('simbolo', $moneda->simbolo) : old('simbolo')" :error="$errors->first('simbolo')" required placeholder="Ej: $" />
 
-    <!-- Checkbox Activo (Marcado por defecto al crear) -->
-    <div class="flex items-center gap-2 mt-6">
-        @php
-            // Si estamos editando, usa el valor de la BD. Si estamos creando, usa '1' (true) por defecto, a menos que old() diga lo contrario.
-            $isChecked = isset($moneda) ? $moneda->activo : old('activo', 1);
-        @endphp
-        <input type="checkbox" name="activo" id="activo" value="1" 
-            {{ $isChecked ? 'checked' : '' }}
-            class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700">
-        <label for="activo" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-            Activo
-        </label>
-    </div>
+    <x-checkbox name="activo" id="activo" class="mt-6" :checked="isset($moneda) ? $moneda->activo : old('activo', 1)">Activo</x-checkbox>
 
     <div class="mt-6 flex justify-end gap-3">
         <x-secondary-button type="button" @click="$dispatch('close-modal', 'moneda-modal')">Cancelar</x-secondary-button>

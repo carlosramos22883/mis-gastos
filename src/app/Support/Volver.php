@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Compromiso;
 use App\Models\Contacto;
 use App\Models\Prestamo;
 use App\Models\TarjetaCredito;
@@ -23,7 +24,7 @@ class Volver
     /** @return array{texto: string, url: string}|null */
     public static function destino(Request $request): ?array
     {
-        if (! preg_match('/^(contacto|prestamo|tarjeta):(\d+)$/', (string) $request->query('desde'), $m) || ! ($user = $request->user())) {
+        if (! preg_match('/^(contacto|prestamo|tarjeta|compromiso):(\d+)$/', (string) $request->query('desde'), $m) || ! ($user = $request->user())) {
             return null;
         }
         [, $tipo, $id] = $m;
@@ -32,6 +33,7 @@ class Volver
             'contacto' => ($c = Contacto::delHogar($user)->find($id)) ? ['texto' => 'Volver a '.$c->nombreCompleto(), 'url' => route('contactos.show', $c)] : null,
             'prestamo' => ($p = Prestamo::delHogar($user)->find($id)) ? ['texto' => 'Volver a '.$p->nombre, 'url' => route('prestamos.show', $p)] : null,
             'tarjeta' => ($t = TarjetaCredito::delHogar($user)->find($id)) ? ['texto' => 'Volver a la tarjeta '.$t->nombre, 'url' => route('tarjetas.show', $t)] : null,
+            'compromiso' => ($c = Compromiso::where('hogar_id', $user->hogar_id)->find($id)) ? ['texto' => 'Volver a '.$c->descripcion, 'url' => route('compromisos.show', $c)] : null,
         };
     }
 }

@@ -49,6 +49,11 @@ class IngresoApiTest extends TestCase
 
         $this->putJson("/api/ingresos/{$id}", ['nombre' => 'Sueldo Stef', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Sueldo (planilla)')->value('id'), 'frecuencia' => 'mensual', 'destino' => 'efectivo'])
             ->assertOk()->assertJsonCount(2, 'data.conceptos'); // sin "conceptos" no se borra la plantilla
+
+        // Con "conceptos" se reemplaza la plantilla completa (las apps la editan así)
+        $this->putJson("/api/ingresos/{$id}", ['nombre' => 'Sueldo Stef', 'tipo_ingreso_id' => TipoIngreso::where('nombre', 'Sueldo (planilla)')->value('id'), 'frecuencia' => 'mensual', 'destino' => 'efectivo',
+            'conceptos' => [['nombre' => 'Renta', 'tipo' => 'descuento', 'monto' => '231.16']]])
+            ->assertOk()->assertJsonCount(1, 'data.conceptos')->assertJsonPath('data.conceptos.0.nombre', 'Renta');
     }
 
     public function test_permisos_y_aislamiento(): void

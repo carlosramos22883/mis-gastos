@@ -17,6 +17,9 @@
         <p class="-mt-2 text-xs text-gray-500 dark:text-gray-400">También puedes pagar con otra tarjeta de crédito (por ejemplo, con el NPE del estado de cuenta): queda como una compra en esa tarjeta y baja su disponible.</p>
     @endif
     <x-floating-money id="monto" label="Monto" :symbol="$simbolo" :value="$compromiso->saldo_pendiente" required />
+    @if ($compromiso->tarjeta_credito_id)
+        <p class="-mt-2 text-xs text-gray-500 dark:text-gray-400">¿Pagaste de más? Escribe lo que pagaste: lo que pase del pendiente queda como crédito en la tarjeta (sube su disponible y se descuenta del próximo corte).</p>
+    @endif
     <x-floating-date id="fecha" label="Fecha" :value="now(auth()->user()->zona_horaria)" :min="$cycleStart" :max="min(now(auth()->user()->zona_horaria), $cycleEnd)" required />
     <x-floating-input id="descripcion" label="Descripción" maxlength="255" :value="$compromiso->descripcion" required />
     @include('hogar._quien', ['label' => '¿Quién paga?'])

@@ -97,9 +97,10 @@ class PagoConTarjetaTest extends TestCase
         // Ni más de su disponible
         $this->atlantida->update(['limite_credito' => 50]);
         $this->pagar([])->assertUnprocessable()->assertJsonValidationErrors('monto');
-        // Ni más de lo pendiente
+        // Lo que pase de lo pendiente queda como crédito en la Credisiman
         $this->atlantida->update(['limite_credito' => 500]);
-        $this->pagar(['monto' => '100.00'])->assertUnprocessable()->assertJsonValidationErrors('monto');
+        $this->pagar(['monto' => '100.00'])->assertOk();
+        $this->assertSame([400.0, 403.38], [$this->disponible($this->atlantida), $this->disponible($this->credisiman)]);
     }
 
     public function test_por_api(): void

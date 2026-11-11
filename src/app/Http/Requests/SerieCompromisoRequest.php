@@ -34,7 +34,8 @@ class SerieCompromisoRequest extends CompromisoRequest
         $data = $this->validated() + ['fecha_inicio' => null];
         $frecuencia = $data['frecuencia'];
 
-        return Arr::only($data, ['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id']) + [
+        // Si no viene (apps anteriores) no se cambia
+        return Arr::only($data, ['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'medio_pago', 'categoria_personal_id', 'es_presupuesto']) + [
             'frecuencia' => $frecuencia,
             'dia_semana' => $frecuencia === 'semanal' ? $data['dia_semana'] : null,
             'dia_pago' => $frecuencia === 'semanal' ? null : $data['dia_pago'],

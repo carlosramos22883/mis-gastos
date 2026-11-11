@@ -4,6 +4,8 @@ namespace App\Http\Resources;
 
 use App\Models\Compromiso;
 use App\Services\CompromisoService;
+use App\Services\PresupuestoService;
+use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +25,11 @@ class CompromisoResource extends JsonResource
             'comentario' => $this->comentario,
             'monto' => number_format((float) $this->monto, 2, '.', ''),
             'saldo_pendiente' => number_format((float) $this->saldo_pendiente, 2, '.', ''),
+            // Presupuesto (súper, gasolina…): no se paga; saldo_pendiente = lo que queda tras los gastos de su categoría
+            'es_presupuesto' => (bool) $this->es_presupuesto,
+            // Solo en presupuestos: monto, gastado, comprometido (compromisos de su categoría por pagar) y queda (< 0 = se pasó);
+            // en el detalle, también los gastos que lo descuentan
+            'presupuesto' => $this->es_presupuesto ? $this->presupuesto() : null,
             'monto_pagado' => number_format($this->montoPagado(), 2, '.', ''),
             'fecha_esperada' => $this->fecha_esperada?->toDateString(),
             'ciclo_inicio' => $this->ciclo_inicio?->toDateString(),
@@ -31,6 +38,8 @@ class CompromisoResource extends JsonResource
             'medio_pago' => $this->medio_pago,
             // Estado de cuenta de una tarjeta: se paga sin categoría (cada compra ya tiene la suya)
             'tarjeta' => $this->tarjeta_credito_id ? ['id' => $this->tarjeta_credito_id, 'nombre' => $this->tarjeta?->nombre, 'color' => $this->tarjeta?->color] : null,
+            // Lo pagado de más a una tarjeta: quedó como crédito en ella
+            'excedente' => number_format($this->tarjeta_credito_id ? app(TarjetaService::class)->excedente($this->resource) : 0, 2, '.', ''),
             'estado' => $this->estado,
             'estado_visual' => $estado,
             'estado_texto' => Compromiso::ESTADOS_VISUALES[$estado] ?? $estado,
@@ -42,6 +51,7 @@ class CompromisoResource extends JsonResource
             'recurrente' => $this->whenLoaded('recurrente', fn () => $this->recurrente ? [
                 'id' => $this->recurrente->id,
                 'frecuencia' => $this->recurrente->frecuencia,
+                'es_presupuesto' => (bool) $this->recurrente->es_presupuesto,
                 'descripcion_frecuencia' => $this->recurrente->descripcionFrecuencia(),
                 'activo' => (bool) $this->recurrente->activo,
                 // La regla completa (para editar la serie desde las apps)
@@ -58,5 +68,18 @@ class CompromisoResource extends JsonResource
             ] : null),
             'abonos' => MovimientoEfectivoResource::collection($this->whenLoaded('movimientos')),
         ];
+    }
+
+    private function presupuesto(): array
+    {
+        $servicio = app(PresupuestoService::class);
+        $dinero = fn ($v) => number_format((float) $v, 2, '.', '');
+        $resumen = array_map($dinero, $servicio->resumen($this->resource));
+        if ($this->relationLoaded('movimientos')) { // detalle
+            $resumen['movimientos'] = $servicio->movimientos($this->resource)->map(fn ($m) => ['clase' => $m->clase, 'id' => $m->id,
+                'fecha' => $m->fecha->toDateString(), 'descripcion' => $m->descripcion, 'origen' => $m->origen, 'monto' => $dinero($m->monto)])->all();
+        }
+
+        return $resumen;
     }
 }

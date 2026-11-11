@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Un pago concreto por realizar. Puede ser de una sola vez o una cuota generada
  * por un CompromisoRecurrente.
  */
-#[Fillable(['user_id', 'contacto_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'estado'])]
+#[Fillable(['user_id', 'contacto_id', 'compromiso_recurrente_id', 'categoria_personal_id', 'tarjeta_credito_id', 'estado_cuenta_tarjeta_id', 'descripcion', 'comentario', 'monto', 'saldo_pendiente', 'fecha_esperada', 'ciclo_inicio', 'numero_cuota', 'total_cuotas', 'medio_pago', 'es_presupuesto', 'estado'])]
 class Compromiso extends Model
 {
     use PerteneceAHogar;
@@ -47,6 +47,7 @@ class Compromiso extends Model
             'ciclo_inicio' => 'date',
             'numero_cuota' => 'integer',
             'total_cuotas' => 'integer',
+            'es_presupuesto' => 'boolean',
         ];
     }
 
@@ -105,6 +106,8 @@ class Compromiso extends Model
         // Se comparan fechas de calendario: las fechas guardadas y las del ciclo pueden venir en zonas horarias distintas
         return match (true) {
             $this->estado !== self::PENDIENTE => $this->estado,
+            // Un presupuesto no vence: se va gastando y se cierra al terminar su ciclo
+            $this->es_presupuesto => (float) $this->saldo_pendiente < (float) $this->monto ? 'parcial' : 'pendiente',
             $this->ciclo_inicio && $this->ciclo_inicio->toDateString() < $inicioCiclo->toDateString() => 'antiguo',
             $this->fecha_esperada && $this->fecha_esperada->toDateString() < $hoy->toDateString() => 'vencido',
             (float) $this->saldo_pendiente < (float) $this->monto => 'parcial',

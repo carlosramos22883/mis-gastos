@@ -38,7 +38,7 @@
                 <span class="text-xs text-gray-500 dark:text-gray-400">Ciclo cerrado: solo consulta</span>
             @endif
         </nav>
-        @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
+        @php($headers = [['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true, 'width' => 'w-[22rem]'], ['label' => 'Monto', 'key' => 'monto', 'sortable' => true], ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true], ['label' => 'Tipo', 'key' => 'tipo', 'sortable' => true], ['label' => 'Categoría', 'sortable' => false], ['label' => 'Acciones', 'sortable' => false, 'width' => 'w-32 text-right']])
         <x-data-table createPermission="efectivo.create" exportPermission="efectivo.export" filterCount="5" :keep="['cycle', 'desde']" :headers="$headers" :data="$movimientos" :createRoute="$isCurrentCycle ? route('efectivo.create') : null" createModal="efectivo-modal"
             :exportRoute="route('efectivo.export')" searchPlaceholder="Buscar descripción..." defaultSort="fecha">
             <x-slot:filters>
@@ -65,4 +65,5 @@
         </div>
     </x-modal>
     <x-ajax-modal name="transferencia" />
+    <x-ajax-modal name="deuda" />
 </x-app-layout>

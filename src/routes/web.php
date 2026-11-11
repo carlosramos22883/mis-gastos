@@ -15,6 +15,7 @@ use App\Http\Controllers\ContactoController;
 use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EstadoCuentaController;
+use App\Http\Controllers\EventoController;
 use App\Http\Controllers\HogarController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\IrAMovimientoController;
@@ -25,9 +26,13 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PagoCompromisoController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProyeccionController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TarjetaCreditoController;
 use App\Http\Controllers\TransferenciaController;
+use App\Http\Requests\ReporteRequest;
+use App\Services\DashboardService;
 use App\Support\CatalogosAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -111,6 +116,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('estados-cuenta/{estado}')->name('estados-cuenta.')->controller(EstadoCuentaController::class)->group(function () {
         Route::get('/', 'show')->middleware('can:tarjetas.view')->name('show');
         Route::patch('fecha-limite', 'fechaLimite')->middleware('can:tarjetas.edit')->name('fecha-limite');
+        Route::patch('intereses', 'intereses')->middleware('can:tarjetas.edit')->name('intereses');
         Route::get('mora', 'moraForm')->middleware('can:tarjetas.create')->name('mora.create');
         Route::post('mora', 'mora')->middleware('can:tarjetas.create')->name('mora.store');
     });
@@ -125,10 +131,28 @@ Route::middleware('auth')->group(function () {
         Route::get('nos-deben', 'nosDeben')->middleware('can:deudores.view')->name('deudores.index');
         Route::get('contactos/{contacto}/deudas/create', 'crearDeuda')->middleware('can:deudores.create')->name('contactos.deudas.create');
         Route::post('contactos/{contacto}/deudas', 'guardarDeuda')->middleware('can:deudores.create')->name('contactos.deudas.store');
+        Route::get('movimientos/{clase}/{id}/deuda', 'crearVinculo')->whereIn('clase', ['efectivo', 'cuenta', 'tarjeta'])->whereNumber('id')->middleware('can:deudores.create')->name('movimientos.deuda.create');
+        Route::post('movimientos/{clase}/{id}/deuda', 'guardarVinculo')->whereIn('clase', ['efectivo', 'cuenta', 'tarjeta'])->whereNumber('id')->middleware('can:deudores.create')->name('movimientos.deuda.store');
         Route::delete('deudas/{deuda}', 'eliminarDeuda')->middleware('can:deudores.delete')->name('deudas.destroy');
         Route::get('contactos/{contacto}/pagos/create', 'crearPago')->middleware('can:deudores.create')->name('contactos.pagos.create');
         Route::post('contactos/{contacto}/pagos', 'guardarPago')->middleware('can:deudores.create')->name('contactos.pagos.store');
         Route::delete('deuda-pagos/{pago}', 'eliminarPago')->middleware('can:deudores.delete')->name('deuda-pagos.destroy');
+    });
+
+    // Eventos: dividir la cuenta de una comida o celebración
+    Route::resource('eventos', EventoController::class)
+        ->middlewareFor(['index', 'show'], 'can:eventos.view')
+        ->middlewareFor(['create', 'store'], 'can:eventos.create')
+        ->middlewareFor(['edit', 'update'], 'can:eventos.edit')
+        ->middlewareFor('destroy', 'can:eventos.delete');
+    Route::prefix('eventos/{evento}')->name('eventos.')->controller(EventoController::class)->scopeBindings()->group(function () {
+        Route::get('imagen', 'imagen')->middleware('can:eventos.view')->name('imagen');
+        Route::get('foto', 'foto')->middleware('can:eventos.view')->name('foto');
+        Route::get('participantes/{participante}/cobro', 'cobroForm')->middleware('can:eventos.edit')->name('cobro.create');
+        Route::post('participantes/{participante}/cobro', 'cobrar')->middleware('can:eventos.edit')->name('cobro.store');
+        Route::get('participantes/{participante}/pagado', 'pagadoForm')->middleware('can:eventos.edit')->name('pagado.create');
+        Route::post('participantes/{participante}/pagado', 'marcarPagado')->middleware('can:eventos.edit')->name('pagado.store');
+        Route::delete('participantes/{participante}/pagado', 'desmarcarPagado')->middleware('can:eventos.edit')->name('pagado.destroy');
     });
 
     // Ingresos con desglose (sueldos, servicios profesionales…)
@@ -156,10 +180,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('prestamo-pagos/{pago}', 'eliminarPago')->middleware('can:prestamos.delete')->name('prestamo-pagos.destroy');
     });
 
+    // Reportes: ver exige reportes.view; descargar, reportes.export
+    Route::controller(ReporteController::class)->prefix('reportes')->name('reportes.')->group(function () {
+        Route::get('/', 'show')->middleware('can:reportes.view')->name('index');
+        Route::get('{reporte}/exportar', 'exportar')->middleware('can:reportes.export')->name('exportar')->whereIn('reporte', ReporteRequest::REPORTES);
+        Route::get('{reporte}', 'show')->middleware('can:reportes.view')->name('show')->whereIn('reporte', ReporteRequest::REPORTES);
+    });
+
     // Hogar: miembros que comparten el fondo
     Route::prefix('hogar')->name('hogar.')->controller(HogarController::class)->group(function () {
         Route::get('/', 'index')->middleware('can:hogar.view')->name('index');
         Route::patch('/', 'update')->middleware('can:hogar.edit')->name('update');
+        Route::patch('tope', 'tope')->middleware('can:compromisos.edit')->name('tope');
         Route::post('invitaciones', 'invitar')->middleware('can:hogar.edit')->name('invitar');
         Route::delete('invitaciones/{invitacion}', 'cancelar')->middleware('can:hogar.edit')->name('cancelar');
         Route::post('invitaciones/{invitacion}/aceptar', 'aceptar')->middleware('can:hogar.view')->name('aceptar');
@@ -168,6 +200,21 @@ Route::middleware('auth')->group(function () {
         Route::delete('miembros/{miembro}', 'quitar')->middleware('can:hogar.edit')->name('quitar');
     });
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Asumimos que profile.view lo tiene todos
+    // Proyecciones: escenarios para salir de deudas, simulados sobre los datos reales
+    Route::resource('proyecciones', ProyeccionController::class)->except('show')->parameters(['proyecciones' => 'proyeccion'])
+        ->middlewareFor('index', 'can:proyecciones.view')
+        ->middlewareFor(['create', 'store'], 'can:proyecciones.create')
+        ->middlewareFor(['edit', 'update'], 'can:proyecciones.edit')
+        ->middlewareFor('destroy', 'can:proyecciones.delete');
+    // Avisos de la campana: abrir uno lo marca como visto; o marcarlos todos
+    Route::get('avisos/{clave}', function (string $clave) {
+        return redirect(app(DashboardService::class)->abrirAviso(request()->user(), $clave) ?? route('dashboard'));
+    })->where('clave', '[0-9a-f]{16}')->name('avisos.abrir');
+    Route::post('avisos/vistos', function () {
+        app(DashboardService::class)->marcarVistos(request()->user());
+
+        return response()->json(['success' => true]);
+    })->name('avisos.vistos');
     Route::get('/notificaciones', function () {
         $notificaciones = request()->user()->notifications()->latest()->paginate(20);
         request()->user()->unreadNotifications->markAsRead();

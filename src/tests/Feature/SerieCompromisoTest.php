@@ -111,6 +111,42 @@ class SerieCompromisoTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_mover_el_dia_a_una_fecha_que_ya_paso_lo_deja_vencido_en_el_ciclo(): void
+    {
+        // Corte el 22: ciclo del 23/10 al 22/11. El pago del 21/11 se pasa al día 24 el 29/10: el 24/10 ya pasó
+        $this->user->update(['fecha_corte_dia' => 22]);
+        Carbon::setTestNow('2026-10-29 20:00:00');
+        $serie = app(CompromisoService::class)->crearRecurrente($this->user, [
+            'descripcion' => 'Cuota', 'monto' => 50, 'medio_pago' => 'efectivo', 'frecuencia' => 'mensual', 'dia_pago' => 21, 'fecha_inicio' => '2026-10-23',
+        ]);
+        $pago = $serie->compromisos()->sole();
+        $this->assertSame('2026-11-21', $pago->fecha_esperada->toDateString());
+
+        $respuesta = $this->actingAs($this->user)->putJson(route('compromisos.serie.update', $pago), [
+            'descripcion' => 'Cuota', 'monto' => '50.00', 'medio_pago' => 'efectivo', 'frecuencia' => 'mensual', 'dia_pago' => 24, 'finalizacion' => 'indefinido',
+        ])->assertOk();
+
+        $nuevo = $serie->compromisos()->sole();
+        $this->assertSame('2026-10-24', $nuevo->fecha_esperada->toDateString());
+        $this->assertSame('2026-10-23', $nuevo->ciclo_inicio->toDateString());
+        $this->assertSame('vencido', $nuevo->estadoVisual(Carbon::parse('2026-10-29'), Carbon::parse('2026-10-23')));
+        // El detalle del pago quitado se va al que lo reemplaza
+        $respuesta->assertJsonPath('redirect', route('compromisos.show', $nuevo));
+
+        // El siguiente ciclo sigue con el 24
+        Carbon::setTestNow('2026-11-25 10:00:00');
+        app(CompromisoService::class)->sincronizar($this->user);
+        $this->assertSame(['2026-10-24', '2026-11-24'], $serie->compromisos()->orderBy('fecha_esperada')->pluck('fecha_esperada')->map->toDateString()->all());
+    }
+
+    public function test_por_api_devuelve_el_pago_que_reemplaza_al_regenerado(): void
+    {
+        Sanctum::actingAs($this->user);
+        $viejo = $this->pago();
+        $this->putJson("/api/compromisos/{$viejo->id}/serie", ['descripcion' => 'Super', 'monto' => '300', 'medio_pago' => 'efectivo', 'frecuencia' => 'mensual', 'dia_pago' => 25, 'finalizacion' => 'indefinido'])
+            ->assertOk()->assertJsonPath('data.id', $this->pago()->id)->assertJsonPath('data.fecha_esperada', '2026-10-25');
+    }
+
     public function test_el_formulario_de_la_serie_abre(): void
     {
         $this->actingAs($this->user)->get(route('compromisos.serie.edit', $this->pago()))->assertOk()->assertSee('Editar la serie')->assertSee('Guardar la serie');

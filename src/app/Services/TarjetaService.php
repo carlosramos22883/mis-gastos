@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\CargoFijoTarjeta;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
+use App\Models\EstadoCuentaItem;
 use App\Models\EstadoCuentaTarjeta;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
@@ -24,6 +26,13 @@ use Illuminate\Validation\ValidationException;
  *    o una cuenta) el disponible se recupera solo.
  *  - Cada corte genera un estado de cuenta con su detalle y un compromiso con la fecha límite de pago.
  *    Las compras a tasa cero se facturan una cuota por corte; la última cuota absorbe los centavos.
+ *  - Los cargos fijos (seguro, Netflix…) crean su movimiento el día de su cobro, cada mes entre su inicio y su fin.
+ *  - Pagar de más un compromiso de la tarjeta: lo que pase del saldo pendiente queda como un crédito en ella (sube el
+ *    disponible y baja el próximo corte). Un corte que queda en negativo pasa ese saldo a favor al siguiente.
+ *  - Tarjetas con cargos_restan_disponible = false (Davivienda): los cargos del banco (tipo "cargo": intereses, comisiones,
+ *    IVA) no bajan el disponible hasta pagarse; un pago cubre primero los cargos de su corte (ver cargosSinRestar).
+ *  - Intereses bonificables (los trae el estado de cuenta del banco): los del último corte se restan del disponible
+ *    hasta el corte siguiente, igual que en la app del banco, aunque ya se haya pagado (ver interesesRetenidos).
  */
 class TarjetaService
 {
@@ -99,7 +108,48 @@ class TarjetaService
 
     public function disponible(TarjetaCredito $tarjeta, ?int $exceptMovimientoId = null): float
     {
-        return round((float) $tarjeta->limite_credito - $this->deuda($tarjeta, $exceptMovimientoId), 2);
+        return round((float) $tarjeta->limite_credito - $this->deuda($tarjeta, $exceptMovimientoId) - $this->interesesRetenidos($tarjeta)
+            + $this->cargosSinRestar($tarjeta, $exceptMovimientoId), 2);
+    }
+
+    /**
+     * Cargos del banco por pagar que la tarjeta no resta del disponible (solo si cargos_restan_disponible = false): los
+     * que aún no se facturan y, en cada corte pendiente, lo que lo pagado no alcanzó a cubrir (el banco aplica el pago
+     * primero a intereses y comisiones). La mora tiene su propio compromiso y sí resta.
+     */
+    public function cargosSinRestar(TarjetaCredito $tarjeta, ?int $exceptMovimientoId = null): float
+    {
+        if ($tarjeta->cargos_restan_disponible ?? true) {
+            return 0.0;
+        }
+        $cargos = fn () => MovimientoTarjeta::where('tarjeta_credito_id', $tarjeta->id)->where('tipo', 'cargo')->whereNull('compromiso_id')
+            ->when($exceptMovimientoId, fn ($q) => $q->whereKeyNot($exceptMovimientoId));
+        $total = (float) $cargos()->whereDoesntHave('items')->sum('monto');
+        $pendientes = $tarjeta->estadosCuenta()->with('compromiso')
+            ->whereHas('compromiso', fn ($q) => $q->where('estado', Compromiso::PENDIENTE))->get();
+        foreach ($pendientes as $estado) {
+            $enCorte = (float) EstadoCuentaItem::where('estado_cuenta_tarjeta_id', $estado->id)
+                ->whereIn('movimiento_tarjeta_id', $cargos()->select('id'))->sum('monto');
+            $total += max(0, $enCorte - $estado->compromiso->montoPagado());
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * Intereses bonificables que el banco aparta del disponible: los del último corte, pagado o no. El banco los
+     * resuelve en el corte siguiente: si se pagó el saldo de contado a tiempo los abona («bonificación pago total»)
+     * y si no, los cobra como intereses (se anotan ahí como un cargo). Por eso un corte anterior ya no retiene nada.
+     */
+    public function interesesRetenidos(TarjetaCredito $tarjeta): float
+    {
+        return round((float) $tarjeta->estadosCuenta()->orderByDesc('fecha_corte')->value('intereses_bonificables'), 2);
+    }
+
+    /** Intereses bonificables que trae el estado de cuenta del banco para este corte. */
+    public function actualizarInteresesBonificables(EstadoCuentaTarjeta $estado, float $monto): void
+    {
+        $estado->update(['intereses_bonificables' => round($monto, 2)]);
     }
 
     /**
@@ -145,16 +195,18 @@ class TarjetaService
         return $limite->lte($corte) ? $this->diaDelMes($corte->copy()->startOfMonth()->addMonthNoOverflow(), $tarjeta->dia_pago) : $limite;
     }
 
-    /** Genera los estados de cuenta de todos los cortes que ya pasaron. Devuelve cuántos generó. */
+    /** Genera los estados de cuenta de todos los cortes que ya pasaron y cobra los cargos fijos que ya tocaron. Devuelve cuántos estados generó. */
     public function generarEstados(TarjetaCredito $tarjeta): int
     {
-        $hoy = $this->hoy($tarjeta->user)->toDateString();
+        $hoy = $this->hoy($tarjeta->user);
         $generados = 0;
 
         while (true) {
             $inicio = $this->inicioPeriodoAbierto($tarjeta);
             $corte = $this->proximoCorte($tarjeta, $inicio);
-            if ($corte->toDateString() >= $hoy) {
+            if ($corte->toDateString() >= $hoy->toDateString()) {
+                $this->aplicarCargosFijos($tarjeta, $hoy);
+
                 return $generados;
             }
             $this->generarEstado($tarjeta, $inicio, $corte);
@@ -169,24 +221,55 @@ class TarjetaService
         }
     }
 
-    /** Lo que entraría en el próximo corte: movimientos del período abierto y cuotas pendientes. */
+    /**
+     * Lo que entraría en el próximo corte: movimientos del período abierto y cuotas pendientes. "programada" = una cuota
+     * con día de cobro que aún no llega (se cobrará antes del corte).
+     */
     public function porFacturar(TarjetaCredito $tarjeta): Collection
     {
         $inicio = $this->inicioPeriodoAbierto($tarjeta);
+        $hoy = $this->hoy($tarjeta->user)->toDateString();
 
-        return $this->lineasDelPeriodo($tarjeta, $inicio, $this->proximoCorte($tarjeta, $inicio));
+        return $this->lineasDelPeriodo($tarjeta, $inicio, $this->proximoCorte($tarjeta, $inicio))
+            ->map(fn (array $l) => $l + ['programada' => $l['fecha']->toDateString() > $hoy]);
     }
 
-    /** @param array{tipo: string, descripcion: string, monto: numeric, fecha: string, cuotas?: ?int, categoria_personal_id?: ?int, comentario?: ?string} $data */
-    public function registrarMovimiento(TarjetaCredito $tarjeta, array $data): MovimientoTarjeta
+    /** Fecha de la cuota $numero (desde 1) de una compra con día de cobro: la primera es la de ese día en o después de la compra. */
+    public function fechaCuota(MovimientoTarjeta $compra, int $numero): Carbon
+    {
+        $mes = Carbon::parse($compra->fecha->toDateString())->startOfMonth();
+        if ($this->diaDelMes($mes, $compra->dia_cuota)->toDateString() < $compra->fecha->toDateString()) {
+            $mes->addMonthNoOverflow();
+        }
+
+        return $this->diaDelMes($mes->addMonthsNoOverflow($numero - 1), $compra->dia_cuota);
+    }
+
+    /**
+     * Con $estado, el movimiento se agrega a ese corte ya facturado (algo que faltó anotar): su total y su pago pendiente suben.
+     *
+     * @param  array{tipo: string, descripcion: string, monto: numeric, fecha: string, cuotas?: ?int, categoria_personal_id?: ?int, comentario?: ?string, confirmar?: bool}  $data  con "confirmar" se acepta sobregirar la tarjeta
+     */
+    public function registrarMovimiento(TarjetaCredito $tarjeta, array $data, ?EstadoCuentaTarjeta $estado = null): MovimientoTarjeta
     {
         $this->generarEstados($tarjeta);
 
-        return DB::transaction(function () use ($tarjeta, $data) {
+        return DB::transaction(function () use ($tarjeta, $data, $estado) {
             $tarjeta = TarjetaCredito::whereKey($tarjeta->id)->lockForUpdate()->firstOrFail();
-            $this->validarMovimiento($tarjeta, $data);
+            if (! $estado) {
+                $this->validarMovimiento($tarjeta, $data);
+                unset($data['confirmar']);
 
-            return $tarjeta->movimientos()->create($data);
+                return $tarjeta->movimientos()->create($data);
+            }
+
+            $this->validarFacturado($tarjeta, $estado, $data);
+            unset($data['confirmar']);
+            $movimiento = $tarjeta->movimientos()->create(['cuotas' => null, 'dia_cuota' => null] + $data);
+            $this->ajustarEstado($estado->items()->create(['movimiento_tarjeta_id' => $movimiento->id, 'monto' => 0]),
+                $data['tipo'] === 'credito' ? -(float) $data['monto'] : (float) $data['monto']);
+
+            return $movimiento;
         });
     }
 
@@ -209,7 +292,7 @@ class TarjetaService
                 'categoria_personal_id' => $compromiso->tarjeta_credito_id ? $this->categoriaPago($tarjeta->hogar_id, $tarjeta->user_id) : ($data['categoria_personal_id'] ?? null),
                 'user_id' => $data['user_id'] ?? null, 'contacto_id' => $compromiso->contacto_id, 'pago_compromiso_id' => $compromiso->id,
             ]);
-            $this->compromisos->abonar($compromiso, (float) $data['monto']);
+            $this->abonarPago($compromiso, (float) $data['monto'], $data['fecha'], $data['user_id'] ?? null);
 
             return $movimiento;
         });
@@ -221,9 +304,17 @@ class TarjetaService
 
         return DB::transaction(function () use ($movimiento, $data) {
             $tarjeta = TarjetaCredito::whereKey($movimiento->tarjeta_credito_id)->lockForUpdate()->firstOrFail();
-            $this->validarMovimiento($tarjeta, $data, $movimiento->id);
+            $item = $movimiento->items()->first();
+            if ($item) { // ya facturado: se corrige dentro de su estado de cuenta y el pago pendiente sigue el nuevo monto
+                $this->validarFacturado($tarjeta, $item->estadoCuenta, $data, $movimiento->id);
+                $data['cuotas'] = $data['dia_cuota'] = null;
+                $this->ajustarEstado($item, $data['tipo'] === 'credito' ? -(float) $data['monto'] : (float) $data['monto']);
+            } else {
+                $this->validarMovimiento($tarjeta, $data, $movimiento->id);
+            }
+            unset($data['confirmar']);
             if ($movimiento->pagoCompromiso) { // el abono sigue al nuevo monto
-                $this->compromisos->abonar($movimiento->pagoCompromiso, (float) $data['monto'] - (float) $movimiento->monto);
+                $this->abonarPago($movimiento->pagoCompromiso, (float) $data['monto'] - (float) $movimiento->monto, $data['fecha'], $movimiento->user_id);
             }
             $movimiento->update($data);
 
@@ -236,46 +327,209 @@ class TarjetaService
         $this->asegurarEditable($movimiento);
         DB::transaction(function () use ($movimiento) {
             if ($movimiento->pagoCompromiso) { // ese monto vuelve a quedar pendiente en el compromiso
-                $this->compromisos->abonar($movimiento->pagoCompromiso, -(float) $movimiento->monto);
+                $this->abonarPago($movimiento->pagoCompromiso, -(float) $movimiento->monto);
+            }
+            if ($item = $movimiento->items()->first()) { // ya facturado: sale de su estado de cuenta
+                $this->ajustarEstado($item, 0);
+                $item->delete();
             }
             $movimiento->delete();
         });
     }
 
-    /** Solo lo que aún no se ha facturado; los avances se gestionan desde su transferencia y la mora desde su compromiso. */
+    /**
+     * Lo no facturado y también lo ya facturado (para corregir un error: se ajusta su estado de cuenta), salvo una compra
+     * en cuotas con cuotas ya cobradas. Los avances se gestionan desde su transferencia, la mora desde su compromiso y el
+     * excedente de un pago desde ese pago.
+     */
     public function esEditable(MovimientoTarjeta $movimiento): bool
     {
-        return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && ! $movimiento->items()->exists()
+        return ! $movimiento->transferencia_id && ! $movimiento->compromiso_id
+            && ! ($movimiento->esEnCuotas() && $movimiento->items()->exists())
             && MovimientoVinculado::modulo($movimiento) === null; // los de un deudor o un préstamo se gestionan desde su módulo
     }
 
     /**
-     * Agrega al período los cargos fijos activos (seguro, membresía…) con fecha del corte, una sola vez por corte.
-     * Se llama al generar el estado de cuenta, así el cargo entra en ese corte como cualquier otro movimiento.
+     * Cambia lo que una línea suma a su estado de cuenta ($nuevo con signo: un crédito resta) y lleva la diferencia al
+     * total y a su compromiso de pago. Lo ya pagado se respeta: el nuevo monto del compromiso no puede quedar por debajo.
      */
-    private function aplicarCargosFijos(TarjetaCredito $tarjeta, Carbon $inicio, Carbon $corte): void
+    private function ajustarEstado(EstadoCuentaItem $item, float $nuevo): void
     {
-        $cargos = $tarjeta->cargosFijos()->where('activo', true)->whereDate('desde', '<=', $corte->toDateString())->get();
-        foreach ($cargos as $cargo) {
-            $yaEsta = $cargo->movimientos()->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $corte->toDateString())->exists();
-            if (! $yaEsta) {
-                $tarjeta->movimientos()->create([
-                    'user_id' => $tarjeta->user_id, 'tipo' => 'cargo', 'descripcion' => $cargo->descripcion, 'monto' => $cargo->monto,
-                    'fecha' => $corte->toDateString(), 'categoria_personal_id' => $cargo->categoria_personal_id, 'cargo_fijo_id' => $cargo->id,
-                ]);
+        $diferencia = round($nuevo - (float) $item->monto, 2);
+        if ($diferencia == 0) {
+            return;
+        }
+        $this->ajustarTotal(EstadoCuentaTarjeta::whereKey($item->estado_cuenta_tarjeta_id)->lockForUpdate()->firstOrFail(), $diferencia);
+        $item->update(['monto' => $nuevo]);
+    }
+
+    /**
+     * Suma $diferencia al total de un corte y a su compromiso de pago. Si el corte tenía o queda con saldo a favor
+     * (total negativo), el cambio de ese saldo pasa al corte siguiente.
+     */
+    private function ajustarTotal(EstadoCuentaTarjeta $estado, float $diferencia): void
+    {
+        $anterior = (float) $estado->total;
+        $total = round($anterior + $diferencia, 2);
+        $compromiso = $estado->compromiso()->lockForUpdate()->first();
+
+        if ($compromiso) {
+            $pagado = $compromiso->montoPagado();
+            $monto = max(0, round((float) $compromiso->monto + max(0, $total) - max(0, $anterior), 2)); // lo que quede a favor no se cobra
+            if ($monto < $pagado) {
+                throw ValidationException::withMessages(['monto' => 'Del corte del '.$estado->fecha_corte->format('d/m/Y').' ya se pagaron $ '.number_format($pagado, 2).': con este cambio quedaría en $ '.number_format($monto, 2).'.']);
             }
+            $saldo = round($monto - $pagado, 2);
+            $compromiso->update(['monto' => $monto, 'saldo_pendiente' => $saldo, 'estado' => match (true) {
+                $compromiso->estado === Compromiso::CANCELADO => Compromiso::CANCELADO,
+                $saldo <= 0 => Compromiso::PAGADO,
+                default => Compromiso::PENDIENTE,
+            }]);
+        } elseif ($total > 0) { // el corte había quedado en cero (o a favor) y ahora sí hay que pagar algo
+            $tarjeta = $estado->tarjeta;
+            $this->compromisos->crearUnico($tarjeta->user, [
+                'descripcion' => "Tarjeta {$tarjeta->nombre} · corte {$estado->fecha_corte->format('d/m/Y')}",
+                'monto' => $total, 'fecha_esperada' => $estado->fecha_limite_pago->toDateString(), 'medio_pago' => 'por_definir',
+                'tarjeta_credito_id' => $tarjeta->id, 'estado_cuenta_tarjeta_id' => $estado->id,
+            ]);
+        }
+        $estado->update(['total' => $total]);
+
+        $arrastre = round(min(0, $total) - min(0, $anterior), 2);
+        $siguiente = $arrastre == 0 ? null : EstadoCuentaTarjeta::where('tarjeta_credito_id', $estado->tarjeta_credito_id)
+            ->whereDate('fecha_corte', '>', $estado->fecha_corte->toDateString())->orderBy('fecha_corte')->lockForUpdate()->first();
+        if ($siguiente) {
+            $this->ajustarTotal($siguiente, $arrastre);
+            $siguiente->update(['saldo_anterior' => round((float) $siguiente->saldo_anterior + $arrastre, 2)]);
         }
     }
 
-    /** Cargos fijos que se sumarán al próximo corte (aún no aplicados), para mostrarlos en "por facturar". */
+    /**
+     * Abona $monto a un compromiso (negativo = un pago que se editó o eliminó). En un compromiso de tarjeta (estado de
+     * cuenta o mora) se acepta pagar de más: lo que pase del saldo pendiente queda como un crédito en la tarjeta, ligado
+     * al compromiso; al reducir el pago se quita primero ese excedente. Debe llamarse dentro de una transacción.
+     */
+    public function abonarPago(Compromiso $compromiso, float $monto, ?string $fecha = null, ?int $userId = null): void
+    {
+        if (! $compromiso->tarjeta_credito_id) {
+            $this->compromisos->abonar($compromiso, $monto);
+
+            return;
+        }
+        $compromiso = Compromiso::whereKey($compromiso->id)->lockForUpdate()->firstOrFail();
+        $excedente = MovimientoTarjeta::where('excedente_compromiso_id', $compromiso->id)->lockForUpdate()->first();
+        $actual = (float) ($excedente?->monto ?? 0);
+        if ($monto >= 0) {
+            $abono = min($monto, max(0, (float) $compromiso->saldo_pendiente));
+            $nuevo = round($actual + $monto - $abono, 2);
+        } else {
+            $quita = min(-$monto, $actual);
+            $abono = -round(-$monto - $quita, 2);
+            $nuevo = round($actual - $quita, 2);
+        }
+        if ($abono != 0) {
+            $this->compromisos->abonar($compromiso, $abono);
+        }
+        $this->guardarExcedente($compromiso, $excedente, $nuevo, $fecha, $userId);
+    }
+
+    /** Lo que se pagó de más en un compromiso de la tarjeta (el crédito que quedó en ella). */
+    public function excedente(Compromiso $compromiso): float
+    {
+        return (float) MovimientoTarjeta::where('excedente_compromiso_id', $compromiso->id)->value('monto');
+    }
+
+    /** Saldo a favor con el que arranca el período abierto (el último corte quedó en negativo), como número ≤ 0. */
+    public function saldoAFavor(TarjetaCredito $tarjeta): float
+    {
+        return min(0, (float) $tarjeta->estadosCuenta()->orderByDesc('fecha_corte')->value('total'));
+    }
+
+    /** Crea, cambia o elimina el crédito del excedente. Si ya entró en un corte, ese corte se ajusta. */
+    private function guardarExcedente(Compromiso $compromiso, ?MovimientoTarjeta $excedente, float $monto, ?string $fecha, ?int $userId): void
+    {
+        $item = $excedente?->items()->first();
+        if ($excedente && $monto <= 0) {
+            if ($item) {
+                $this->ajustarEstado($item, 0);
+                $item->delete();
+            }
+            $excedente->delete();
+
+            return;
+        }
+        if ($excedente) {
+            if ($item) {
+                $this->ajustarEstado($item, -$monto);
+            }
+            $excedente->update(['monto' => $monto]);
+
+            return;
+        }
+        if ($monto <= 0) {
+            return;
+        }
+
+        $tarjeta = $compromiso->tarjeta;
+        $fecha = max($fecha ?? $this->hoy($tarjeta->user)->toDateString(), $this->inicioPeriodoAbierto($tarjeta)->toDateString());
+        $estado = $compromiso->estadoCuenta;
+        $tarjeta->movimientos()->create([
+            'user_id' => $userId ?? $tarjeta->user_id, 'tipo' => 'credito', 'monto' => $monto, 'fecha' => $fecha,
+            'descripcion' => $estado ? 'Pago de más al estado de cuenta del corte '.$estado->fecha_corte->format('d/m/Y') : "Pago de más a «{$compromiso->descripcion}»",
+            'categoria_personal_id' => $this->categoriaPago($tarjeta->hogar_id, $tarjeta->user_id), 'excedente_compromiso_id' => $compromiso->id,
+        ]);
+    }
+
+    /**
+     * Crea el movimiento de cada cobro de los cargos fijos activos (Netflix el 15…) con fecha hasta $hasta: así descuentan
+     * el disponible el día que se cobran. Un cobro que caería en un corte ya facturado (inicio en el pasado) no se crea.
+     */
+    private function aplicarCargosFijos(TarjetaCredito $tarjeta, Carbon $hasta): void
+    {
+        $inicioAbierto = $this->inicioPeriodoAbierto($tarjeta)->toDateString();
+        foreach ($tarjeta->cargosFijos()->where('activo', true)->pluck('id') as $id) {
+            DB::transaction(function () use ($tarjeta, $id, $hasta, $inicioAbierto) {
+                $cargo = $tarjeta->cargosFijos()->whereKey($id)->lockForUpdate()->first();
+                while (($fecha = $this->proximoCobro($cargo)) && $fecha->toDateString() <= $hasta->toDateString()) {
+                    if ($fecha->toDateString() >= $inicioAbierto) {
+                        $tarjeta->movimientos()->create([
+                            'user_id' => $tarjeta->user_id, 'tipo' => 'cargo', 'descripcion' => $cargo->descripcion, 'monto' => $cargo->monto,
+                            'fecha' => $fecha->toDateString(), 'categoria_personal_id' => $cargo->categoria_personal_id, 'cargo_fijo_id' => $cargo->id,
+                        ]);
+                    }
+                    $cargo->update(['ultimo_cobro' => $fecha->toDateString()]);
+                }
+            });
+        }
+    }
+
+    /**
+     * Siguiente cobro de un cargo fijo: su día en el mes siguiente al último cobro (así cambiar el día no cobra dos veces
+     * el mismo mes), sin ser antes de "desde". null si ya pasó de "hasta".
+     */
+    public function proximoCobro(CargoFijoTarjeta $cargo): ?Carbon
+    {
+        $mes = $cargo->desde->copy()->startOfMonth();
+        if ($cargo->ultimo_cobro && $cargo->ultimo_cobro->copy()->startOfMonth()->addMonthNoOverflow()->toDateString() > $mes->toDateString()) {
+            $mes = $cargo->ultimo_cobro->copy()->startOfMonth()->addMonthNoOverflow();
+        }
+        $fecha = $this->diaDelMes($mes, $cargo->dia);
+        if ($fecha->toDateString() < $cargo->desde->toDateString()) {
+            $fecha = $this->diaDelMes($mes->addMonthNoOverflow(), $cargo->dia);
+        }
+
+        return $cargo->hasta && $fecha->toDateString() > $cargo->hasta->toDateString() ? null : $fecha;
+    }
+
+    /** Cargos fijos que aún se cobrarán antes del próximo corte (con "proximo_cobro"), para avisarlos en "por facturar". */
     public function cargosFijosDelProximoCorte(TarjetaCredito $tarjeta): Collection
     {
-        $inicio = $this->inicioPeriodoAbierto($tarjeta);
-        $corte = $this->proximoCorte($tarjeta, $inicio);
+        $corte = $this->proximoCorte($tarjeta, $this->inicioPeriodoAbierto($tarjeta))->toDateString();
 
-        return $tarjeta->cargosFijos()->where('activo', true)->whereDate('desde', '<=', $corte->toDateString())
-            ->whereDoesntHave('movimientos', fn ($q) => $q->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $corte->toDateString()))
-            ->orderBy('descripcion')->get();
+        return $tarjeta->cargosFijos()->where('activo', true)->get()
+            ->each(fn (CargoFijoTarjeta $c) => $c->proximo_cobro = $this->proximoCobro($c))
+            ->filter(fn (CargoFijoTarjeta $c) => $c->proximo_cobro && $c->proximo_cobro->toDateString() <= $corte)
+            ->sortBy(fn (CargoFijoTarjeta $c) => $c->proximo_cobro->toDateString().$c->descripcion)->values();
     }
 
     /** Id de la categoría "Pago de tarjeta" del hogar (se crea la primera vez). */
@@ -363,15 +617,17 @@ class TarjetaService
     private function generarEstado(TarjetaCredito $tarjeta, Carbon $inicio, Carbon $corte): EstadoCuentaTarjeta
     {
         return DB::transaction(function () use ($tarjeta, $inicio, $corte) {
-            $this->aplicarCargosFijos($tarjeta, $inicio, $corte);
+            $this->aplicarCargosFijos($tarjeta, $corte); // lo que se cobró hasta el corte entra en él
             $lineas = $this->lineasDelPeriodo($tarjeta, $inicio, $corte);
-            $total = round($lineas->sum('monto'), 2);
+            $saldoAnterior = $this->saldoAFavor($tarjeta); // si el corte anterior quedó a favor, ese saldo se descuenta aquí
+            $total = round($lineas->sum('monto') + $saldoAnterior, 2);
             $limite = $this->fechaLimite($tarjeta, $corte);
 
             $estado = $tarjeta->estadosCuenta()->create([
                 'fecha_inicio' => $inicio->toDateString(),
                 'fecha_corte' => $corte->toDateString(),
                 'fecha_limite_pago' => $limite->toDateString(),
+                'saldo_anterior' => $saldoAnterior,
                 'total' => $total,
             ]);
             foreach ($lineas as $linea) {
@@ -397,7 +653,12 @@ class TarjetaService
         });
     }
 
-    /** @return Collection<int, array{movimiento: MovimientoTarjeta, cuota_numero: ?int, monto: float}> */
+    /**
+     * Líneas de un período. Las cuotas con día de cobro entran en el corte que contiene su fecha (pueden ser varias si
+     * se atrasaron); sin día, una por corte. La última cuota absorbe los centavos.
+     *
+     * @return Collection<int, array{movimiento: MovimientoTarjeta, cuota_numero: ?int, monto: float, fecha: Carbon}>
+     */
     private function lineasDelPeriodo(TarjetaCredito $tarjeta, Carbon $inicio, Carbon $corte): Collection
     {
         // Sin facturar todavía, o compras a plazos que aún tienen cuotas por cobrar
@@ -408,23 +669,32 @@ class TarjetaService
             ->withCount('items')->withSum('items', 'monto')
             ->orderBy('fecha')->orderBy('id')->get();
 
-        return $movimientos->map(function (MovimientoTarjeta $m) use ($inicio) {
+        return $movimientos->flatMap(function (MovimientoTarjeta $m) use ($inicio, $corte) {
             if ($m->esEnCuotas()) {
-                if ($m->items_count >= $m->cuotas) {
-                    return null;
-                }
-                $numero = $m->items_count + 1;
                 $cuota = round((float) $m->monto / $m->cuotas, 2);
-                $monto = $numero === $m->cuotas ? round((float) $m->monto - (float) $m->items_sum_monto, 2) : $cuota;
+                $cobrado = (float) $m->items_sum_monto;
+                $lineas = [];
+                for ($numero = $m->items_count + 1; $numero <= $m->cuotas; $numero++) {
+                    $fecha = $m->dia_cuota ? $this->fechaCuota($m, $numero) : $m->fecha;
+                    if ($m->dia_cuota && $fecha->toDateString() > $corte->toDateString()) {
+                        break;
+                    }
+                    $monto = $numero === $m->cuotas ? round((float) $m->monto - $cobrado, 2) : $cuota;
+                    $cobrado += $monto;
+                    $lineas[] = ['movimiento' => $m, 'cuota_numero' => $numero, 'monto' => $monto, 'fecha' => $fecha];
+                    if (! $m->dia_cuota) {
+                        break;
+                    }
+                }
 
-                return ['movimiento' => $m, 'cuota_numero' => $numero, 'monto' => $monto];
+                return $lineas;
             }
             if ($m->items_count > 0 || $m->fecha->toDateString() < $inicio->toDateString()) {
-                return null;
+                return [];
             }
 
-            return ['movimiento' => $m, 'cuota_numero' => null, 'monto' => $m->tipo === 'credito' ? -(float) $m->monto : (float) $m->monto];
-        })->filter()->values();
+            return [['movimiento' => $m, 'cuota_numero' => null, 'monto' => $m->tipo === 'credito' ? -(float) $m->monto : (float) $m->monto, 'fecha' => $m->fecha]];
+        })->values();
     }
 
     private function validarMovimiento(TarjetaCredito $tarjeta, array $data, ?int $exceptId = null): void
@@ -433,15 +703,46 @@ class TarjetaService
         if ($data['fecha'] < $inicio->toDateString()) {
             throw ValidationException::withMessages(['fecha' => 'La fecha debe ser del período sin facturar (desde el '.$inicio->format('d/m/Y').').']);
         }
-        if (in_array($data['tipo'], ['compra', 'avance'], true) && (float) $data['monto'] > $this->disponible($tarjeta, $exceptId)) {
-            throw ValidationException::withMessages(['monto' => 'El monto supera el disponible de la tarjeta ($ '.number_format(max(0, $this->disponible($tarjeta, $exceptId)), 2).').']);
+        $this->validarDisponible($tarjeta, $data, $exceptId);
+    }
+
+    /** Lo que se agrega o corrige en un corte ya facturado queda dentro de su período y de contado. */
+    private function validarFacturado(TarjetaCredito $tarjeta, EstadoCuentaTarjeta $estado, array $data, ?int $movimientoId = null): void
+    {
+        if ($data['fecha'] < $estado->fecha_inicio->toDateString() || $data['fecha'] > $estado->fecha_corte->toDateString()) {
+            throw ValidationException::withMessages(['fecha' => 'Ya se facturó en el corte del '.$estado->fecha_corte->format('d/m/Y').': la fecha debe quedar entre el '.$estado->fecha_inicio->format('d/m/Y').' y ese día.']);
         }
+        if (($data['cuotas'] ?? 1) > 1) {
+            throw ValidationException::withMessages(['cuotas' => 'En un corte ya facturado el movimiento va de contado.']);
+        }
+        $this->validarDisponible($tarjeta, $data, $movimientoId);
+    }
+
+    /**
+     * Una tarjeta sí se puede sobregirar. Si quien llama manda "confirmar" (el formulario de movimientos), al pasarse
+     * del disponible se pide confirmación (error "confirmar") y con confirmar = true se registra igual; si no lo
+     * manda (avances, pagos de deudas o compromisos), pasarse del disponible es un error del monto.
+     */
+    private function validarDisponible(TarjetaCredito $tarjeta, array $data, ?int $exceptId = null): void
+    {
+        if (! in_array($data['tipo'], ['compra', 'avance'], true) || ! empty($data['confirmar'])) {
+            return;
+        }
+        $disponible = max(0, $this->disponible($tarjeta, $exceptId));
+        if ((float) $data['monto'] <= $disponible) {
+            return;
+        }
+        if (! array_key_exists('confirmar', $data)) {
+            throw ValidationException::withMessages(['monto' => 'El monto supera el disponible de la tarjeta ($ '.number_format($disponible, 2).').']);
+        }
+        throw ValidationException::withMessages(['confirmar' => 'El monto supera el disponible de la tarjeta: solo quedan $ '.number_format($disponible, 2)
+            .' y quedaría sobregirada por $ '.number_format((float) $data['monto'] - $disponible, 2).'. ¿Deseas registrarlo de todas formas?']);
     }
 
     private function asegurarEditable(MovimientoTarjeta $movimiento): void
     {
         MovimientoVinculado::asegurarLibre($movimiento);
-        abort_unless($this->esEditable($movimiento), 403, 'Este movimiento ya se facturó o se gestiona desde su transferencia o compromiso.');
+        abort_unless($this->esEditable($movimiento), 403, 'Este movimiento se gestiona desde su transferencia, su compromiso o su compra en cuotas.');
     }
 
     private function diaDelMes(Carbon $mes, int $dia): Carbon

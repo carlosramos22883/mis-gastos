@@ -55,19 +55,7 @@
 
         <x-floating-select id="tipo_emisor_id" label="Tipo de emisor" :allowEmpty="false" :options="\App\Models\Catalogos\TipoEmisor::opciones($banco->tipo_emisor_id ?? null)" :value="$banco->tipo_emisor_id ?? \App\Models\Catalogos\TipoEmisor::predeterminado()" />
 
-        <!-- Checkbox Activo -->
-        <div class="flex items-center gap-2">
-            @php
-                $isChecked = isset($banco) ? $banco->activo : old('activo', 1);
-            @endphp
-            <input type="hidden" name="activo" value="0">
-            <input type="checkbox" name="activo" id="activo" value="1"
-                {{ $isChecked ? 'checked' : '' }}
-                class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500">
-            <label for="activo" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                Activo
-            </label>
-        </div>
+        <x-checkbox name="activo" id="activo" sinMarcar="0" :checked="isset($banco) ? $banco->activo : old('activo', 1)">Activo</x-checkbox>
 
         <div class="mt-6 flex justify-end gap-3">
             <x-secondary-button type="button" @click="$dispatch('close-modal', 'banco-modal')">Cancelar</x-secondary-button>

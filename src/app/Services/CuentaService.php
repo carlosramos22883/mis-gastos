@@ -19,7 +19,7 @@ class CuentaService
 {
     public function __construct(
         private readonly CicloEfectivoService $ciclos,
-        private readonly CompromisoService $compromisos,
+        private readonly TarjetaService $tarjetas,
     ) {}
 
     public function saldo(Cuenta $cuenta, ?Carbon $hasta = null, ?int $exceptId = null): float
@@ -83,7 +83,8 @@ class CuentaService
             $this->asegurarSaldo($cuenta, $this->efecto($data));
             if (! empty($data['compromiso_id'])) {
                 $this->exigirEgreso($data);
-                $this->compromisos->abonar(Compromiso::findOrFail($data['compromiso_id']), (float) $data['monto']);
+                // A una tarjeta se le puede pagar de más: el excedente queda como crédito en ella
+                $this->tarjetas->abonarPago(Compromiso::findOrFail($data['compromiso_id']), (float) $data['monto'], $data['fecha'], $data['user_id'] ?? null);
             }
 
             return $cuenta->movimientos()->create($data);
@@ -101,7 +102,7 @@ class CuentaService
             $this->asegurarSaldo($cuenta, $this->efecto($data), $movimiento->id);
             if ($movimiento->compromiso) {
                 $this->exigirEgreso($data);
-                $this->compromisos->abonar($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto);
+                $this->tarjetas->abonarPago($movimiento->compromiso, (float) $data['monto'] - (float) $movimiento->monto, $data['fecha'], $movimiento->user_id);
             }
             $movimiento->update($data);
 
@@ -119,7 +120,7 @@ class CuentaService
                 $this->asegurarSaldo($cuenta, 0, $movimiento->id, 'No puedes eliminar este ingreso: la cuenta quedaría en negativo.');
             }
             if ($movimiento->compromiso) {
-                $this->compromisos->abonar($movimiento->compromiso, -(float) $movimiento->monto);
+                $this->tarjetas->abonarPago($movimiento->compromiso, -(float) $movimiento->monto);
             }
             $movimiento->delete();
         });

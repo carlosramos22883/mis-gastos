@@ -34,11 +34,17 @@
                 <p class="text-xs opacity-80">Disponible</p>
                 <p class="text-2xl font-bold">{{ $simbolo }} {{ number_format($tarjeta->disponible, 2) }}</p>
                 <p class="text-xs opacity-80">de {{ $simbolo }} {{ number_format((float) $tarjeta->limite_credito, 2) }}</p>
+                @if (($tarjeta->cargos_sin_restar ?? 0) > 0)
+                    <p class="text-xs opacity-80" title="Este banco solo resta el capital: los intereses, comisiones e IVA bajan el disponible cuando los pagas.">{{ $simbolo }} {{ number_format($tarjeta->cargos_sin_restar, 2) }} de cargos del banco aún sin restar</p>
+                @endif
+                @if (($tarjeta->intereses_retenidos ?? 0) > 0)
+                    <p class="text-xs opacity-80" title="Los aparta el banco hasta el próximo corte. Si pagaste el total a tiempo, ahí te los devuelve.">{{ $simbolo }} {{ number_format($tarjeta->intereses_retenidos, 2) }} de intereses retenidos</p>
+                @endif
             </div>
             <x-logo-red :marca="$tarjeta->marcaRed" />
         </div>
         <div class="mt-2 h-1.5 overflow-hidden rounded-full" style="background-color: {{ $texto }}33">
-            <div class="h-full rounded-full" style="width: {{ $uso }}%; background-color: {{ $texto }}"></div>
+            <div class="barra-crece h-full rounded-full" style="width: {{ $uso }}%; background-color: {{ $texto }}"></div>
         </div>
     </{{ $tag }}>
     <dl class="mt-3 grid grid-cols-3 gap-2 px-1 text-xs text-gray-600 dark:text-gray-300">

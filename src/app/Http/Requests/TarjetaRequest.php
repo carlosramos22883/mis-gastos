@@ -23,6 +23,10 @@ class TarjetaRequest extends FormRequest
         $this->normalizarFechas('pendiente_fecha');
         $this->merge(['activo' => $this->boolean('activo', ! $this->isMethod('put')),
             'permite_avances' => $this->boolean('permite_avances', ! $this->isMethod('put'))]);
+        // Al editar, si no viene (apps anteriores) se deja como está
+        if ($this->has('cargos_restan_disponible') || ! $this->isMethod('put')) {
+            $this->merge(['cargos_restan_disponible' => $this->boolean('cargos_restan_disponible', true)]);
+        }
     }
 
     public function rules(): array
@@ -44,6 +48,7 @@ class TarjetaRequest extends FormRequest
             'dia_pago' => ['required', 'integer', 'between:1,31'],
             'activo' => ['boolean'],
             'permite_avances' => ['boolean'],
+            'cargos_restan_disponible' => ['sometimes', 'boolean'],
             // Situación de la tarjeta al registrarla
             'disponible' => [$creando ? 'required' : 'prohibited', 'numeric', 'min:0', 'lte:limite_credito', self::MONTO],
             'pendiente_monto' => [$soloAlCrear, 'numeric', 'min:0', self::MONTO],

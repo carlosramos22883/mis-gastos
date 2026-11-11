@@ -42,19 +42,73 @@
             </div>
         </div>
 
+        {{-- Se muestran 5 segundos al entrar, se desvanecen y el espacio se cierra suave; siguen en la campana de arriba --}}
         @if ($d['alertas'])
-            <div class="space-y-2">
+            <div x-data="{ desvanecer: false, mostrar: true }" x-init="setTimeout(() => desvanecer = true, 5000); setTimeout(() => mostrar = false, 6200)"
+                x-show="mostrar" x-collapse.duration.600ms>
+            <div class="space-y-2 transition-all duration-1000 ease-out" x-bind:class="desvanecer ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'">
                 @foreach ($d['alertas'] as $a)
                     @php([, $clase, $icono] = $niveles[$a['nivel']])
                     @php($etiqueta = $a['etiqueta'])
-                    <a href="{{ $a['url'] }}" class="flex items-center gap-3 rounded-lg border px-4 py-2 text-sm hover:opacity-90 {{ $clase }}">
+                    <a href="{{ route('avisos.abrir', $a['clave']) }}" class="flex items-center gap-3 rounded-lg border px-4 py-2 text-sm hover:opacity-90 {{ $clase }}">
                         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $icono }}" /></svg>
                         <span class="shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-xs font-semibold dark:bg-black/20">{{ $etiqueta }}</span>
                         <span>{{ $a['texto'] }}</span>
                     </a>
                 @endforeach
             </div>
+            </div>
         @endif
+
+        {{-- Termómetro del ciclo: tope de gasto y presupuestos (súper, gasolina…) que se van gastando --}}
+        @php($barra = fn (float $gastado, float $monto) => $gastado > $monto ? 'bg-red-500' : ($gastado >= $monto * 0.8 ? 'bg-amber-500' : 'bg-green-500'))
+        <section class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Gasto del ciclo</h2>
+                @can('compromisos.edit')
+                    <x-secondary-button type="button" class="py-1.5" x-data x-on:click="$dispatch('editar-tope')">{{ $d['tope'] ? 'Cambiar tope' : 'Ponerle un tope' }}</x-secondary-button>
+                @endcan
+            </div>
+            @can('compromisos.edit')
+                <div x-data="{ editando: false }" x-on:editar-tope.window="editando = true" x-show="editando" x-cloak>
+                <form x-data="ajaxForm(async function(data) { await showAlert('success', '¡Listo!', data.message); window.location.reload(); })"
+                    @submit.prevent="submit" method="POST" action="{{ route('hogar.tope') }}" class="mt-3 flex flex-wrap items-start gap-3" novalidate>
+                    @csrf
+                    @method('PATCH')
+                    <div class="w-48"><x-floating-money id="tope_gasto_ciclo" label="Tope del ciclo" :symbol="$simbolo" :value="$d['tope']['tope'] ?? ''" /></div>
+                    <x-secondary-button type="button" x-on:click="editando = false">Cancelar</x-secondary-button>
+                    <x-primary-button type="submit" x-bind:disabled="loading">Guardar</x-primary-button>
+                </form>
+                </div>
+            @endcan
+            @if ($tope = $d['tope'])
+                <div class="mt-3 flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                    <span class="text-gray-700 dark:text-gray-300">Llevas <strong>{{ $dinero($tope['gastado']) }}</strong> de {{ $dinero($tope['tope']) }}</span>
+                    <span class="{{ $tope['queda'] < 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300' }}">
+                        {{ $tope['queda'] < 0 ? 'Te pasaste por '.$dinero(-$tope['queda']) : 'Te quedan '.$dinero($tope['queda']).' · '.$dinero($tope['por_dia']).' por día ('.($tope['dias_restantes'] + 1).' días)' }}
+                    </span>
+                </div>
+                <div class="mt-2 h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700" role="progressbar" aria-valuenow="{{ $tope['porcentaje'] }}" aria-valuemin="0" aria-valuemax="100" aria-label="Gasto del ciclo">
+                    <div class="barra-crece h-full rounded-full {{ $barra($tope['gastado'], $tope['tope']) }}" style="width: {{ min(100, $tope['porcentaje']) }}%"></div>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cuenta todos los gastos del ciclo menos las cuotas de préstamos.</p>
+            @else
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Sin tope: ponle uno para saber cuánto puedes gastar por día.</p>
+            @endif
+            @if ($d['presupuestos'])
+                <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+                    @foreach ($d['presupuestos'] as $p)
+                        <li>
+                            <a href="{{ route('compromisos.show', $p['id']) }}" class="flex items-baseline justify-between gap-2 text-sm hover:underline">
+                                <span class="font-medium text-gray-800 dark:text-gray-200">{{ $p['descripcion'] }}</span>
+                                <span class="{{ $p['queda'] < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300' }}">{{ $dinero($p['gastado']) }} de {{ $dinero($p['monto']) }}{{ $p['comprometido'] > 0 ? ' + '.$dinero($p['comprometido']).' por pagar' : '' }} · {{ $p['queda'] < 0 ? 'te pasaste '.$dinero(-$p['queda']) : 'quedan '.$dinero($p['queda']) }}</span>
+                            </a>
+                            <div class="mt-1 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"><div class="barra-crece h-full rounded-full {{ $barra($p['gastado'] + $p['comprometido'], $p['monto']) }}" style="--retraso: {{ 150 + $loop->index * 60 }}ms; width: {{ $p['monto'] > 0 ? min(100, round(($p['gastado'] + $p['comprometido']) / $p['monto'] * 100)) : 0 }}%"></div></div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
 
         {{-- Dónde está el dinero y qué se debe --}}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -133,7 +187,7 @@
                                     <span class="truncate">{{ $c['nombre'] }}</span>
                                 </span>
                                 <span class="col-span-5 h-3.5">
-                                    <span class="block h-full rounded-r" style="width: {{ max(1, $c['monto'] / $maxCategoria * 100) }}%; background-color: var(--series-1)"></span>
+                                    <span class="barra-crece block h-full rounded-r" style="--retraso: {{ $loop->index * 50 }}ms; width: {{ max(1, $c['monto'] / $maxCategoria * 100) }}%; background-color: var(--series-1)"></span>
                                 </span>
                                 <span class="col-span-3 text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">{{ $dinero($c['monto']) }}</span>
                             </li>
@@ -158,8 +212,8 @@
                         @php($etiqueta = \Carbon\Carbon::parse($h['inicio'])->translatedFormat('M'))
                         <div class="flex h-full flex-1 cursor-default flex-col justify-end" x-on:mouseenter="tip = @js('Ciclo '.\Carbon\Carbon::parse($h['inicio'])->format('d/m').'–'.\Carbon\Carbon::parse($h['fin'])->format('d/m').': ingresos '.$dinero($h['ingresos']).' · gastos '.$dinero($h['gastos']))" x-on:mouseleave="tip = null">
                             <div class="flex h-full items-end justify-center gap-0.5">
-                                <span class="w-full max-w-6 rounded-t" style="height: {{ $h['ingresos'] / $maxHistorial * 100 }}%; background-color: var(--series-1)"></span>
-                                <span class="w-full max-w-6 rounded-t" style="height: {{ $h['gastos'] / $maxHistorial * 100 }}%; background-color: var(--series-2)"></span>
+                                <span class="columna-crece w-full max-w-6 rounded-t" style="--retraso: {{ $loop->index * 80 }}ms; height: {{ $h['ingresos'] / $maxHistorial * 100 }}%; background-color: var(--series-1)"></span>
+                                <span class="columna-crece w-full max-w-6 rounded-t" style="--retraso: {{ $loop->index * 80 + 40 }}ms; height: {{ $h['gastos'] / $maxHistorial * 100 }}%; background-color: var(--series-2)"></span>
                             </div>
                         </div>
                     @endforeach

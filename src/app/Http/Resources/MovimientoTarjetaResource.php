@@ -30,6 +30,7 @@ class MovimientoTarjetaResource extends JsonResource
             'monto' => number_format((float) $this->monto, 2, '.', ''),
             'fecha' => $this->fecha->toDateString(),
             'cuotas' => $this->cuotas,
+            'dia_cuota' => $this->dia_cuota, // día del mes en que se cobra cada cuota (null: una por corte)
             'categoria' => $this->categoria ? ['id' => $this->categoria->id, 'nombre' => $this->categoria->nombre, 'color' => $this->categoria->color] : null,
             'transferencia_id' => $this->transferencia_id,
             'pago_compromiso_id' => $this->pago_compromiso_id,

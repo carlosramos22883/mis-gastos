@@ -23,7 +23,7 @@
         <div class="space-y-1 text-sm">
             <p class="text-gray-700 dark:text-gray-300">Toca la cámara para elegir una foto o logo y recortarla.</p>
             @if ($editing && $contacto->foto)
-                <label class="flex items-center gap-2 text-gray-600 dark:text-gray-300"><input type="checkbox" name="quitar_foto" value="1" class="rounded border-gray-300 dark:border-gray-600"> Quitar foto</label>
+                <x-checkbox name="quitar_foto" peligro>Quitar foto</x-checkbox>
             @endif
             <p class="text-xs text-gray-500 dark:text-gray-400">Solo la ven los miembros de tu hogar.</p>
         </div>
@@ -39,10 +39,7 @@
     </div>
     <x-floating-input id="notas" label="Notas (opcional)" maxlength="1000" :value="$contacto->notas ?? ''" />
     @if ($editing)
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input type="hidden" name="activo" value="0">
-            <input type="checkbox" name="activo" value="1" @checked($contacto->activo) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activo
-        </label>
+        <x-checkbox name="activo" sinMarcar="0" :checked="$contacto->activo">Activo</x-checkbox>
     @endif
     <div class="flex justify-end gap-3">
         <x-secondary-button type="button" x-on:click="$dispatch('close-modal', 'contacto-modal')">Cancelar</x-secondary-button>

@@ -58,18 +58,7 @@
         <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" maxlength="255" :value="isset($marcaRed) ? old('nombre', $marcaRed->nombre) : old('nombre')"
             :error="$errors->first('nombre')" required placeholder="Ej: Visa" />
 
-        <!-- Checkbox Activo -->
-        <div class="flex items-center gap-2">
-            @php
-                $isChecked = isset($marcaRed) ? $marcaRed->activo : old('activo', 1);
-            @endphp
-            <input type="hidden" name="activo" value="0">
-            <input type="checkbox" name="activo" id="activo" value="1" {{ $isChecked ? 'checked' : '' }}
-                class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500">
-            <label for="activo" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                Activa
-            </label>
-        </div>
+        <x-checkbox name="activo" id="activo" sinMarcar="0" :checked="isset($marcaRed) ? $marcaRed->activo : old('activo', 1)">Activa</x-checkbox>
 
         <div class="mt-6 flex justify-end gap-3">
             <x-secondary-button type="button"

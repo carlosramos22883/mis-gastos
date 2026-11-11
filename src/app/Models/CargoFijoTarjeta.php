@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** Cargo que la tarjeta cobra cada corte (seguro, membresía…). Lo aplica TarjetaService al generar el estado de cuenta. */
-#[Fillable(['user_id', 'tarjeta_credito_id', 'categoria_personal_id', 'descripcion', 'monto', 'desde', 'activo'])]
+/**
+ * Cargo que la tarjeta cobra cada mes (seguro, Netflix…) el día "dia" (31 = último día), desde "desde" y hasta "hasta"
+ * (opcional). TarjetaService::aplicarCargosFijos crea el movimiento ese día; "ultimo_cobro" es la fecha del último creado.
+ */
+#[Fillable(['user_id', 'tarjeta_credito_id', 'categoria_personal_id', 'descripcion', 'monto', 'dia', 'desde', 'hasta', 'ultimo_cobro', 'activo'])]
 class CargoFijoTarjeta extends Model
 {
     use PerteneceAHogar;
@@ -18,7 +21,7 @@ class CargoFijoTarjeta extends Model
 
     protected function casts(): array
     {
-        return ['monto' => 'decimal:2', 'desde' => 'date', 'activo' => 'boolean'];
+        return ['monto' => 'decimal:2', 'dia' => 'integer', 'desde' => 'date', 'hasta' => 'date', 'ultimo_cobro' => 'date', 'activo' => 'boolean'];
     }
 
     public function tarjeta(): BelongsTo

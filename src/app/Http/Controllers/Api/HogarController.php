@@ -34,6 +34,17 @@ class HogarController extends Controller
         return new HogarResource($hogar->fresh('miembros'));
     }
 
+    #[OA\Patch(path: '/api/hogar/tope', summary: 'Tope de gasto del ciclo', description: 'Monto máximo de gasto por ciclo (sin las cuotas de préstamos). Vacío o 0 = sin tope. El dashboard informa lo gastado, lo que queda y cuánto se puede gastar por día.', tags: ['Hogar'], security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [new OA\Property(property: 'tope_gasto_ciclo', type: 'string', nullable: true, example: '1800.00')])),
+        responses: [new OA\Response(response: 200, description: 'Actualizado'), new OA\Response(response: 422, description: 'Validación')])]
+    public function tope(Request $request)
+    {
+        $data = $request->validate(['tope_gasto_ciclo' => ['nullable', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/']]);
+        $request->user()->hogar->update(['tope_gasto_ciclo' => $data['tope_gasto_ciclo'] ?: null]);
+
+        return response()->json(['data' => ['tope_gasto_ciclo' => $request->user()->hogar->tope_gasto_ciclo]]);
+    }
+
     #[OA\Post(path: '/api/hogar/invitaciones', summary: 'Invitar por correo (solo quien administra)', tags: ['Hogar'], security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [new OA\Property(property: 'email', type: 'string')])),
         responses: [new OA\Response(response: 201, description: 'Invitación enviada'), new OA\Response(response: 422, description: 'Ya es miembro o ya hay una pendiente')])]

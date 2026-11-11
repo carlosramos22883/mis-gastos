@@ -32,10 +32,7 @@
         <div x-data="{ pendiente: false }" class="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
             <p class="text-sm font-medium text-gray-800 dark:text-gray-200">¿Cómo está la tarjeta hoy?</p>
             <x-floating-money id="disponible" label="Disponible actual" :symbol="$simbolo" required />
-            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <input type="checkbox" name="tiene_pendiente" value="1" x-model="pendiente" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
-                Tengo un estado de cuenta pendiente de pago
-            </label>
+            <x-checkbox name="tiene_pendiente" x-model="pendiente">Tengo un estado de cuenta pendiente de pago</x-checkbox>
             <div x-show="pendiente" x-collapse class="grid gap-4 sm:grid-cols-2">
                 <x-floating-money id="pendiente_monto" label="Saldo del estado de cuenta" :symbol="$simbolo" />
                 <x-floating-date id="pendiente_fecha" label="Fecha límite de pago" :max="now()->addYear()" />
@@ -48,13 +45,9 @@
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             Color <input type="color" name="color" value="{{ $tarjeta->color ?? '#1E293B' }}" class="h-8 w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600">
         </label>
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input type="checkbox" name="activo" value="1" @checked($tarjeta->activo ?? true) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activa
-        </label>
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300" title="Las tarjetas de tienda no sirven para avances ni recargas (Chivo, Niu)">
-            <input type="hidden" name="permite_avances" value="0">
-            <input type="checkbox" name="permite_avances" value="1" @checked($tarjeta->permite_avances ?? true) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Sirve para avances o recargas
-        </label>
+        <x-checkbox name="activo" :checked="$tarjeta->activo ?? true">Activa</x-checkbox>
+        <x-checkbox name="permite_avances" sinMarcar="0" :checked="$tarjeta->permite_avances ?? true" ayuda="Las tarjetas de tienda no sirven para avances ni recargas (Chivo, Niu).">Sirve para avances o recargas</x-checkbox>
+        <x-checkbox name="cargos_restan_disponible" sinMarcar="0" :checked="$tarjeta->cargos_restan_disponible ?? true" ayuda="Desmárcalo si el banco solo resta el capital (Davivienda): los intereses, comisiones e IVA bajan el disponible al pagarlos.">Los cargos del banco restan del disponible</x-checkbox>
     </div>
     <div class="flex justify-end gap-3">
         <x-secondary-button type="button" x-on:click="$dispatch('close-modal', 'tarjeta-modal')">Cancelar</x-secondary-button>

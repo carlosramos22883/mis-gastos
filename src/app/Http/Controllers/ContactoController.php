@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ContactoRequest;
 use App\Http\Requests\DeudaPagoRequest;
 use App\Http\Requests\DeudaRequest;
+use App\Http\Requests\DeudaVinculoRequest;
 use App\Models\Contacto;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
+use App\Models\MovimientoCuenta;
+use App\Models\MovimientoEfectivo;
+use App\Models\MovimientoTarjeta;
 use App\Services\ContactoService;
 use App\Services\DeudorService;
 use App\Services\PrestamoService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -114,12 +119,30 @@ class ContactoController extends Controller
         return response()->json(['success' => true, 'message' => 'Deuda registrada.']);
     }
 
+    /** "Me lo debe" desde un gasto ya registrado (efectivo, cuenta o tarjeta). */
+    public function crearVinculo(Request $request, string $clase, int $id)
+    {
+        $movimiento = $this->movimiento($request, $clase, $id);
+        abort_unless($this->deudas->vinculable($movimiento), 403, 'Este movimiento no se puede ligar a una deuda.');
+
+        return view('contactos._vinculo_form', ['movimiento' => $movimiento, 'clase' => $clase]);
+    }
+
+    public function guardarVinculo(DeudaVinculoRequest $request, string $clase, int $id)
+    {
+        $movimiento = $this->movimiento($request, $clase, $id);
+        $contacto = $request->user()->contactos()->findOrFail($request->validated('contacto_id'));
+        $deuda = $this->deudas->vincularMovimiento($request->user(), $movimiento, $contacto, $request->validated());
+
+        return response()->json(['success' => true, 'message' => "Listo: {$contacto->nombreCompleto()} te debe $ ".number_format((float) $deuda->monto, 2).'.']);
+    }
+
     public function eliminarDeuda(Request $request, Deuda $deuda)
     {
         abort_unless($deuda->esDelHogar($request->user()), 404);
         $this->deudas->eliminarDeuda($deuda);
 
-        return response()->json(['success' => true, 'message' => 'Deuda eliminada.']);
+        return response()->json(['success' => true, 'message' => $deuda->vinculada ? 'Deuda eliminada. El movimiento sigue registrado.' : 'Deuda eliminada.']);
     }
 
     public function crearPago(Request $request, Contacto $contacto)
@@ -164,6 +187,13 @@ class ContactoController extends Controller
         }
 
         return $opciones + ['ninguno' => 'Solo anotar (el dinero ya está registrado)'];
+    }
+
+    private function movimiento(Request $request, string $clase, int $id): Model
+    {
+        $modelo = ['efectivo' => MovimientoEfectivo::class, 'cuenta' => MovimientoCuenta::class, 'tarjeta' => MovimientoTarjeta::class][$clase];
+
+        return $modelo::delHogar($request->user())->findOrFail($id);
     }
 
     private function own(Request $request, Contacto $contacto): void

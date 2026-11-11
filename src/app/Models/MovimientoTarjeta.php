@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Movimiento de una tarjeta. Tipos: compra (con "cuotas" > 1 si es a tasa cero), avance (a efectivo o a una
+ * Movimiento de una tarjeta. Tipos: compra (con "cuotas" > 1 si es a tasa cero; "dia_cuota" = día del mes en que se
+ * cobra cada cuota, sin él una por corte), avance (a efectivo o a una
  * cuenta, vía transferencia), cargo (intereses, seguro, comisión o mora) y credito (devolución o promoción).
- * Un cargo con compromiso_id (mora) se cobra en su propio compromiso y no entra en los cortes.
+ * Un cargo con compromiso_id (mora) se cobra en su propio compromiso y no entra en los cortes. Un crédito con
+ * excedente_compromiso_id es lo que se pagó de más en ese compromiso (se gestiona desde el pago).
  */
-#[Fillable(['user_id', 'contacto_id', 'tarjeta_credito_id', 'categoria_personal_id', 'compromiso_id', 'pago_compromiso_id', 'cargo_fijo_id', 'transferencia_id', 'tipo', 'descripcion', 'comentario', 'monto', 'fecha', 'cuotas'])]
+#[Fillable(['user_id', 'contacto_id', 'tarjeta_credito_id', 'categoria_personal_id', 'compromiso_id', 'pago_compromiso_id', 'excedente_compromiso_id', 'cargo_fijo_id', 'transferencia_id', 'tipo', 'descripcion', 'comentario', 'monto', 'fecha', 'cuotas', 'dia_cuota'])]
 class MovimientoTarjeta extends Model
 {
     use PerteneceAHogar;
@@ -24,7 +26,7 @@ class MovimientoTarjeta extends Model
 
     protected function casts(): array
     {
-        return ['monto' => 'decimal:2', 'fecha' => 'date', 'cuotas' => 'integer'];
+        return ['monto' => 'decimal:2', 'fecha' => 'date', 'cuotas' => 'integer', 'dia_cuota' => 'integer'];
     }
 
     public function tarjeta(): BelongsTo

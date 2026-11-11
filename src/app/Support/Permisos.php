@@ -35,6 +35,9 @@ class Permisos
         'prestamos' => 'Préstamos',
         'ingresos' => 'Ingresos (sueldos)',
         'hogar' => 'Hogar',
+        'reportes' => 'Reportes',
+        'eventos' => 'Eventos (dividir la cuenta)',
+        'proyecciones' => 'Proyecciones (escenarios para salir de deudas)',
     ];
 
     public const ACCIONES = [

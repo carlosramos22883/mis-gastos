@@ -65,15 +65,9 @@
         </label>
     </div>
     @unless ($editing)
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input type="checkbox" name="crear_compromiso" value="1" checked class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
-            Crear el compromiso mensual de la cuota (no aplica a descuentos de planilla)
-        </label>
+        <x-checkbox name="crear_compromiso" checked ayuda="No aplica a los descuentos de planilla.">Crear el compromiso mensual de la cuota</x-checkbox>
     @else
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input type="hidden" name="activo" value="0">
-            <input type="checkbox" name="activo" value="1" @checked($prestamo->activo) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activo
-        </label>
+        <x-checkbox name="activo" sinMarcar="0" :checked="$prestamo->activo">Activo</x-checkbox>
     @endunless
     <x-floating-input id="notas" label="Notas (opcional)" maxlength="1000" :value="$prestamo->notas ?? ''" />
     <div class="flex justify-end gap-3">

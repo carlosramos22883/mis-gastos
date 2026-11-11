@@ -32,7 +32,7 @@
             {{ __('Inicio') }}
         </a>
 
-        @canany(['categorias.view', 'efectivo.view', 'cuentas.view', 'compromisos.view', 'tarjetas.view', 'deudores.view', 'prestamos.view', 'ingresos.view', 'contactos.view'])
+        @canany(['categorias.view', 'efectivo.view', 'cuentas.view', 'compromisos.view', 'tarjetas.view', 'deudores.view', 'prestamos.view', 'ingresos.view', 'contactos.view', 'eventos.view'])
             <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
                 @canany(['categorias.view'])
                     <a href="{{ route('categorias.index') }}" @click="sidebarOpen = false"
@@ -86,6 +86,29 @@
                     <a href="{{ route('contactos.index', ['filtro' => 'deben']) }}" @click="sidebarOpen = false"
                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('contactos.index') && request('filtro') === 'deben' ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                         {{ __('Nos deben') }}
+                    </a>
+                @endcan
+                @can('eventos.view')
+                    <a href="{{ route('eventos.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('eventos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Eventos') }}
+                    </a>
+                @endcan
+            </div>
+        @endcanany
+
+        @canany(['reportes.view', 'proyecciones.view'])
+            <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                @can('reportes.view')
+                    <a href="{{ route('reportes.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('reportes.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Reportes') }}
+                    </a>
+                @endcan
+                @can('proyecciones.view')
+                    <a href="{{ route('proyecciones.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('proyecciones.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Proyecciones') }}
                     </a>
                 @endcan
             </div>

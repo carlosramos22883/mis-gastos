@@ -123,6 +123,16 @@ class RoleAndPermissionSeeder extends Seeder
             'contactos.create',
             'contactos.edit',
             'contactos.delete',
+            'reportes.view',
+            'reportes.export',
+            'eventos.view',
+            'eventos.create',
+            'eventos.edit',
+            'eventos.delete',
+            'proyecciones.view',
+            'proyecciones.create',
+            'proyecciones.edit',
+            'proyecciones.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -149,6 +159,9 @@ class RoleAndPermissionSeeder extends Seeder
             'prestamos.view', 'prestamos.create', 'prestamos.edit', 'prestamos.delete',
             'ingresos.view', 'ingresos.create', 'ingresos.edit', 'ingresos.delete',
             'contactos.view', 'contactos.create', 'contactos.edit', 'contactos.delete',
+            'reportes.view', 'reportes.export',
+            'eventos.view', 'eventos.create', 'eventos.edit', 'eventos.delete',
+            'proyecciones.view', 'proyecciones.create', 'proyecciones.edit', 'proyecciones.delete',
         ]);
 
         // 4. Crear Usuario Administrador por defecto

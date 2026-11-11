@@ -1,9 +1,11 @@
 @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
 <x-app-layout>
     <x-slot name="header"><h1>{{ $tarjeta->nombre }}</h1></x-slot>
-    {{-- ?estado=ID abre ese estado de cuenta (viene de "ir al movimiento" de uno ya facturado) --}}
+    {{-- ?estado=ID abre ese estado de cuenta (viene de "ir al movimiento" de uno ya facturado, o de guardar/eliminar un movimiento desde su detalle) --}}
     @php($abrirEstado = request()->filled('estado') ? $tarjeta->estadosCuenta()->whereKey((int) request('estado'))->first() : null)
-    <div class="max-w-7xl mx-auto space-y-6" x-data x-on:refresh-table.window="$event.detail?.redirect ? window.location = $event.detail.redirect : window.location.reload()"
+    {{-- Un clic en la pantalla (los modales están fuera de este div) olvida el estado de cuenta del que se venía --}}
+    <div class="max-w-7xl mx-auto space-y-6" x-data x-on:click.capture="window.volverAlEstado = null"
+        x-on:refresh-table.window="if ($event.detail?.redirect) { window.location = $event.detail.redirect } else { const url = new URL(window.location.href); url.searchParams.delete('resaltar'); window.volverAlEstado ? url.searchParams.set('estado', window.volverAlEstado) : url.searchParams.delete('estado'); window.location = url.toString() }"
         @if ($abrirEstado) x-init="$nextTick(() => { $dispatch('load-estado-modal-form', '{{ route('estados-cuenta.show', $abrirEstado) }}'); $dispatch('open-modal', 'estado-modal') })" @endif>
         <div class="grid gap-6 lg:grid-cols-3">
             <div>@include('tarjetas._tarjeta')</div>
@@ -82,27 +84,45 @@
             <div class="flex flex-wrap items-center justify-between gap-2 px-6 pt-5">
                 <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Por facturar en el corte del {{ $tarjeta->proximo_corte->format('d/m/Y') }}</h2>
                 <span class="text-right">
-                    <span class="block text-lg font-bold text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format($porFacturar->sum('monto') + $cargosProximos->sum('monto'), 2) }}</span>
-                    @if ($cargosProximos->isNotEmpty())
-                        <span class="block text-xs text-gray-500 dark:text-gray-400">incluye {{ $cargosProximos->pluck('descripcion')->join(', ') }} ({{ $simbolo }} {{ number_format($cargosProximos->sum('monto'), 2) }}) que se suma al cortar</span>
+                    @php([$programadas, $cobrado] = $porFacturar->partition(fn ($l) => $l['programada']))
+                    <span class="block text-lg font-bold text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format($cobrado->sum('monto') + $saldoAFavor, 2) }}</span>
+                    @if ($saldoAFavor < 0)
+                        <span class="block text-xs text-green-700 dark:text-green-400">Incluye el saldo a favor del corte anterior ({{ $simbolo }} {{ number_format(-$saldoAFavor, 2) }})</span>
+                    @endif
+                    {{-- Aún no se cobran: los cargos fijos se registran solos y las cuotas entran el día de su cobro --}}
+                    @php($proximos = $cargosProximos->map(fn ($c) => ['fecha' => $c->proximo_cobro, 'texto' => $c->descripcion, 'monto' => (float) $c->monto])
+                        ->concat($programadas->map(fn ($l) => ['fecha' => $l['fecha'], 'texto' => 'cuota '.$l['cuota_numero'].' de '.$l['movimiento']->cuotas.' de '.$l['movimiento']->descripcion, 'monto' => $l['monto']]))
+                        ->sortBy(fn ($p) => $p['fecha']->toDateString()))
+                    @if ($proximos->isNotEmpty())
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">Antes del corte se cobrará: {{ $proximos->map(fn ($p) => $p['texto'].' el '.$p['fecha']->format('d/m').' ('.$simbolo.' '.number_format($p['monto'], 2).')')->join(', ') }}</span>
                     @endif
                 </span>
             </div>
-            <div class="overflow-x-auto">
+            {{-- Lo más reciente primero; cada columna se puede ordenar con un clic --}}
+            <div class="overflow-x-auto" x-data="tablaOrdenable('fecha', 'desc')">
                 <table class="mt-3 w-full text-sm text-left text-gray-700 dark:text-gray-300">
                     <thead class="text-xs uppercase bg-cabecera text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                        <tr><th class="px-6 py-3">Fecha</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Tipo</th><th class="px-6 py-3 text-right">Monto</th><th class="px-6 py-3 text-right">Acciones</th></tr>
+                        <tr>
+                            <x-th-ordenable campo="fecha">Fecha</x-th-ordenable>
+                            <x-th-ordenable campo="descripcion">Descripción</x-th-ordenable>
+                            <x-th-ordenable campo="tipo">Tipo</x-th-ordenable>
+                            <x-th-ordenable campo="monto" class="text-right">Monto</x-th-ordenable>
+                            <th class="px-6 py-3 text-right">Acciones</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        @forelse ($porFacturar as $linea)
+                        @forelse ($cobrado->sortByDesc(fn ($l) => $l['fecha']->toDateString().sprintf('%010d', $l['movimiento']->id)) as $linea)
                             @php($m = $linea['movimiento'])
-                            <tr class="border-t border-gray-200 dark:border-gray-700" data-movimiento="{{ $m->id }}">
-                                <td class="px-6 py-3 whitespace-nowrap">{{ $m->fecha->format('d/m/Y') }}</td>
+                            @php($tipoLinea = $linea['cuota_numero'] ? 'Cuota '.$linea['cuota_numero'].' de '.$m->cuotas : \App\Models\MovimientoTarjeta::TIPOS[$m->tipo])
+                            <tr class="border-t border-gray-200 dark:border-gray-700" data-movimiento="{{ $m->id }}"
+                                data-orden-fecha="{{ $linea['fecha']->toDateString() }}-{{ sprintf('%010d', $m->id) }}" data-orden-descripcion="{{ $m->descripcion }}" data-orden-tipo="{{ $tipoLinea }}" data-orden-monto="{{ $linea['monto'] }}">
+                                <td class="px-6 py-3 whitespace-nowrap">{{ $linea['fecha']->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3">@include('hogar._por', ['id' => $m->user_id]){{ $m->descripcion }}@include('contactos._chip', ['contacto' => $m->contacto])@if ($m->categoria)<span class="ml-2 text-xs text-gray-400">{{ $m->categoria->nombre }}</span>@endif</td>
-                                <td class="px-6 py-3 whitespace-nowrap">{{ $linea['cuota_numero'] ? 'Cuota '.$linea['cuota_numero'].' de '.$m->cuotas : \App\Models\MovimientoTarjeta::TIPOS[$m->tipo] }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap">{{ $tipoLinea }}</td>
                                 <td class="px-6 py-3 text-right whitespace-nowrap {{ $linea['monto'] < 0 ? 'text-green-700 dark:text-green-400' : '' }}">{{ $simbolo }} {{ number_format($linea['monto'], 2) }}</td>
                                 <td class="px-6 py-3">
                                     <div class="flex justify-end gap-2">
+                                        @include('contactos._me_lo_debe', ['clase' => 'tarjeta', 'movimiento' => $m])
                                         @if (app(\App\Services\TarjetaService::class)->esEditable($m))
                                             @can('tarjetas.edit')
                                                 <x-secondary-button type="button" class="py-1.5 px-2" title="Editar" x-on:click="$dispatch('load-movimiento-modal-form', '{{ route('tarjetas.movimientos.edit', [$tarjeta, $m]) }}'); $dispatch('open-modal', 'movimiento-modal')">
@@ -136,7 +156,12 @@
                         <div>
                             <div class="flex flex-wrap justify-between gap-2 text-sm text-gray-700 dark:text-gray-300">
                                 <span><strong>{{ $compra->descripcion }}</strong> · {{ $simbolo }} {{ number_format((float) $compra->monto, 2) }} en {{ $compra->cuotas }} cuotas de {{ $simbolo }} {{ number_format((float) $compra->monto / $compra->cuotas, 2) }}</span>
-                                <span>{{ $compra->items_count }} de {{ $compra->cuotas }} facturadas</span>
+                                <span>
+                                    {{ $compra->items_count }} de {{ $compra->cuotas }} facturadas
+                                    @if ($compra->dia_cuota)
+                                        <span class="block text-right text-xs text-gray-500 dark:text-gray-400">{{ $compra->dia_cuota === 31 ? 'El último día' : 'El día '.$compra->dia_cuota }} de cada mes · próxima: {{ app(\App\Services\TarjetaService::class)->fechaCuota($compra, $compra->items_count + 1)->format('d/m/Y') }}</span>
+                                    @endif
+                                </span>
                             </div>
                             <div class="mt-1 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                                 <div class="h-full rounded-full bg-primary-500" style="width: {{ $compra->items_count / $compra->cuotas * 100 }}%"></div>
@@ -164,7 +189,7 @@
                                     <span class="block text-xs text-gray-400">desde {{ $estado->fecha_inicio->format('d/m/Y') }}</span></td>
                                 <td class="px-6 py-3 whitespace-nowrap font-semibold">{{ $simbolo }} {{ number_format((float) $estado->total, 2) }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap">
-                                    <div x-data="{ editando: false, fecha: '{{ $estado->fecha_limite_pago->toDateString() }}' }">
+                                    <div x-data="{ editando: false }">
                                         <span x-show="!editando">{{ $estado->fecha_limite_pago->format('d/m/Y') }}
                                             @can('tarjetas.edit')
                                                 @if (! $compromiso || $compromiso->estado === 'pendiente')
@@ -172,14 +197,16 @@
                                                 @endif
                                             @endcan
                                         </span>
-                                        <span x-show="editando" x-cloak class="flex items-center gap-1">
-                                            <input type="date" x-model="fecha" class="rounded border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700">
-                                            <button type="button" class="text-xs font-medium text-primary-600 dark:text-primary-400"
-                                                x-on:click="fetch('{{ route('estados-cuenta.fecha-limite', $estado) }}', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }, body: JSON.stringify({ fecha_limite_pago: fecha }) })
-                                                    .then(async r => { const d = await r.json(); if (!r.ok) throw d; await showAlert('success', '¡Listo!', d.message); window.location.reload(); })
-                                                    .catch(e => showAlert('error', 'Error', e?.message || 'No se pudo actualizar.'))">Guardar</button>
-                                            <button type="button" class="text-xs text-gray-500" x-on:click="editando = false">Cancelar</button>
-                                        </span>
+                                        @can('tarjetas.edit')
+                                            <form x-show="editando" x-cloak method="POST" action="{{ route('estados-cuenta.fecha-limite', $estado) }}" class="flex items-start gap-2" novalidate
+                                                x-data="ajaxForm(async function(data) { await showAlert('success', '¡Listo!', data.message); window.location.reload(); })" @submit.prevent="submit">
+                                                @csrf
+                                                @method('PATCH')
+                                                <div class="w-40"><x-floating-date id="fecha_limite_pago_{{ $estado->id }}" x-bind:name="'fecha_limite_pago'" label="Fecha límite" :value="$estado->fecha_limite_pago" :min="$estado->fecha_corte" :max="$estado->fecha_corte->copy()->addMonths(3)" /></div>
+                                                <x-primary-button type="submit" class="py-2" x-bind:disabled="loading">Guardar</x-primary-button>
+                                                <x-secondary-button type="button" class="py-2" x-on:click="editando = false">Cancelar</x-secondary-button>
+                                            </form>
+                                        @endcan
                                     </div>
                                 </td>
                                 <td class="px-6 py-3">
@@ -221,7 +248,7 @@
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                 <div>
                     <h2 class="font-semibold text-gray-900 dark:text-gray-100">Cargos fijos</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Seguro, membresía… se agregan solos a cada estado de cuenta.</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Seguro, Netflix… cada mes, el día de su cobro, se registran solos como movimiento de la tarjeta.</p>
                 </div>
                 @can('tarjetas.edit')
                     <x-secondary-button type="button" x-on:click="$dispatch('load-cargo-modal-form', '{{ route('tarjetas.cargos.create', $tarjeta) }}'); $dispatch('open-modal', 'cargo-modal')">Agregar</x-secondary-button>
@@ -229,10 +256,13 @@
             </div>
             <ul class="divide-y divide-gray-100 text-sm dark:divide-gray-700">
                 @forelse ($tarjeta->cargosFijos()->with('categoria')->orderByDesc('activo')->orderBy('descripcion')->get() as $cargo)
-                    <li class="flex items-center justify-between gap-3 px-6 py-3 {{ $cargo->activo ? '' : 'opacity-60' }}">
+                    @php($proximo = $cargo->activo ? app(\App\Services\TarjetaService::class)->proximoCobro($cargo) : null)
+                    <li class="flex items-center justify-between gap-3 px-6 py-3 {{ $cargo->activo && $proximo ? '' : 'opacity-60' }}">
                         <span class="min-w-0">
-                            <span class="block text-gray-800 dark:text-gray-200">{{ $cargo->descripcion }}@unless ($cargo->activo) <span class="text-xs text-gray-500">· inactivo</span>@endunless</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">Cada corte desde el {{ $cargo->desde->format('d/m/Y') }}{{ $cargo->categoria ? ' · '.$cargo->categoria->nombre : '' }}</span>
+                            <span class="block text-gray-800 dark:text-gray-200">{{ $cargo->descripcion }}@unless ($cargo->activo) <span class="text-xs text-gray-500">· inactivo</span>@elseif (! $proximo) <span class="text-xs text-gray-500">· terminado</span>@endunless</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $cargo->dia === 31 ? 'El último día' : 'El día '.$cargo->dia }} de cada mes · desde el {{ $cargo->desde->format('d/m/Y') }}{{ $cargo->hasta ? ' hasta el '.$cargo->hasta->format('d/m/Y') : '' }}{{ $proximo ? ' · próximo cobro: '.$proximo->format('d/m/Y') : '' }}{{ $cargo->categoria ? ' · '.$cargo->categoria->nombre : '' }}
+                            </span>
                         </span>
                         <span class="flex shrink-0 items-center gap-3">
                             <strong class="text-gray-900 dark:text-gray-100">{{ $simbolo }} {{ number_format((float) $cargo->monto, 2) }}</strong>
@@ -243,7 +273,7 @@
                         </span>
                     </li>
                 @empty
-                    <li class="px-6 py-6 text-center text-gray-500 dark:text-gray-400">Sin cargos fijos. Si la tarjeta cobra un seguro cada mes, agrégalo aquí.</li>
+                    <li class="px-6 py-6 text-center text-gray-500 dark:text-gray-400">Sin cargos fijos. Si la tarjeta cobra algo cada mes (un seguro, Netflix…), agrégalo aquí.</li>
                 @endforelse
             </ul>
         </section>
@@ -269,7 +299,7 @@
             </ul>
         </section>
     </div>
-    @foreach (['tarjeta', 'movimiento', 'transferencia', 'estado', 'pago', 'mora', 'cargo'] as $modal)
+    @foreach (['tarjeta', 'movimiento', 'transferencia', 'estado', 'pago', 'mora', 'cargo', 'deuda'] as $modal)
         <x-ajax-modal :name="$modal" />
     @endforeach
 </x-app-layout>

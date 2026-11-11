@@ -10,6 +10,8 @@ use App\Models\Contacto;
 use App\Models\Cuenta;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
+use App\Models\EscenarioProyeccion;
+use App\Models\Evento;
 use App\Models\FuenteIngreso;
 use App\Models\Hogar;
 use App\Models\HogarInvitacion;
@@ -39,7 +41,7 @@ class HogarService
         CategoriaPersonal::class, MovimientoEfectivo::class, CompromisoRecurrente::class, Compromiso::class,
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
         Contacto::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
-        FuenteIngreso::class, Ingreso::class, CargoFijoTarjeta::class,
+        FuenteIngreso::class, Ingreso::class, CargoFijoTarjeta::class, Evento::class, EscenarioProyeccion::class,
     ];
 
     /** Modelos con categoría (para unificar categorías al fusionar hogares). */

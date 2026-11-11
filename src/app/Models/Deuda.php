@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** Lo prestado a un contacto (lo que nos debe). Pagado = suma de sus pagos; pendiente = monto − pagado (no se guarda). */
-#[Fillable(['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'fecha', 'origen', 'movimiento_efectivo_id', 'movimiento_cuenta_id', 'movimiento_tarjeta_id'])]
+/**
+ * Lo prestado a un contacto (lo que nos debe). Pagado = suma de sus pagos; pendiente = monto − pagado (no se guarda).
+ * "vinculada": se ligó a un movimiento que ya existía (no lo creó la deuda), así que al eliminarla el movimiento se queda.
+ */
+#[Fillable(['user_id', 'contacto_id', 'descripcion', 'comentario', 'monto', 'fecha', 'origen', 'vinculada', 'categoria_original_id', 'movimiento_efectivo_id', 'movimiento_cuenta_id', 'movimiento_tarjeta_id'])]
 class Deuda extends Model
 {
     use PerteneceAHogar;
@@ -22,7 +25,7 @@ class Deuda extends Model
 
     protected $table = 'deudas';
 
-    protected $casts = ['monto' => 'decimal:2', 'fecha' => 'date'];
+    protected $casts = ['monto' => 'decimal:2', 'fecha' => 'date', 'vinculada' => 'boolean'];
 
     public function contacto(): BelongsTo
     {

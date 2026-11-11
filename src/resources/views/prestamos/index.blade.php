@@ -38,7 +38,7 @@
                             </div>
                         </div>
                         <p class="mt-4 text-2xl font-bold {{ $r['saldo'] > 0 ? 'text-gray-900 dark:text-gray-100' : 'text-green-600' }}">{{ $r['saldo'] > 0 ? $simbolo.' '.number_format($r['saldo'], 2) : 'Pagado' }}</p>
-                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"><div class="h-full rounded-full" style="width: {{ $r['avance'] }}%; background-color: {{ $prestamo->color }}"></div></div>
+                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"><div class="barra-crece h-full rounded-full" style="width: {{ $r['avance'] }}%; background-color: {{ $prestamo->color }}"></div></div>
                         <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                             {{ $r['avance'] }} % pagado
                             @if ($r['cuota_total']) · cuota {{ $simbolo }} {{ number_format($r['cuota_total'], 2) }} @endif

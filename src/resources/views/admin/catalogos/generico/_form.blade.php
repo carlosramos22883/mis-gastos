@@ -22,9 +22,7 @@
     <x-floating-input id="descripcion" label="Descripción (opcional)" maxlength="255" :value="$item->descripcion ?? ''" />
     <div class="grid grid-cols-2 items-center gap-4">
         <x-floating-input id="orden" label="Orden en las listas" type="number" min="0" max="999" :value="$item->orden ?? 0" />
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input type="checkbox" name="activo" value="1" @checked($item->activo ?? true) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activo
-        </label>
+        <x-checkbox name="activo" :checked="$item->activo ?? true">Activo</x-checkbox>
     </div>
     <div class="flex justify-end gap-3">
         <x-secondary-button type="button" x-on:click="$dispatch('close-modal', '{{ $modal }}')">Cancelar</x-secondary-button>

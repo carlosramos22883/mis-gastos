@@ -55,6 +55,7 @@
             </div>
             <x-floating-date id="fecha_inicio" label="Desde" :value="$hoy" :max="$hoy->copy()->addYears(10)" :error="$errors->first('fecha_inicio')" />
             <x-floating-select id="finalizacion" label="¿Hasta cuándo?" :allowEmpty="false" :options="['indefinido' => 'Sin fecha de fin', 'fecha' => 'Hasta una fecha', 'cuotas' => 'Un número de cuotas']" value="indefinido" />
+            <x-checkbox name="es_presupuesto" sinMarcar="0" ayuda="Súper, gasolina…: no se paga, se descuenta solo con los gastos de su categoría en cada ciclo.">Es un presupuesto</x-checkbox>
             <div x-show="finalizacion === 'fecha'" style="display: none;">
                 <x-floating-date id="fecha_fin" label="Hasta" :max="$hoy->copy()->addYears(30)" :error="$errors->first('fecha_fin')" />
             </div>

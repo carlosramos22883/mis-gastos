@@ -126,6 +126,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Prestamo::class, 'hogar_id', 'hogar_id');
     }
 
+    public function eventos(): HasMany
+    {
+        return $this->hasMany(Evento::class, 'hogar_id', 'hogar_id');
+    }
+
     public function movimientosEfectivo(): HasMany
     {
         return $this->hasMany(MovimientoEfectivo::class, 'hogar_id', 'hogar_id');
@@ -142,6 +147,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'onboarding_data' => 'array',
+            'avisos_vistos' => 'array',
         ];
     }
 }

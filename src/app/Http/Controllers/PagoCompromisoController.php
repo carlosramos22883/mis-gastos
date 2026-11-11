@@ -8,6 +8,7 @@ use App\Models\Compromiso;
 use App\Models\Prestamo;
 use App\Services\CicloEfectivoService;
 use App\Services\PagoCompromisoService;
+use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 
 /** "Pagar" un compromiso desde efectivo, una cuenta o una tarjeta (la lógica está en PagoCompromisoService). */
@@ -40,10 +41,12 @@ class PagoCompromisoController extends Controller
     {
         $this->own($request, $compromiso);
         $compromiso = app(PagoCompromisoService::class)->pagar($request->user(), $compromiso, $request->validated());
+        $excedente = $compromiso->tarjeta_credito_id ? app(TarjetaService::class)->excedente($compromiso) : 0;
 
         return response()->json([
             'success' => true,
-            'message' => $compromiso->estado === Compromiso::PAGADO ? 'Compromiso pagado por completo.' : 'Abono registrado. Pendiente: $ '.number_format((float) $compromiso->saldo_pendiente, 2),
+            'message' => ($compromiso->estado === Compromiso::PAGADO ? 'Compromiso pagado por completo.' : 'Abono registrado. Pendiente: $ '.number_format((float) $compromiso->saldo_pendiente, 2))
+                .($excedente > 0 ? ' Pagaste $ '.number_format($excedente, 2).' de más: quedaron como crédito en la tarjeta.' : ''),
             'highlight_id' => $compromiso->id,
         ]);
     }

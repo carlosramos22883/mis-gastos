@@ -616,3 +616,39 @@ thead .sticky-col-right {
 [x-cloak] {
     display: none !important;
 }
+
+/* Barras y columnas de los gráficos: crecen desde cero al cargar la pantalla (ancho o alto final = el del style).
+   Con --retraso se escalonan. Si la persona pide menos movimiento, aparecen ya completas. */
+@keyframes barra-crece {
+    from { width: 0; }
+}
+@keyframes columna-crece {
+    from { height: 0; }
+}
+.barra-crece {
+    animation: barra-crece 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--retraso, 0ms) both;
+}
+.columna-crece {
+    animation: columna-crece 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--retraso, 0ms) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .barra-crece,
+    .columna-crece {
+        animation: none;
+    }
+}
+
+/* Proyecciones: colores de los escenarios (paleta categórica validada en claro y oscuro) y líneas que se dibujan */
+.viz-proy { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --grid: #e5e7eb; --surface: #ffffff; }
+.dark .viz-proy { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --grid: #374151; --surface: #1f2937; }
+@keyframes linea-dibuja {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+}
+.linea-dibuja {
+    stroke-dasharray: 1;
+    animation: linea-dibuja 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .linea-dibuja { animation: none; stroke-dasharray: none; }
+}

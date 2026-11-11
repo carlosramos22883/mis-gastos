@@ -440,6 +440,9 @@ window.cancelCommitment = function (name, url, isSeries) {
     });
 };
 
+// Un DELETE con confirmación ya hecha (ej. quitar el pago de un participante de un evento)
+window.performDeleteUrl = (url) => performDelete(url);
+
 async function performDelete(url) {
     try {
         const formData = new FormData();
@@ -564,11 +567,35 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    // Tabla que se ordena en el navegador (sin recargar): encabezados <x-th-ordenable campo="..."> y filas con data-orden-{campo}
+    // (los campos de texto se comparan como texto; "fecha" y "monto" como vienen: Y-m-d y número)
+    Alpine.data('tablaOrdenable', (campo = 'fecha', direccion = 'desc') => ({
+        campo,
+        direccion,
+
+        ordenar(nuevo) {
+            this.direccion = this.campo === nuevo ? (this.direccion === 'asc' ? 'desc' : 'asc') : 'asc';
+            this.campo = nuevo;
+            const tbody = this.$el.querySelector('tbody');
+            const filas = [...tbody.querySelectorAll(':scope > tr[data-orden-fecha]')];
+            const valor = (fila) => fila.dataset[`orden${nuevo[0].toUpperCase()}${nuevo.slice(1)}`] ?? '';
+            const signo = this.direccion === 'asc' ? 1 : -1;
+            filas.sort((a, b) => {
+                const comparar = nuevo === 'monto'
+                    ? parseFloat(valor(a)) - parseFloat(valor(b))
+                    : valor(a).localeCompare(valor(b), 'es', { sensitivity: 'base' });
+                // Empate: el más reciente primero
+                return signo * comparar || b.dataset.ordenFecha.localeCompare(a.dataset.ordenFecha);
+            });
+            filas.forEach((fila) => tbody.appendChild(fila));
+        },
+    }));
+
     Alpine.data('ajaxForm', (onSuccessCallback) => ({
         loading: false,
         errors: {},
 
-        async submit(e) {
+        async submit(e, confirmado = false) {
             this.loading = true;
             this.errors = {};
             const form = e.target;
@@ -585,6 +612,7 @@ document.addEventListener('alpine:init', () => {
             }
             applyClientFieldLimits(form);
             const formData = new FormData(form);
+            if (confirmado) formData.set('confirmar', '1');
             const tableForm = document.getElementById('data-table-form');
             if (tableForm) {
                 const tableFields = [
@@ -615,7 +643,20 @@ document.addEventListener('alpine:init', () => {
                 if (response.status === 422) {
                     const data = await response.json();
 
-                    // Console.log detallado
+                    // Error "confirmar": el servidor pide aceptar una advertencia (ej. sobregirar una tarjeta); si se acepta, se reenvía
+                    if (!confirmado && data.errors?.confirmar && Object.keys(data.errors).length === 1) {
+                        this.clearValidationErrors();
+                        const { isConfirmed } = await Swal.fire({
+                            icon: 'warning', title: '¿Registrar de todas formas?', text: data.errors.confirmar[0],
+                            showCancelButton: true, confirmButtonText: 'Sí, registrar', cancelButtonText: 'Cancelar', timer: 0, showConfirmButton: true,
+                            customClass: { confirmButton: 'swal-btn-danger', cancelButton: 'swal-btn-secondary', actions: 'swal-actions' },
+                        });
+                        if (isConfirmed) {
+                            this.loading = false;
+                            return await this.submit(e, true);
+                        }
+                        return;
+                    }
                     this.errors = data.errors;
                     this.showValidationErrors();
                 } else if (response.ok) {
@@ -853,6 +894,114 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.removeItem('alertTitle');
         localStorage.removeItem('alertIcon');
     }
+});
+
+// ==========================================
+// Eventos: formulario (participantes, consumos, propina) con el reparto en vivo. El cálculo es el mismo de
+// EventoService::calcular (en centavos: la suma de las partes es exactamente el total).
+// ==========================================
+const red6 = (v) => Math.round(v * 1e6) / 1e6;
+// A igualdad de fracción, el centavo que sobra va a quien tenga menos en "exceso" (lo que ya recibió de más)
+window.repartirCentavos = function (total, pesos, exceso = {}) {
+    const claves = Object.keys(pesos);
+    if (!claves.length) return {};
+    let suma = claves.reduce((s, k) => s + pesos[k], 0);
+    if (suma <= 0) { claves.forEach((k) => { pesos[k] = 1; }); suma = claves.length; }
+    const partes = {}; const fracciones = {};
+    claves.forEach((k) => { const exacto = total * pesos[k] / suma; partes[k] = Math.floor(exacto + 1e-9); fracciones[k] = red6(exacto - partes[k]); });
+    const orden = [...claves].sort((a, b) => (fracciones[b] - fracciones[a]) || (red6(exceso[a] || 0) - red6(exceso[b] || 0)) || (claves.indexOf(a) - claves.indexOf(b)));
+    let sobran = total - claves.reduce((s, k) => s + partes[k], 0);
+    for (let i = 0; sobran > 0; i++, sobran--) partes[orden[i % orden.length]]++;
+    return partes;
+};
+
+/** Comparte la imagen de un evento (WhatsApp, etc.); si el navegador no puede compartir archivos, la descarga. */
+window.compartirImagen = async function (url, archivo, titulo) {
+    try {
+        const respuesta = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!respuesta.ok) throw new Error('imagen');
+        const blob = await respuesta.blob();
+        const file = new File([blob], archivo, { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: titulo });
+            return;
+        }
+        const enlace = document.createElement('a');
+        enlace.href = URL.createObjectURL(blob);
+        enlace.download = archivo;
+        enlace.click();
+        URL.revokeObjectURL(enlace.href);
+    } catch (error) {
+        if (error?.name !== 'AbortError') showAlert('error', 'No se pudo compartir', 'Intenta de nuevo o descarga la imagen.');
+    }
+};
+
+document.addEventListener('alpine:init', () => {
+    // Como la hoja de cálculo: personas en las filas, productos (con precio) en las columnas y en cada celda cuántos pidió
+    Alpine.data('eventoForm', (inicial) => ({
+        participantes: inicial.participantes,
+        productos: inicial.productos,
+        pagador: inicial.pagador,
+        propinaTipo: inicial.propina_tipo,
+        propinaValor: inicial.propina_valor,
+        opciones: inicial.opciones,
+        siguiente: 1000,
+
+        agregarParticipante() {
+            this.participantes.push({ uid: this.siguiente++, quien: '', nuevo: '', es_festejado: false });
+        },
+        quitarParticipante(uid) {
+            this.participantes = this.participantes.filter((p) => p.uid !== uid);
+            this.productos.forEach((c) => { delete c.cant[uid]; });
+            if (this.pagador === uid) this.pagador = this.participantes[0]?.uid ?? null;
+        },
+        agregarProducto() {
+            this.productos.push({ uid: this.siguiente++, descripcion: '', precio: '', cant: {} });
+            this.$nextTick(() => document.querySelector('[data-producto-nuevo]:last-of-type')?.focus());
+        },
+        quitarProducto(uid) { this.productos = this.productos.filter((c) => c.uid !== uid); },
+        /** Valor que se envía: el del selector o "nuevo:Nombre". */
+        quien(p) { return p.quien === '__nuevo' ? (p.nuevo.trim() ? `nuevo:${p.nuevo.trim()}` : '') : p.quien; },
+        get pagaElHogar() {
+            const p = this.participantes.find((x) => x.uid === this.pagador);
+            return !!p && String(p.quien).startsWith('miembro:');
+        },
+        get hayFestejados() { return this.participantes.some((p) => p.es_festejado); },
+        get hayPropina() { return this.propinaTipo !== 'ninguna'; },
+        centavos(texto) { return Math.round((Number(String(texto ?? '').replace(/,/g, '')) || 0) * 100); },
+        cantidad(c, uid) { return Math.max(0, parseInt(c.cant[uid], 10) || 0); },
+        totalProducto(c) { return this.participantes.reduce((s, p) => s + this.cantidad(c, p.uid), 0) * this.centavos(c.precio) / 100; },
+
+        /** { subtotal, propina, total, por: { uid: { consumo, propina, festejo, total } } } en dólares (igual que EventoService::calcular). */
+        get calculo() {
+            const uids = this.participantes.map((p) => p.uid);
+            const consumo = Object.fromEntries(uids.map((u) => [u, 0]));
+            this.productos.forEach((c) => { const precio = this.centavos(c.precio); uids.forEach((u) => { consumo[u] += this.cantidad(c, u) * precio; }); });
+            const subtotal = Object.values(consumo).reduce((s, v) => s + v, 0);
+            const n = Math.max(1, uids.length);
+            let propina = 0; let exactas = Object.fromEntries(uids.map((u) => [u, 0]));
+            if (this.propinaTipo === 'porcentaje') {
+                propina = Math.round(subtotal * (Number(String(this.propinaValor).replace(/,/g, '')) || 0) / 100);
+                exactas = Object.fromEntries(uids.map((u) => [u, subtotal > 0 ? propina * consumo[u] / subtotal : 0]));
+            } else if (this.propinaTipo === 'monto') {
+                propina = this.centavos(this.propinaValor);
+                exactas = Object.fromEntries(uids.map((u) => [u, propina / n]));
+            }
+            const propinas = window.repartirCentavos(propina, { ...exactas });
+            const festejados = this.participantes.filter((p) => p.es_festejado).map((p) => p.uid);
+            const pagan = uids.filter((u) => !festejados.includes(u));
+            const festejo = festejados.reduce((s, u) => s + consumo[u] + (propinas[u] || 0), 0);
+            const exceso = Object.fromEntries(uids.map((u) => [u, (propinas[u] || 0) - exactas[u]]));
+            const aportes = pagan.length ? window.repartirCentavos(festejo, Object.fromEntries(pagan.map((u) => [u, 1])), exceso) : {};
+            const por = {};
+            uids.forEach((u) => {
+                const f = festejados.includes(u);
+                por[u] = { consumo: consumo[u] / 100, propina: (propinas[u] || 0) / 100, festejo: (aportes[u] || 0) / 100, total: f ? 0 : (consumo[u] + (propinas[u] || 0) + (aportes[u] || 0)) / 100 };
+            });
+            return { subtotal: subtotal / 100, propina: propina / 100, total: (subtotal + propina) / 100, festejo: festejo / 100, por };
+        },
+        dinero(v) { return `${inicial.simbolo} ${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; },
+    }));
 });
 
 window.Alpine = Alpine;

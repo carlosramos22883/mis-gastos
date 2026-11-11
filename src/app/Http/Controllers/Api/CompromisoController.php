@@ -80,14 +80,18 @@ class CompromisoController extends Controller
     }
 
     #[OA\Put(path: '/api/compromisos/{id}/serie', summary: 'Editar la regla de la serie de este pago', description: 'Mismos campos que al crear una serie, sin fecha_inicio. Se aplica a los pagos de hoy en adelante sin abonos; si cambia el calendario se regeneran.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'Serie actualizada (data = este pago)'), new OA\Response(response: 404, description: 'No pertenece a una serie'), new OA\Response(response: 422, description: 'Validación')])]
+        responses: [new OA\Response(response: 200, description: 'Serie actualizada (data = este pago, o el que lo reemplaza si cambió el calendario: puede traer otro id)'), new OA\Response(response: 404, description: 'No pertenece a una serie'), new OA\Response(response: 422, description: 'Validación')])]
     public function actualizarSerie(SerieCompromisoRequest $request, Compromiso $compromiso)
     {
         $this->own($request, $compromiso);
         abort_unless($compromiso->recurrente, 404, 'Este compromiso no pertenece a una serie.');
         $actualizados = $this->compromisos->actualizarSerie($compromiso->recurrente, $request->datosSerie());
 
-        return (new CompromisoResource($compromiso->fresh(['categoria', 'recurrente', 'tarjeta'])))->additional(['pagos_actualizados' => $actualizados]);
+        // Si cambió el calendario este pago se regeneró: se devuelve el que lo reemplaza (puede tener otro id)
+        $vigente = $this->compromisos->pagoVigente($compromiso);
+        abort_unless($vigente, 404, 'La serie ya no tiene pagos.');
+
+        return (new CompromisoResource($vigente->load('categoria', 'recurrente', 'tarjeta')))->additional(['pagos_actualizados' => $actualizados]);
     }
 
     #[OA\Delete(path: '/api/compromisos/{id}', summary: 'Cancelar compromiso', description: 'alcance=serie cancela también los pagos siguientes sin abonos y desactiva la regla.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
@@ -111,13 +115,13 @@ class CompromisoController extends Controller
     }
 
     #[OA\Post(path: '/api/compromisos/{id}/pagar', summary: 'Pagar (completo o abono) desde efectivo, una cuenta o una tarjeta', tags: ['Compromisos'], security: [['bearerAuth' => []]],
-        description: 'origen: "efectivo" | "cuenta:{id}" | "tarjeta:{id}" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría.',
+        description: 'origen: "efectivo" | "cuenta:{id}" | "tarjeta:{id}" (ej. pagar el estado de cuenta de otra tarjeta con su NPE). El pago de una tarjeta no lleva categoría y puede superar el pendiente: el excedente queda como crédito en la tarjeta (campo "excedente" de la respuesta).',
         requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
             new OA\Property(property: 'origen', type: 'string', example: 'tarjeta:5'), new OA\Property(property: 'monto', type: 'string', example: '96.62'),
             new OA\Property(property: 'fecha', type: 'string', format: 'date'), new OA\Property(property: 'descripcion', type: 'string'),
             new OA\Property(property: 'categoria_personal_id', type: 'integer'), new OA\Property(property: 'user_id', type: 'integer'),
         ])),
-        responses: [new OA\Response(response: 200, description: 'Compromiso actualizado'), new OA\Response(response: 422, description: 'Supera el saldo o el disponible')])]
+        responses: [new OA\Response(response: 200, description: 'Compromiso actualizado'), new OA\Response(response: 422, description: 'Supera el saldo (salvo en una tarjeta) o el disponible')])]
     public function pagar(PagoCompromisoRequest $request, Compromiso $compromiso)
     {
         $this->own($request, $compromiso);

@@ -33,6 +33,15 @@ class HogarController extends Controller
         return response()->json(['message' => 'Nombre del hogar actualizado.']);
     }
 
+    /** Tope de gasto del ciclo del hogar (vacío = sin tope). */
+    public function tope(Request $request)
+    {
+        $data = $request->validate(['tope_gasto_ciclo' => ['nullable', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/']]);
+        $request->user()->hogar->update(['tope_gasto_ciclo' => $data['tope_gasto_ciclo'] ?: null]);
+
+        return response()->json(['success' => true, 'message' => $data['tope_gasto_ciclo'] ? 'Tope de gasto actualizado.' : 'Se quitó el tope de gasto.']);
+    }
+
     public function invitar(HogarInvitacionRequest $request)
     {
         $invitacion = $this->hogares->invitar($request->user(), $request->validated('email'));

@@ -18,19 +18,7 @@
     <x-floating-input id="nombre" name="nombre" label="Nombre" type="text" maxlength="255" :value="isset($tipoCuenta) ? old('nombre', $tipoCuenta->nombre) : old('nombre')" :error="$errors->first('nombre')" required placeholder="Ej: Cuenta de Ahorro" />
     <x-floating-input id="descripcion" name="descripcion" label="Descripción (Opcional)" type="text" maxlength="500" :value="isset($tipoCuenta) ? old('descripcion', $tipoCuenta->descripcion) : old('descripcion')" :error="$errors->first('descripcion')" placeholder="Ej: Cuenta que genera intereses" />
 
-    <!-- Checkbox Activo (Marcado por defecto al crear) -->
-    <div class="flex items-center gap-2 mt-6">
-        @php
-            // Si estamos editando, usa el valor de la BD. Si estamos creando, usa '1' (true) por defecto, a menos que old() diga lo contrario.
-            $isChecked = isset($tipoCuenta) ? $tipoCuenta->activo : old('activo', 1);
-        @endphp
-        <input type="checkbox" name="activo" id="activo" value="1" 
-            {{ $isChecked ? 'checked' : '' }}
-            class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700">
-        <label for="activo" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-            Marca Activa
-        </label>
-    </div>
+    <x-checkbox name="activo" id="activo" class="mt-6" :checked="isset($tipoCuenta) ? $tipoCuenta->activo : old('activo', 1)">Activo</x-checkbox>
 
     <div class="mt-6 flex justify-end gap-3">
         <x-secondary-button type="button" @click="$dispatch('close-modal', 'tipo-cuenta-modal')">Cancelar</x-secondary-button>

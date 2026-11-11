@@ -2,22 +2,23 @@
 @forelse($movimientos as $movimiento)
     @php($editable = app(\App\Services\CuentaService::class)->esEditable($movimiento, $inicioActual))
     <tr data-record-id="{{ $movimiento->id }}" class="border-b dark:border-gray-700">
-        <td class="px-6 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}@include('contactos._chip', ['contacto' => $movimiento->contacto])</td>
+        <td class="w-[22rem] max-w-[22rem] px-6 py-4">@include('hogar._por', ['id' => $movimiento->user_id]){{ $movimiento->descripcion }}@include('contactos._chip', ['contacto' => $movimiento->contacto])</td>
         <td class="px-6 py-4 whitespace-nowrap {{ $movimiento->tipo === 'ingreso' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' }}">
             {{ $movimiento->tipo === 'ingreso' ? '+' : '−' }} {{ $simbolo }} {{ number_format((float) $movimiento->monto, 2) }}
         </td>
         <td class="px-6 py-4 whitespace-nowrap">{{ $movimiento->fecha->format('d/m/Y') }}</td>
         <td class="px-6 py-4">
             @if ($movimiento->transferencia)
-                <span class="rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">Transferencia</span>
+                <span class="inline-block whitespace-nowrap rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">Transferencia</span>
             @elseif ($movimiento->categoria)
-                <span class="rounded-full px-2 py-1 text-xs font-medium" style="background-color: {{ $movimiento->categoria->color }}; color: {{ $movimiento->categoria->textColor() }}">{{ $movimiento->categoria->nombre }}</span>
+                <span class="inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium" style="background-color: {{ $movimiento->categoria->color }}; color: {{ $movimiento->categoria->textColor() }}">{{ $movimiento->categoria->nombre }}</span>
             @else
                 —
             @endif
         </td>
         <td class="px-6 py-4 sticky-col-right">
             <div class="flex justify-end gap-2">
+                @include('contactos._me_lo_debe', ['clase' => 'cuenta'])
                 @if ($editable)
                     @can('cuentas.edit')
                         <x-secondary-button type="button" class="py-1.5 px-2" title="Editar" x-on:click.prevent="$dispatch('load-movimiento-modal-form', '{{ route('cuentas.movimientos.edit', [$cuenta, $movimiento]) }}'); $dispatch('open-modal', 'movimiento-modal')">

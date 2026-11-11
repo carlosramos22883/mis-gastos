@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\RoleController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CargoFijoController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\CompromisoController;
@@ -10,12 +11,15 @@ use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\CuentaController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EfectivoController;
+use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
 use App\Http\Controllers\Api\PrestamoController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\TarjetaController;
 use App\Http\Controllers\Api\TransferenciaController;
+use App\Http\Requests\ReporteRequest;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -81,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('hogar')->name('hogar.')->controller(HogarController::class)->group(function () {
             Route::get('/', 'show')->middleware('can:hogar.view')->name('show');
             Route::patch('/', 'update')->middleware('can:hogar.edit')->name('update');
+            Route::patch('tope', 'tope')->middleware('can:compromisos.edit')->name('tope');
             Route::post('invitaciones', 'invitar')->middleware('can:hogar.edit')->name('invitar');
             Route::delete('invitaciones/{invitacion}', 'cancelar')->middleware('can:hogar.edit')->name('cancelar');
             Route::post('invitaciones/{invitacion}/aceptar', 'aceptar')->middleware('can:hogar.view')->name('aceptar');
@@ -140,6 +145,35 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', 'guardarMovimiento')->middleware('can:tarjetas.create')->name('store');
             Route::put('{movimiento}', 'actualizarMovimiento')->middleware('can:tarjetas.edit')->name('update');
             Route::delete('{movimiento}', 'eliminarMovimiento')->middleware('can:tarjetas.delete')->name('destroy');
+        });
+        Route::patch('tarjetas/{tarjeta}/estados-cuenta/{estado}/intereses', [TarjetaController::class, 'intereses'])->middleware('can:tarjetas.edit')->name('tarjetas.estados.intereses');
+        // Eventos: dividir la cuenta (opciones antes del recurso para que no se tome como {evento})
+        Route::get('eventos/opciones', [EventoController::class, 'opciones'])->middleware('can:eventos.view')->name('eventos.opciones');
+        Route::apiResource('eventos', EventoController::class)
+            ->middlewareFor(['index', 'show'], 'can:eventos.view')
+            ->middlewareFor('store', 'can:eventos.create')
+            ->middlewareFor('update', 'can:eventos.edit')
+            ->middlewareFor('destroy', 'can:eventos.delete');
+        Route::prefix('eventos/{evento}')->name('eventos.')->controller(EventoController::class)->scopeBindings()->group(function () {
+            Route::get('imagen', 'imagen')->middleware('can:eventos.view')->name('imagen');
+            Route::get('foto', 'foto')->middleware('can:eventos.view')->name('foto');
+            Route::post('foto', 'subirFoto')->middleware('can:eventos.edit')->name('foto.store');
+            Route::delete('foto', 'quitarFoto')->middleware('can:eventos.edit')->name('foto.destroy');
+            Route::post('participantes/{participante}/cobro', 'cobrar')->middleware('can:eventos.edit')->name('cobro');
+            Route::post('participantes/{participante}/pagado', 'marcarPagado')->middleware('can:eventos.edit')->name('pagado.store');
+            Route::delete('participantes/{participante}/pagado', 'desmarcarPagado')->middleware('can:eventos.edit')->name('pagado.destroy');
+        });
+
+        // Reportes (ver: reportes.view · descargar: reportes.export)
+        Route::controller(ReporteController::class)->prefix('reportes')->name('reportes.')->group(function () {
+            Route::get('{reporte}/exportar', 'exportar')->middleware('can:reportes.export')->name('exportar')->whereIn('reporte', ReporteRequest::REPORTES);
+            Route::get('{reporte}', 'show')->middleware('can:reportes.view')->name('show')->whereIn('reporte', ReporteRequest::REPORTES);
+        });
+        // Cargos fijos (seguro, membresía…): se administran como parte de la tarjeta
+        Route::prefix('tarjetas/{tarjeta}/cargos-fijos')->name('tarjetas.cargos.')->controller(CargoFijoController::class)->group(function () {
+            Route::post('/', 'store')->middleware('can:tarjetas.edit')->name('store');
+            Route::put('{cargo}', 'update')->middleware('can:tarjetas.edit')->name('update');
+            Route::delete('{cargo}', 'destroy')->middleware('can:tarjetas.edit')->name('destroy');
         });
     });
 });

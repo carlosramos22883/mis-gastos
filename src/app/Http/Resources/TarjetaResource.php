@@ -27,10 +27,13 @@ class TarjetaResource extends JsonResource
             'limite_credito' => $dinero($this->limite_credito),
             'tasa_interes' => $this->tasa_interes !== null ? $dinero($this->tasa_interes) : null,
             'permite_avances' => (bool) $this->permite_avances,
+            'cargos_restan_disponible' => (bool) ($this->cargos_restan_disponible ?? true),
+            'cargos_sin_restar' => $dinero($this->cargos_sin_restar ?? 0), // cargos del banco por pagar que este banco aún no resta del disponible
             'dia_corte' => $this->dia_corte,
             'dia_pago' => $this->dia_pago,
             'deuda' => $dinero($this->deuda),
             'disponible' => $dinero($this->disponible),
+            'intereses_retenidos' => $dinero($this->intereses_retenidos), // intereses bonificables ya restados del disponible
             'proximo_corte' => $this->proximo_corte?->toDateString(),
             'por_pagar' => $porPagar ? ['compromiso_id' => $porPagar->id, 'monto' => $dinero($porPagar->saldo_pendiente), 'fecha' => $porPagar->fecha_esperada?->toDateString()] : null,
             'activo' => (bool) $this->activo,

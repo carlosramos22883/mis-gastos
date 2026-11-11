@@ -255,6 +255,7 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - **"¿Con quién?"** en efectivo, cuentas, tarjetas, compromisos y préstamos: selector con búsqueda y fotos; al **escribir un nombre nuevo** se crea el contacto al guardar (no se duplica si ya existe con ese nombre). Se ve como una ficha pequeña en las listas. El contacto de un compromiso pasa a los pagos generados y a su egreso; el de un préstamo, a sus pagos
 - **Foto** elegida y recortada con el recortador (Croppie, circular, 512 px) y guardada en el disco privado (`local`), servida solo a miembros del hogar (`contactos.foto` en web, `api.contactos.foto` con token)
 - **Nos deben:** vista filtrada de contactos con deudas. Prestar desde efectivo, cuenta o tarjeta ("Préstamos a terceros") o solo anotar; un pago se reparte de la deuda más antigua a la más reciente; lo pendiente se calcula de los pagos. Los movimientos de una deuda se gestionan desde el contacto (`MovimientoVinculado`)
+- **"Me lo debe" (deuda vinculada):** un gasto ya registrado (compra con tarjeta, egreso de efectivo o de cuenta) se liga a una deuda nueva del contacto, desde el botón de su fila o con la casilla al registrar la compra con tarjeta (ej. se le prestó la tarjeta a alguien). Por el monto completo el gasto pasa a "Préstamos a terceros"; por una parte conserva su categoría. Al eliminar la deuda el gasto se queda y recupera su categoría (`deudas.vinculada`, `categoria_original_id`; `DeudorService::vincularMovimiento`). Web ✅ (04/11/2026) · API y apps ⏳
 - Un contacto con historial no se elimina: se desactiva
 - Permisos `contactos.view/create/edit/delete` (contactos) y `deudores.view/create/edit/delete` (deudas y pagos). Menú "Contactos" y "Nos deben"
 - ⏳ Pantallas móviles
@@ -302,22 +303,25 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Permisos `hogar.view` (pantalla, aceptar, salir) y `hogar.edit` (renombrar, invitar, quitar; además hay que administrar el hogar)
 - ⏳ Pantallas de Android e iOS
 
-### 5.8 EVENTOS (DIVISIÓN DE GASTOS) ⏳
+### 5.8 EVENTOS (DIVISIÓN DE GASTOS) ✅ (web + API + Android + iOS, 30/10/2026)
 
-**Evento:** id, nombre ("Cumpleaños de María"), fecha, lugar, usuario_id, propina_porcentaje (opcional), quién pagó, tipo_pago, referencia al pago
-**Participante:** id, evento_id, nombre, es_festejado, total_a_pagar, ya_pago, fecha_pago, tipo_pago
-**Ítem consumido:** id, evento_id, participante(s), descripción, valor, compartido
+**Como la hoja de cálculo del autor:** personas en las filas, productos con su precio en las columnas y en cada celda cuántos pidió cada uno; luego Total, Propina, Con propina, Cumpleañero y A pagar (las columnas de propina y cumpleañero solo aparecen si aplican).
+**Tablas:** `eventos` (nombre, fecha, lugar, `foto` de la cuenta en el disco privado, propina `ninguna|porcentaje|monto` + valor, origen del pago, categoría, `movimiento_*_id`), `evento_participantes` (un miembro del hogar `user_id` o un contacto; `es_festejado`, `es_pagador`, `deuda_id`; si pagó otra persona: `fecha_pago` y el movimiento con que un miembro le pagó), `evento_consumos` (los productos: descripción y precio unitario) y `evento_consumo_participante` (la celda: `cantidad` que pidió cada participante).
+**Lógica:** `EventoService` (`calcular`, `resumen`, `guardar`, `eliminar`, `cobrar`, `marcarPagado`, `desmarcarPagado`). Validación en `EventoRequest`, `EventoCobroRequest` y `EventoPagadoRequest`.
 
-**Lógica de cálculo:**
-- Sin festejados: cada persona paga sus consumos + su parte proporcional de propina
-- Con festejados: el consumo de los festejados (con su propina) se divide entre los no festejados, que además pagan sus propios consumos y su propina
+**Cálculo (en centavos, la suma de las partes es exactamente el total):**
+- Consumo de cada uno = Σ cantidad × precio. Propina: un **porcentaje** del total de cada uno, o un **monto fijo dividido entre todos**. Lo de los festejados (consumo + propina) se reparte en partes iguales entre los que no lo son
+- Los centavos que sobran van a quien menos recibió de más al redondear (la hoja redondea cada celda y su suma no siempre cuadra; aquí sí). Prueba con la cuenta real de la hoja: 10 personas, Rocío cumpleañera, 10 % → $93.55 + $9.36 = **$102.91**. El mismo algoritmo está en `app.js` (`eventoForm`), en Android y en iOS (`CalculoEvento`) para el cálculo en vivo; hay pruebas que comparan los resultados
 
-**Funcionalidades:**
-- Registrar participantes, consumos, festejados y propina
-- Si yo pagué: registrar el gasto (efectivo/tarjeta/cuenta) y los ingresos a medida que me pagan
-- Si otro pagó: solo marcar quién ya pagó
-- Generar una **imagen** de la tabla de totales para compartir por WhatsApp
-- Editar si hubo errores
+**Pagos:**
+- **Pagó un miembro del hogar:** un solo movimiento por el total (efectivo, cuenta o tarjeta con la categoría elegida, o "solo anotar"), igual que en el banco. La parte de cada contacto es una **deuda** (`Nos deben`, origen "ninguno"); "Cobrar" registra el pago de esa deuda con `DeudorService` y el ingreso entra solo al efectivo o a una cuenta
+- **Pagó otra persona:** "Ya pagó" marca a cada participante; un miembro del hogar puede registrar su egreso (efectivo, cuenta o tarjeta)
+- Editar el evento ajusta las deudas (nunca por debajo de lo cobrado) y el movimiento del pago (si su ciclo ya cerró, el total no puede cambiar). No se puede cambiar quién pagó ni quitar a alguien con pagos registrados. Eliminar exige quitar antes los cobros
+- Los movimientos y deudas de un evento se gestionan desde el evento (`MovimientoVinculado` → "Eventos"; `DeudorService::eliminarDeuda` lo impide)
+
+**Foto de la cuenta (opcional):** `App\Support\FotoCuenta` la endereza (lee la orientación EXIF del JPEG: el servidor no tiene la extensión exif), la reduce a 1600 px y la guarda en JPEG; la URL lleva `?v=` para no ver la anterior desde la caché.
+**Compartir:** `App\Support\EventoImagen` genera en el servidor (GD + DejaVu de dompdf) un PNG con la tabla (los productos en vertical, como en la hoja) y la foto de la cuenta debajo. Web: `navigator.share` con el archivo (o lo descarga); Android: `ACTION_SEND` vía `FileProvider` (caché `eventos/`); iOS: Vista previa (Quick Look) con su botón de compartir.
+**API:** `GET /api/eventos`, `GET /api/eventos/opciones`, `GET|POST|PUT|DELETE /api/eventos/{id}`, `GET /api/eventos/{id}/imagen`, `GET|POST|DELETE /api/eventos/{id}/foto` (multipart "foto"), `POST /api/eventos/{id}/participantes/{p}/cobro`, `POST|DELETE /api/eventos/{id}/participantes/{p}/pagado`. Permisos `eventos.view/create/edit/delete`. Menú "Eventos".
 
 ---
 
@@ -338,21 +342,26 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 - Próximos compromisos y cuentas con su saldo
 - Tarjetas: campo **"sirve para avances o recargas"** (las de tienda no); banco y red son opcionales
 
-## 7. REPORTES ⏳
+## 7. REPORTES ✅ (web + API + Android + iOS, 22/10/2026)
 
-### 7.1 Ejecución Financiera
-Ingresos de efectivo, egresos de efectivo, compromisos, tarjetas (ordenadas por fecha límite de pago), cuentas bancarias, deudores. Totales grandes al final. Filtro: ciclo actual o rango.
+**Lógica:** `ReporteService` (gasto e ingreso se cuentan igual que en el inicio: `DashboardService::movimientosDeGasto/movimientosDeIngreso`). Pantalla `/reportes` con pestañas; API `GET /api/reportes/{reporte}` (montos como número, igual que el dashboard) y `GET /api/reportes/{reporte}/exportar?formato=pdf|xlsx|csv`. Permisos `reportes.view` (ver) y `reportes.export` (descargar).
 
-### 7.2 Gastos por Categoría
-Ciclo actual o rango de meses.
+**Período:** un ciclo (navegable ‹ ›; el primero arranca el día del saldo inicial) o un rango libre desde/hasta de hasta 24 meses (`ReporteRequest`). Tarjetas y "nos deben" muestran cómo están **hoy** (no tienen historial por fecha).
 
-### 7.3 Estado de Cuenta (por tarjeta y mes)
+### 7.1 Ejecución financiera ✅
+Ingresos del período (cada movimiento, de dónde y quién), gastos por categoría (con %), efectivo y cada cuenta (al inicio, entró, salió, al final), compromisos con fecha en el período (monto, pagado, pendiente), tarjetas ordenadas por fecha límite de pago (como la hoja) y lo que nos deben. Totales grandes: ingresos, gastos, ahorro y "al pagar los compromisos quedaría".
 
-### 7.4 Préstamos
-Datos del préstamo, cuotas pagadas y faltantes, totales.
+### 7.2 Gastos por categoría ✅
+Cada categoría con total, % y cantidad de movimientos; al abrirla, sus movimientos (con enlace a cada uno). Si el período abarca varios ciclos: tabla categoría × ciclo y promedio por ciclo.
 
-### 7.5 Exportación
-PDF, CSV, XLSX e imagen.
+### 7.3 Estado de cuenta ✅
+Se elige la tarjeta y el corte: cada línea (compras, cuotas "3/12", cargos, créditos en negativo), total, pagado, pendiente y enlace para pagarlo. Los estados se generan en cada corte (las tarjetas importadas aún no tienen).
+
+### 7.4 Préstamos ✅
+Cada préstamo con datos, avance, cuota, pagos registrados, capital/intereses/cargos pagados, lo que falta (meses, fecha fin, intereses) y su tabla de pagos; totales.
+
+### 7.5 Exportación ✅
+PDF (dompdf, horizontal salvo el estado de cuenta), XLSX y CSV con el mismo contenido (`App\Support\ReporteTabular` arma las secciones; `ReporteExport` las pone en una hoja con montos de dos decimales). En las apps se descargan y se abren o comparten (Android: FileProvider; iOS: Vista previa). ⏳ Exportar como imagen.
 
 ---
 
@@ -442,15 +451,17 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie) |
-| Tarjetas de crédito (cortes, cuotas, avances, mora) | ✅ |
+| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie; presupuestos por categoría que se descuentan con los gastos (y con los compromisos pendientes de su categoría), con la lista de esos gastos; tope de gasto del ciclo en el inicio; orden por estado por defecto: web, API, Android e iOS 11/11/2026) |
+| Tarjetas de crédito (cortes, cuotas, avances, mora, pagar de más con saldo a favor, intereses bonificables) | ✅ (pagar de más: web, API, Android e iOS 30/10/2026; intereses bonificables del último corte apartados del disponible hasta el corte siguiente, opción por tarjeta «los cargos del banco restan del disponible» (Davivienda solo resta el capital) y detalle del corte ordenable: web, API, Android e iOS 11/11/2026) |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
-| Contactos (foto privada, "¿con quién?") y "Nos deben" | ✅ |
+| Contactos (foto privada, "¿con quién?") y "Nos deben"; "me lo debe" sobre un gasto ya registrado | ✅ (me lo debe: 04/11/2026) |
 | Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
 | Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
 | Dashboard (inicio) e intereses de tarjeta | ✅ |
-| Eventos, Reportes | ⏳ |
+| Proyecciones (parte 1: foto de hoy con datos reales, escenarios con palancas —préstamo, venta, gasto, ingreso, algo de una vez, pagar una deuda—, comparación de hasta 3 con «Si sigo igual», gráfica y fecha en cero de cada deuda) | ✅ web 11/11/2026 · ⏳ parte 2 (orden de pago, metas, pasar a cuotas) y parte 3 (API, Android e iOS) |
+| Eventos: dividir la cuenta (consumos, propina, festejados), cobrar o marcar quién pagó, imagen para compartir | ✅ (30/10/2026) |
+| Reportes | ✅ |
 
 ### API (para móviles)
 | Endpoint | Estado |
@@ -471,6 +482,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/cuentas` (lista con saldo, detalle por ciclo con resumen y movimientos, CRUD), `POST/PUT/DELETE /api/cuentas/{id}/movimientos/{mov}` | ✅ |
 | `GET /api/transferencias/opciones`, `POST /api/transferencias` (origen tarjeta = avance), `DELETE /api/transferencias/{id}` | ✅ |
 | `/api/tarjetas` (lista con deuda, disponible, próximo corte y pago; detalle con lo que entra al corte, cuotas, estados de cuenta y costo de no pagar; CRUD), `POST/PUT/DELETE /api/tarjetas/{id}/movimientos/{mov}` | ✅ |
+| `/api/eventos` (CRUD, opciones, imagen PNG, cobrar a un participante, marcar o quitar "ya pagó") | ✅ (30/10/2026) |
 | Documentación Swagger: `/api/documentation` | ✅ |
 
 ### Android (Kotlin)
@@ -492,7 +504,9 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Crear, editar y eliminar cuentas, tarjetas (con disponible y estado pendiente al registrarla), préstamos (con cargos mensuales y compromiso mensual) y fuentes de ingreso | ✅ |
 | Mi perfil (nombre, correo y foto), categorías (crear, editar, desactivar, eliminar), foto de un contacto (se toca la foto; recorte cuadrado de 512 px) | ✅ |
 | Editar la regla de una serie de compromisos; ordenar tarjetas; foto del contacto en préstamos de una persona | ✅ |
-| Plantilla de descuentos de una fuente | ⏳ |
+| Plantilla de descuentos y adiciones de una fuente (monto fijo, % con tope, variable, cuota de un préstamo); cargos fijos de cada tarjeta (agregar, editar, desactivar, eliminar) | ✅ (21/10/2026) |
+| Reportes (ejecución, gastos por categoría, préstamos, estado de cuenta) con período por ciclo o fechas; descargar en PDF, Excel o CSV y abrir o compartir | ✅ (22/10/2026) |
+| Eventos: lista, formulario con cálculo en vivo (personas, festejados, quién pagó, consumos con "¿quién?", propina, pago), detalle con cobrar / ya pagó, compartir la imagen | ✅ (30/10/2026) |
 
 ### iOS (Swift)
 SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token del Keychain, 401 → login, imágenes privadas con token y caché). Mismas pestañas que Android: Inicio, Efectivo, Tarjetas, Compromisos y Más. En DEBUG se abre directo en una pantalla con `SIMCTL_CHILD_MG_TOKEN`, `MG_PESTANA` y `MG_ABRIR` (ver `ArranqueDebug.swift`).
@@ -509,10 +523,12 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 | Préstamos: resumen, logo o foto del contacto, detalle, registrar y eliminar el último pago, simulador "¿Y si…?" | ✅ |
 | Ingresos: fuentes, plantilla, pago recibido con propuesta de descuentos del servidor, eliminar | ✅ |
 | Alta y edición de cuentas, tarjetas, préstamos y fuentes; Mi perfil (nombre, correo, foto); categorías | ✅ |
-| Plantilla de descuentos de una fuente; cargos fijos de tarjeta (se administran en la web) | ⏳ |
+| Plantilla de descuentos y adiciones de una fuente; cargos fijos de cada tarjeta | ✅ (21/10/2026) |
+| Reportes (ejecución, gastos por categoría, préstamos, estado de cuenta) con período por ciclo o fechas; descargar en PDF, Excel o CSV (Vista previa para compartir) | ✅ (22/10/2026) |
+| Eventos: lista, formulario con cálculo en vivo, detalle con cobrar / ya pagó, compartir la imagen (Vista previa) | ✅ (30/10/2026) |
 
 ### Calidad
-- 152 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
+- 189 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -531,8 +547,10 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 9. ~~Intereses de tarjeta~~ ✅: en cada tarjeta, lo que costaría no pagar completo cada estado de cuenta (pendiente × tasa × 30 / 365 + pago tardío) y cómo cobran los bancos
 10. ~~Dashboard~~ ✅ (20/10/2026)
 10b. ~~Pagar un compromiso con otra tarjeta~~ ✅ y ~~catálogos de tipos administrables~~ ✅ (20/10/2026)
-11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos, formularios de alta, perfil, categorías y fotos (21/10/2026). iOS ✅ a la par de Android (21/10/2026). Falta en ambos: editar la plantilla de descuentos de una fuente y administrar cargos fijos de tarjeta (hoy en la web)
-12. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · Eventos · Reportes · Notificaciones push
+11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos, formularios de alta, perfil, categorías y fotos (21/10/2026). iOS ✅ a la par de Android (21/10/2026). ✅ API de cargos fijos (`/api/tarjetas/{id}/cargos-fijos`) y plantilla de una fuente en ambas apps: los 3 a la par
+12. ~~Reportes~~ ✅ (22/10/2026: ejecución financiera, gastos por categoría, estado de cuenta y préstamos, en web, API y apps; PDF, Excel y CSV)
+12a. **"Me lo debe" en la API y las apps:** endpoint para ligar un gasto ya registrado a una deuda y casilla en la compra con tarjeta (web ✅ 04/11/2026)
+12b. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · ~~Eventos~~ ✅ (30/10/2026) · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
 ---
@@ -557,7 +575,10 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 ### Pagos de tarjeta
 - Todo pago a un estado de cuenta (desde efectivo, una cuenta u otra tarjeta) lleva la categoría **"Pago de tarjeta"** (`TarjetaService::CATEGORIA_PAGO`, se crea por hogar). No cuenta como gasto en el Inicio (`DashboardService::NO_SON_GASTO`): las compras de la tarjeta ya lo son.
 - La pantalla de la tarjeta (web, API `data.pagos` y Android) lista los "Pagos realizados" (`TarjetaService::pagos`).
-- **Cargos fijos de tarjeta** (`cargos_fijos_tarjeta`: seguro, membresía…): al generarse cada corte, `TarjetaService::aplicarCargosFijos` crea el cargo con fecha del corte (una vez por corte, `movimientos_tarjeta.cargo_fijo_id`). "Por facturar" muestra los que se sumarán. Se administran en la pantalla de la tarjeta (web); API y Android los muestran.
+- **Pagar de más** un compromiso de tarjeta (estado de cuenta, pendiente inicial o mora): `TarjetaService::abonarPago` abona hasta el pendiente y el resto queda como un movimiento **crédito** en la tarjeta (`movimientos_tarjeta.excedente_compromiso_id`, categoría "Pago de tarjeta", descripción "Pago de más al estado de cuenta del corte dd/mm/aaaa"): sube el disponible y baja el próximo corte. Del origen sale lo que de verdad se pagó. Editar o eliminar el pago ajusta primero el excedente (si ya se facturó, su corte se corrige); el crédito no se edita desde la tarjeta (`gestionado_en` = "Compromisos"). Los compromisos que no son de tarjeta siguen sin aceptar pagar de más. API: `excedente` en `CompromisoResource`.
+- **Saldo a favor entre cortes**: si un corte queda en negativo no genera pago y su saldo pasa al siguiente (`estados_cuenta_tarjeta.saldo_anterior`, ≤ 0, ya incluido en `total`); corregir un corte propaga el cambio a los siguientes. API: `por_facturar.saldo_a_favor` (ya restado en `total`) y `saldo_anterior` en cada estado de cuenta.
+- **Cargos fijos de tarjeta** (`cargos_fijos_tarjeta`: seguro, Netflix…): se cobran un **día del mes** (`dia`, 31 = último día) entre `desde` y `hasta` (opcional). `TarjetaService::aplicarCargosFijos` crea el movimiento "cargo" **el día del cobro** (descuenta el disponible desde ya; `movimientos_tarjeta.cargo_fijo_id`) y guarda `ultimo_cobro`: borrar el movimiento no lo repite y cambiar el día no cobra dos veces el mismo mes. Un cobro que caería en un corte ya facturado no se crea. "Por facturar" avisa los que se cobrarán antes del corte (sin sumarlos). Las compras a plazos no van aquí: son compras en cuotas. API: `dia` opcional (si falta, el día de `desde`) y devuelve `dia`, `hasta`, `ultimo_cobro`, `proximo_cobro`. Pendiente: día y fecha fin en Android e iOS (30/10/2026).
+- **Compras en cuotas con día de cobro** (`movimientos_tarjeta.dia_cuota`, 31 = último día): la cuota 1 es la de ese día en o después de la compra (`TarjetaService::fechaCuota`) y cada cuota entra en el corte que contiene su fecha (si se atrasan, varias en un corte). El total se descuenta del disponible desde la compra, como antes. "Por facturar" solo suma las cuotas cuya fecha ya llegó; las que faltan se avisan ("programada" en la API). Sin `dia_cuota` (las ya registradas y apps anteriores), una cuota por corte. Pendiente: el día en Android e iOS (30/10/2026).
 - **Ordenar tarjetas** (web): más disponible, más endeudada, más usada, corte más próximo, pago más próximo, límite, nombre; se recuerda en la sesión. Inactivas siempre al final.
 - Préstamos de una persona (sin banco): se muestra la foto del contacto en lugar del logo.
 
@@ -570,6 +591,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 - Tarjetas de resumen que se actualizan solas al guardar: `data-cash-card="clave"` + `data-cash-value`; el JSON de la tabla trae `clave` (efectivo y cuentas).
 
 ### Apps móviles: notas
+- **Navegación de pestañas (31/10/2026):** la pestaña marcada es la de donde vienes (Android: la última pantalla principal en la pila; iOS: una pila por pestaña), así que un compromiso abierto desde Inicio sigue en "Inicio" y atrás regresa ahí. Tocar la pestaña activa regresa a su pantalla principal. Enlaces: compromiso de una tarjeta → "Ver la tarjeta"; participante de un evento → su contacto.
 - `GET /api/catalogos` responde sin la envoltura `data` (el resto de recursos sí la usan).
 - Subir archivos: PHP no lee multipart en PATCH/PUT → `POST` con `_method=PATCH|PUT`. El interceptor no debe fijar `Content-Type` (rompe el multipart).
 - Gson omite los nulos: al editar, lo que no se envía no cambia (no sirve para vaciar un campo opcional).

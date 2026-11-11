@@ -32,10 +32,7 @@
                 Color <input type="color" name="color" value="{{ $fuente->color ?? '#16A34A' }}" class="h-8 w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600">
             </label>
             @if ($editing)
-                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input type="hidden" name="activo" value="0">
-                    <input type="checkbox" name="activo" value="1" @checked($fuente->activo) class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"> Activa
-                </label>
+                <x-checkbox name="activo" sinMarcar="0" :checked="$fuente->activo">Activa</x-checkbox>
             @endif
         </div>
     </div>

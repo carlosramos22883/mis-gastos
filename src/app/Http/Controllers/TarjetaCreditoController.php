@@ -78,6 +78,7 @@ class TarjetaCreditoController extends Controller
         return view('tarjetas.show', [
             'tarjeta' => $tarjeta,
             'porFacturar' => $this->tarjetas->porFacturar($tarjeta),
+            'saldoAFavor' => $this->tarjetas->saldoAFavor($tarjeta),
             'movimientos' => $tarjeta->movimientos()->with('categoria', 'contacto', 'transferencia.destinoCuenta')->withCount('items')
                 ->whereDate('fecha', '>=', $this->tarjetas->inicioPeriodoAbierto($tarjeta)->toDateString())
                 ->orderByDesc('fecha')->orderByDesc('id')->get(),
@@ -133,6 +134,8 @@ class TarjetaCreditoController extends Controller
         return $tarjetas->each(function (TarjetaCredito $t) {
             $t->setAttribute('deuda', $this->tarjetas->deuda($t));
             $t->setAttribute('disponible', $this->tarjetas->disponible($t));
+            $t->setAttribute('intereses_retenidos', $this->tarjetas->interesesRetenidos($t));
+            $t->setAttribute('cargos_sin_restar', $this->tarjetas->cargosSinRestar($t));
             $t->setAttribute('proximo_corte', $this->tarjetas->proximoCorte($t, $this->tarjetas->inicioPeriodoAbierto($t)));
             $t->setAttribute('por_pagar', $t->compromisos()->where('estado', 'pendiente')->orderBy('fecha_esperada')->first());
         });

@@ -3,13 +3,15 @@
 namespace App\Services;
 
 use App\Models\CategoriaPersonal;
+use App\Models\Contacto;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
-use App\Models\Contacto;
+use App\Models\EventoParticipante;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Models\User;
+use App\Support\MovimientoVinculado;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,8 @@ use Illuminate\Validation\ValidationException;
  *
  *  - Una deuda puede salir del efectivo, de una cuenta o de una tarjeta (se crea ese movimiento con la
  *    categoría "Préstamos a terceros") o solo anotarse ("ninguno") si el dinero ya estaba registrado.
+ *  - También puede ligarse a un gasto ya registrado ("vinculada"; ej. una compra con la tarjeta que hizo otra persona):
+ *    si es por el monto completo, el gasto pasa a "Préstamos a terceros"; al eliminar la deuda el gasto se queda.
  *  - Un pago entra al efectivo o a una cuenta (categoría "Cobros de deudas") y se reparte entre las deudas
  *    pendientes del contacto, de la más antigua a la más reciente, o se aplica a una sola.
  *  - Lo pagado y lo pendiente se calculan de los pagos; nunca se guardan.
@@ -91,9 +95,64 @@ class DeudorService
         });
     }
 
-    /** Solo sin pagos; el movimiento que generó también se elimina (con las reglas de su módulo). */
+    /** Si el movimiento puede ligarse a una deuda: un gasto propio (no de otro módulo, de una transferencia ni de un compromiso). */
+    public function vinculable(Model $movimiento): bool
+    {
+        $gasto = match (true) {
+            $movimiento instanceof MovimientoEfectivo => $movimiento->tipo === 'egreso' && ! $movimiento->es_saldo_arrastrado,
+            $movimiento instanceof MovimientoCuenta => $movimiento->tipo === 'egreso',
+            $movimiento instanceof MovimientoTarjeta => $movimiento->tipo === 'compra' && ! $movimiento->pago_compromiso_id,
+            default => false,
+        };
+
+        return $gasto && ! $movimiento->transferencia_id && ! $movimiento->compromiso_id && MovimientoVinculado::modulo($movimiento) === null;
+    }
+
+    /**
+     * Liga un gasto ya registrado a una deuda nueva del contacto, por todo el monto o por una parte. Con el monto
+     * completo el gasto pasa a "Préstamos a terceros" (deja de ser gasto propio); con una parte conserva su categoría.
+     *
+     * @param  array{descripcion: string, monto: numeric, comentario?: ?string}  $data
+     */
+    public function vincularMovimiento(User $user, Model $movimiento, Contacto $contacto, array $data): Deuda
+    {
+        return DB::transaction(function () use ($user, $movimiento, $contacto, $data) {
+            $movimiento = $movimiento::whereKey($movimiento->id)->lockForUpdate()->firstOrFail();
+            if (! $this->vinculable($movimiento)) {
+                throw ValidationException::withMessages(['monto' => 'Este movimiento no se puede ligar a una deuda.']);
+            }
+            $monto = round((float) $data['monto'], 2);
+            if ($monto > (float) $movimiento->monto) {
+                throw ValidationException::withMessages(['monto' => 'La deuda no puede superar el monto del movimiento ($ '.number_format((float) $movimiento->monto, 2).').']);
+            }
+            $completo = $monto === round((float) $movimiento->monto, 2);
+            $origen = match (true) {
+                $movimiento instanceof MovimientoEfectivo => 'efectivo',
+                $movimiento instanceof MovimientoCuenta => 'cuenta',
+                default => 'tarjeta',
+            };
+
+            $deuda = $contacto->deudas()->create([
+                'user_id' => $movimiento->user_id, 'descripcion' => $data['descripcion'], 'comentario' => $data['comentario'] ?? null,
+                'monto' => $monto, 'fecha' => $movimiento->fecha, 'origen' => $origen, 'vinculada' => true,
+                'categoria_original_id' => $completo ? $movimiento->categoria_personal_id : null, "movimiento_{$origen}_id" => $movimiento->id,
+            ]);
+            $movimiento->update(['contacto_id' => $contacto->id]
+                + ($completo ? ['categoria_personal_id' => $this->categoria($user, self::CATEGORIA_PRESTAMO, 'egreso')] : []));
+
+            return $deuda;
+        });
+    }
+
+    /**
+     * Solo sin pagos; el movimiento que generó también se elimina (con las reglas de su módulo). Si la deuda se ligó
+     * a un gasto que ya existía, el gasto se queda y recupera su categoría.
+     */
     public function eliminarDeuda(Deuda $deuda): void
     {
+        if (EventoParticipante::where('deuda_id', $deuda->id)->exists()) {
+            throw ValidationException::withMessages(['deuda' => 'Esta deuda es la parte de un evento: se modifica desde Eventos.']);
+        }
         if ($deuda->pagos()->exists()) {
             throw ValidationException::withMessages(['deuda' => 'Esta deuda ya tiene pagos: elimina primero los pagos.']);
         }
@@ -101,7 +160,11 @@ class DeudorService
         DB::transaction(function () use ($deuda) {
             $movimiento = $deuda->movimientoEfectivo ?? $deuda->movimientoCuenta ?? $deuda->movimientoTarjeta;
             $deuda->delete();
-            $this->eliminarMovimiento($movimiento);
+            if (! $deuda->vinculada) {
+                $this->eliminarMovimiento($movimiento);
+            } elseif ($movimiento && round((float) $deuda->monto, 2) === round((float) $movimiento->monto, 2)) {
+                $movimiento->update(['categoria_personal_id' => $deuda->categoria_original_id]); // la deuda le había cambiado la categoría
+            }
         });
     }
 

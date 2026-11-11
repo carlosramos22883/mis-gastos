@@ -111,8 +111,14 @@ class CompromisoController extends Controller
         $this->own($request, $compromiso);
         abort_unless($compromiso->recurrente, 404);
         $n = $this->compromisos->actualizarSerie($compromiso->recurrente, $request->datosSerie());
+        // Si cambió el calendario este pago se regeneró: el detalle se va al que lo reemplaza
+        $vigente = $this->compromisos->pagoVigente($compromiso);
 
-        return response()->json(['success' => true, 'message' => 'Serie actualizada'.($n ? ": {$n} pago(s) pendiente(s) al día con la regla." : '. Se aplica a los próximos pagos.')]);
+        return response()->json(array_filter([
+            'success' => true,
+            'message' => 'Serie actualizada'.($n ? ": {$n} pago(s) pendiente(s) al día con la regla." : '. Se aplica a los próximos pagos.'),
+            'redirect' => $vigente?->is($compromiso) ? null : ($vigente ? route('compromisos.show', $vigente) : route('compromisos.index')),
+        ]));
     }
 
     public function destroy(Request $request, Compromiso $compromiso)

@@ -48,7 +48,7 @@
         </nav>
 
         @php($headers = [
-            ['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true],
+            ['label' => 'Descripción', 'key' => 'descripcion', 'sortable' => true, 'width' => 'w-[22rem]'],
             ['label' => 'Monto', 'key' => 'monto', 'sortable' => true],
             ['label' => 'Fecha', 'key' => 'fecha', 'sortable' => true],
             ['label' => 'Categoría', 'sortable' => false],
@@ -67,4 +67,5 @@
     </div>
     <x-ajax-modal name="movimiento" />
     <x-ajax-modal name="transferencia" />
+    <x-ajax-modal name="deuda" />
 </x-app-layout>

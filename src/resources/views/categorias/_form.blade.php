@@ -22,7 +22,7 @@
         </div>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Selecciona un color o escribe su código hexadecimal.</p>
     </div>
-    <label class="flex gap-2 items-center"><input type="checkbox" name="activo" value="1" @checked($categoria->activo ?? true)> Activa</label>
+    <x-checkbox name="activo" :checked="$categoria->activo ?? true">Activa</x-checkbox>
     @error('activo')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
     <div class="mt-6 flex justify-end gap-3">
         <x-secondary-button type="button" @click="$dispatch('close-modal', 'categoria-modal')">Cancelar</x-secondary-button>

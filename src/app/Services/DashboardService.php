@@ -10,6 +10,7 @@ use App\Models\TarjetaCredito;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Números de la página de inicio: dónde está el dinero, qué se debe, qué vence y en qué se gasta.
@@ -34,13 +35,20 @@ class DashboardService
         private readonly DeudorService $deudores,
         private readonly IngresoService $ingresos,
         private readonly CompromisoService $compromisos,
+        private readonly PresupuestoService $presupuestos,
     ) {}
+
+    /** Categorías que no cuentan para el tope de gasto del ciclo: las cuotas de préstamos ya están aparte. */
+    public const FUERA_DEL_TOPE = ['Préstamos y deudas'];
+
+    private const MINUTOS_ALERTAS = 10;
 
     public function resumen(User $user): array
     {
         $this->ciclos->closeIfNeeded($user);
         $this->tarjetas->generarPendientes($user);
         [$hoy, $inicio, $fin] = $this->compromisos->fechas($user);
+        [$tope, $presupuestos] = $this->termometro($user, $hoy, $inicio, $fin);
 
         $efectivo = round($this->ciclos->balance($user), 2);
         $cuentas = $user->cuentas()->with('banco')->where('activo', true)->orderBy('nombre')->get()
@@ -52,7 +60,7 @@ class DashboardService
         $prestamos = $user->prestamos()->where('activo', true)->with('cargos')->get()->map(fn ($p) => ['saldo' => $this->prestamos->saldo($p), 'cuota' => $this->prestamos->montoPorPagar($p) ?? 0]);
         $totalCuentas = round($cuentas->sum('saldo'), 2);
 
-        return [
+        $resumen = [
             'hoy' => $hoy->toDateString(),
             'ciclo' => ['inicio' => $inicio->toDateString(), 'fin' => $fin->toDateString(), 'dias_restantes' => $this->diasEntre($hoy, $fin)],
             'efectivo' => $efectivo,
@@ -67,12 +75,74 @@ class DashboardService
             'nos_deben' => round($this->deudores->listar($user)->sum('pendiente'), 2),
             'gastos_por_categoria' => $this->gastosPorCategoria($user, $inicio, $fin),
             'historial' => $this->historial($user, $fin),
-            'alertas' => $this->alertas($user, $hoy, $tarjetas['lista']),
-            'proximos' => $user->compromisos()->with('tarjeta')->where('estado', Compromiso::PENDIENTE)->whereNotNull('fecha_esperada')
+            'tope' => $tope,
+            'presupuestos' => $presupuestos->all(),
+            'alertas' => $alertas = $this->alertas($user, $hoy, $tarjetas['lista'], $tope, $presupuestos),
+            'proximos' => $user->compromisos()->with('tarjeta')->where('estado', Compromiso::PENDIENTE)->where('es_presupuesto', false)->whereNotNull('fecha_esperada')
                 ->orderBy('fecha_esperada')->limit(8)->get()
                 ->map(fn ($c) => ['id' => $c->id, 'descripcion' => $c->descripcion, 'fecha' => $c->fecha_esperada->toDateString(), 'monto' => (float) $c->saldo_pendiente,
                     'vencido' => $c->fecha_esperada->toDateString() < $hoy->toDateString(), 'color' => $c->tarjeta?->color])->all(),
         ];
+        Cache::put(self::claveAlertas($user), $alertas, self::MINUTOS_ALERTAS * 60);
+
+        return $resumen;
+    }
+
+    /** Los avisos de la campana (los mismos del inicio), guardados unos minutos: la campana sale en todas las pantallas. */
+    public function alertasCampana(User $user): array
+    {
+        return Cache::remember(self::claveAlertas($user), self::MINUTOS_ALERTAS * 60, function () use ($user) {
+            [$hoy, $inicio, $fin] = $this->compromisos->fechas($user);
+            [$tope, $presupuestos] = $this->termometro($user, $hoy, $inicio, $fin);
+
+            return $this->alertas($user, $hoy, $this->tarjetas($user)['lista'], $tope, $presupuestos);
+        });
+    }
+
+    /** Abrir un aviso de la campana: queda como visto (deja de contar) y devuelve a dónde lleva. */
+    public function abrirAviso(User $user, string $clave): ?string
+    {
+        $aviso = collect($this->alertasCampana($user))->firstWhere('clave', $clave);
+        if ($aviso) {
+            $this->marcarVistos($user, [$clave]);
+        }
+
+        return $aviso['url'] ?? null;
+    }
+
+    /** Marca avisos como vistos; solo se guardan las claves de los avisos que siguen vigentes. */
+    public function marcarVistos(User $user, ?array $claves = null): void
+    {
+        $vigentes = collect($this->alertasCampana($user))->pluck('clave');
+        $vistas = $vigentes->intersect(array_merge($user->avisos_vistos ?? [], $claves ?? $vigentes->all()))->values()->all();
+        $user->forceFill(['avisos_vistos' => $vistas])->save();
+    }
+
+    /** Un gasto o un compromiso cambió: los avisos de la campana de todo el hogar se recalculan en la siguiente pantalla. */
+    public static function olvidarAlertas(?int $hogarId): void
+    {
+        if ($hogarId) {
+            User::where('hogar_id', $hogarId)->pluck('id')->each(fn ($id) => Cache::forget('alertas-campana:'.$id));
+        }
+    }
+
+    private static function claveAlertas(User $user): string
+    {
+        return 'alertas-campana:'.$user->id;
+    }
+
+    /** Tope de gasto del ciclo y presupuestos abiertos (súper, gasolina…) con lo gastado y lo que queda. */
+    private function termometro(User $user, Carbon $hoy, Carbon $inicio, Carbon $fin): array
+    {
+        $this->presupuestos->sincronizar($user);
+        $gastos = $this->movimientosDeGasto($user, $inicio, $fin);
+        $tope = $this->presupuestos->tope($user->hogar, (float) $gastos->reject(fn ($m) => in_array($m->categoria->nombre, self::FUERA_DEL_TOPE, true))->sum('monto'), $this->diasEntre($hoy, $fin));
+        $presupuestos = $user->compromisos()->with('categoria')->where('es_presupuesto', true)->where('estado', Compromiso::PENDIENTE)
+            ->whereDate('ciclo_inicio', $inicio->toDateString())->orderBy('descripcion')->get()
+            ->map(fn ($c) => ['id' => $c->id, 'descripcion' => $c->descripcion, 'categoria' => $c->categoria?->nombre, 'color' => $c->categoria?->color]
+                + $this->presupuestos->resumen($c))->values();
+
+        return [$tope, $presupuestos];
     }
 
     /** El "cuadrito" de la hoja: cada tarjeta con corte, fecha límite, límite, disponible y lo pendiente de pago. */
@@ -100,7 +170,7 @@ class DashboardService
     /** @return array<int, array{nombre: string, color: ?string, monto: float}> de mayor a menor */
     public function gastosPorCategoria(User $user, Carbon $inicio, Carbon $fin): array
     {
-        return $this->gastos($user, $inicio, $fin)
+        return $this->movimientosDeGasto($user, $inicio, $fin)
             ->groupBy(fn ($m) => $m->categoria->nombre)
             ->map(fn (Collection $g, $nombre) => ['nombre' => $nombre, 'color' => $g->first()->categoria->color, 'monto' => round((float) $g->sum('monto'), 2)])
             ->sortByDesc('monto')->values()->all();
@@ -118,31 +188,40 @@ class DashboardService
                 break;
             }
             $resultado[] = ['inicio' => $ini->toDateString(), 'fin' => $fi->toDateString(),
-                'ingresos' => $this->ingresosEntre($user, $ini, $fi), 'gastos' => round((float) $this->gastos($user, $ini, $fi)->sum('monto'), 2)];
+                'ingresos' => $this->ingresosEntre($user, $ini, $fi), 'gastos' => round((float) $this->movimientosDeGasto($user, $ini, $fi)->sum('monto'), 2)];
             $fecha = $ini->copy()->subDay();
         }
 
         return array_reverse($resultado);
     }
 
-    private function gastos(User $user, Carbon $inicio, Carbon $fin): Collection
+    /** Movimientos que cuentan como gasto (efectivo, cuentas y tarjetas), con su categoría. Ver la definición arriba. */
+    public function movimientosDeGasto(User $user, Carbon $inicio, Carbon $fin): Collection
     {
         $rango = fn ($q) => $q->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $fin->toDateString())
             ->whereNotNull('categoria_personal_id')->whereHas('categoria', fn ($c) => $c->whereNotIn('nombre', self::NO_SON_GASTO))->with('categoria');
 
         return collect()
             ->concat($rango(MovimientoEfectivo::delHogar($user)->where('tipo', 'egreso')->whereNull('transferencia_id'))->get())
-            ->concat($rango(MovimientoCuenta::delHogar($user)->where('tipo', 'egreso')->whereNull('transferencia_id'))->get())
-            ->concat($rango(MovimientoTarjeta::delHogar($user)->whereIn('tipo', ['compra', 'cargo']))->get());
+            ->concat($rango(MovimientoCuenta::delHogar($user)->where('tipo', 'egreso')->whereNull('transferencia_id'))->with('cuenta')->get())
+            ->concat($rango(MovimientoTarjeta::delHogar($user)->whereIn('tipo', ['compra', 'cargo']))->with('tarjeta')->get());
+    }
+
+    /** Movimientos que cuentan como ingreso (efectivo y cuentas), con su categoría. */
+    public function movimientosDeIngreso(User $user, Carbon $inicio, Carbon $fin): Collection
+    {
+        $rango = fn ($q) => $q->where('tipo', 'ingreso')->whereNull('transferencia_id')
+            ->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $fin->toDateString())
+            ->whereHas('categoria', fn ($c) => $c->whereNotIn('nombre', self::NO_SON_INGRESO))->with('categoria');
+
+        return collect()
+            ->concat($rango(MovimientoEfectivo::delHogar($user)->where('es_saldo_arrastrado', false))->get())
+            ->concat($rango(MovimientoCuenta::delHogar($user))->with('cuenta')->get());
     }
 
     private function ingresosEntre(User $user, Carbon $inicio, Carbon $fin): float
     {
-        $suma = fn ($q) => (float) $q->where('tipo', 'ingreso')->whereNull('transferencia_id')
-            ->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $fin->toDateString())
-            ->whereHas('categoria', fn ($c) => $c->whereNotIn('nombre', self::NO_SON_INGRESO))->sum('monto');
-
-        return round($suma(MovimientoEfectivo::delHogar($user)->where('es_saldo_arrastrado', false)) + $suma(MovimientoCuenta::delHogar($user)), 2);
+        return round((float) $this->movimientosDeIngreso($user, $inicio, $fin)->sum('monto'), 2);
     }
 
     /** Días de calendario entre dos fechas (sin horas ni zonas horarias: ver CLAUDE.md, "Fechas"). */
@@ -152,10 +231,23 @@ class DashboardService
     }
 
     /** Lo que hay que atender hoy: vencidos, lo que vence pronto, tarjetas sobregiradas e ingresos del día. */
-    private function alertas(User $user, Carbon $hoy, array $tarjetas): array
+    private function alertas(User $user, Carbon $hoy, array $tarjetas, ?array $tope = null, ?Collection $presupuestos = null): array
     {
         $alertas = [];
-        $pendientes = $user->compromisos()->where('estado', Compromiso::PENDIENTE)->whereNotNull('fecha_esperada')
+        $dinero = fn (float $v) => '$ '.number_format($v, 2);
+        if ($tope && $tope['queda'] < 0) {
+            $alertas[] = ['nivel' => 'critico', 'etiqueta' => 'Tope', 'texto' => 'Te pasaste del tope del ciclo por '.$dinero(-$tope['queda']).' (llevas '.$dinero($tope['gastado']).' de '.$dinero($tope['tope']).')', 'url' => route('dashboard')];
+        } elseif ($tope && $tope['porcentaje'] >= 80) {
+            $alertas[] = ['nivel' => 'serio', 'etiqueta' => 'Tope', 'texto' => "Llevas el {$tope['porcentaje']} % del tope del ciclo: te quedan ".$dinero($tope['queda']).' para '.($tope['dias_restantes'] + 1).' días', 'url' => route('dashboard')];
+        }
+        foreach ($presupuestos ?? [] as $p) {
+            if ($p['queda'] < 0) {
+                $alertas[] = ['nivel' => 'serio', 'etiqueta' => 'Presupuesto', 'texto' => "{$p['descripcion']}: te pasaste por ".$dinero(-$p['queda']).' (gastado '.$dinero($p['gastado']).' de '.$dinero($p['monto']).')', 'url' => route('compromisos.show', $p['id'])];
+            } elseif ($p['monto'] > 0 && $p['gastado'] >= $p['monto'] * 0.8) {
+                $alertas[] = ['nivel' => 'aviso', 'etiqueta' => 'Presupuesto', 'texto' => "{$p['descripcion']}: te quedan ".$dinero($p['queda']).' de '.$dinero($p['monto']), 'url' => route('compromisos.show', $p['id'])];
+            }
+        }
+        $pendientes = $user->compromisos()->where('estado', Compromiso::PENDIENTE)->where('es_presupuesto', false)->whereNotNull('fecha_esperada')
             ->whereDate('fecha_esperada', '<=', $hoy->copy()->addDays(3)->toDateString())->orderBy('fecha_esperada')->get();
         foreach ($pendientes as $c) {
             $dias = $this->diasEntre($hoy, $c->fecha_esperada);
@@ -184,7 +276,10 @@ class DashboardService
         }
 
         $orden = ['critico' => 0, 'serio' => 1, 'aviso' => 2, 'info' => 3];
+        // Clave estable del aviso en el ciclo (cambia si sube de nivel): con ella la campana sabe cuáles ya se abrieron
+        $ciclo = $this->compromisos->fechas($user)[1]->toDateString();
 
-        return collect($alertas)->sortBy(fn ($a) => $orden[$a['nivel']])->values()->all();
+        return collect($alertas)->sortBy(fn ($a) => $orden[$a['nivel']])
+            ->map(fn ($a) => $a + ['clave' => substr(sha1($ciclo.'|'.$a['etiqueta'].'|'.$a['url'].'|'.$a['nivel']), 0, 16)])->values()->all();
     }
 }

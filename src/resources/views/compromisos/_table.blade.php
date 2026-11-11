@@ -15,7 +15,10 @@
     <td class="px-6 py-4 whitespace-nowrap">{{ $compromiso->fecha_esperada?->format('d/m/Y') ?? 'Sin fecha' }}</td>
     <td class="px-6 py-4 whitespace-nowrap">
         {{ $simbolo }} {{ number_format((float) $compromiso->monto, 2) }}
-        @if ($compromiso->estado === \App\Models\Compromiso::PENDIENTE && $compromiso->montoPagado() > 0)
+        @if ($compromiso->es_presupuesto)
+            @php($resumenP = app(\App\Services\PresupuestoService::class)->resumen($compromiso))
+            <div class="text-xs {{ $resumenP['queda'] < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400' }}">Presupuesto · gastado {{ $simbolo }} {{ number_format($resumenP['gastado'], 2) }} · {{ $resumenP['queda'] < 0 ? 'te pasaste '.$simbolo.' '.number_format(-$resumenP['queda'], 2) : 'quedan '.$simbolo.' '.number_format($resumenP['queda'], 2) }}</div>
+        @elseif ($compromiso->estado === \App\Models\Compromiso::PENDIENTE && $compromiso->montoPagado() > 0)
             <div class="text-xs text-amber-700 dark:text-amber-300">Pendiente: {{ $simbolo }} {{ number_format((float) $compromiso->saldo_pendiente, 2) }}</div>
         @endif
     </td>
@@ -23,7 +26,9 @@
     <td class="px-6 py-4 sticky-col-right"><div class="flex justify-end gap-2">
         @if ($compromiso->estado === \App\Models\Compromiso::PENDIENTE)
             @canany(['efectivo.create', 'cuentas.create'])
+                @unless ($compromiso->es_presupuesto)
                 <x-primary-button type="button" class="py-1.5 px-2" title="Pagar" x-on:click.prevent="$dispatch('load-pago-modal-form', '{{ route('compromisos.pagar', $compromiso) }}'); $dispatch('open-modal', 'pago-modal')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg></x-primary-button>
+                @endunless
             @endcanany
             @can('compromisos.edit')
                 <x-secondary-button type="button" class="py-1.5 px-2" title="Editar" x-on:click.prevent="$dispatch('load-compromiso-modal-form', '{{ route('compromisos.edit', $compromiso) }}?modal=1'); $dispatch('open-modal', 'compromiso-modal')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></x-secondary-button>
