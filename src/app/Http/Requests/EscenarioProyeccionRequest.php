@@ -13,12 +13,14 @@ use Illuminate\Validation\Validator;
  *  - prestamo: mes, monto, tasa, plazo, comision?, cuota?, destino? (claves de deudas)  - venta: mes, monto, destino?
  *  - gasto: desde, hasta?, monto (gasto mensual nuevo)  - ingreso: desde, hasta?, monto (extra al mes, puede ser negativo)
  *  - unico: mes, monto (positivo entra, negativo sale)  - pagar: mes, deuda, monto? (sin monto = toda la deuda)
+ *  - cuotas: mes, deuda, plazo, tasa?, comision? (el saldo pasa a un préstamo a plazo fijo)
+ * Además: orden de pago (y prioridad si es personalizado) y una meta opcional (meta_que + meta_mes).
  */
 class EscenarioProyeccionRequest extends FormRequest
 {
     private const OBLIGATORIOS = [
         'prestamo' => ['mes', 'monto', 'plazo'], 'venta' => ['mes', 'monto'], 'gasto' => ['desde', 'monto'],
-        'ingreso' => ['desde', 'monto'], 'unico' => ['mes', 'monto'], 'pagar' => ['mes', 'deuda'],
+        'ingreso' => ['desde', 'monto'], 'unico' => ['mes', 'monto'], 'pagar' => ['mes', 'deuda'], 'cuotas' => ['mes', 'deuda', 'plazo'],
     ];
 
     public function authorize(): bool
@@ -43,6 +45,11 @@ class EscenarioProyeccionRequest extends FormRequest
             'modo_tarjetas' => ['required', Rule::in(['intereses', 'rotar'])],
             'perdida_rotar' => ['nullable', 'numeric', 'between:0,20'],
             'sobrante' => ['required', Rule::in(['abonar', 'ahorrar'])],
+            'orden' => ['nullable', Rule::in(ProyeccionService::ORDENES)],
+            'prioridad' => ['nullable', 'array', 'required_if:orden,personalizado'],
+            'prioridad.*' => ['string', 'regex:/^(tarjeta|prestamo):\d+$/'],
+            'meta_que' => ['nullable', 'string', 'regex:/^(tarjetas|personas|sin_deudas|(tarjeta|prestamo):\d+)$/'],
+            'meta_mes' => ['nullable', 'required_with:meta_que', 'date_format:Y-m'],
             'palancas' => ['present', 'array', 'max:30'],
             'palancas.*.tipo' => ['required', Rule::in(ProyeccionService::TIPOS_PALANCA)],
             'palancas.*.descripcion' => ['nullable', 'string', 'max:100'],
@@ -52,6 +59,11 @@ class EscenarioProyeccionRequest extends FormRequest
             'palancas.*.destino' => ['nullable', 'array'], 'palancas.*.destino.*' => ['string', 'regex:/^(tarjeta|prestamo):\d+$/'],
             'palancas.*.deuda' => ['nullable', 'string', 'regex:/^(tarjeta|prestamo):\d+$/'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return ['prioridad.required_if' => 'Elige en qué orden pagar las deudas.', 'meta_mes.required_with' => 'Elige para cuándo quieres lograr la meta.'];
     }
 
     public function after(): array
@@ -75,7 +87,11 @@ class EscenarioProyeccionRequest extends FormRequest
     {
         $v = $this->validated();
 
+        $orden = $v['orden'] ?? 'mas_cara';
+
         return ['modo_tarjetas' => $v['modo_tarjetas'], 'perdida_rotar' => (float) ($v['perdida_rotar'] ?? 1), 'sobrante' => $v['sobrante'],
+            'orden' => $orden, 'prioridad' => $orden === 'personalizado' ? array_values($v['prioridad'] ?? []) : [],
+            'meta' => ! empty($v['meta_que']) ? ['que' => $v['meta_que'], 'mes' => $v['meta_mes']] : null,
             'palancas' => array_values(array_map(fn ($p) => array_filter($p, fn ($x) => $x !== null && $x !== ''), $v['palancas']))];
     }
 }

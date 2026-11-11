@@ -92,4 +92,48 @@ class ProyeccionTest extends TestCase
         $this->assertNotNull($r['hitos']['sin_deudas']); // la hipoteca no cuenta: termina al pagar la tarjeta
         $this->assertLessThan(50000, $meses['2027-03']['hipoteca']);
     }
+
+    public function test_orden_de_pago_la_mas_pequena_primero_o_el_que_yo_elija(): void
+    {
+        $base = $this->base([
+            $this->tarjeta('grande_cara', 1000, 48), $this->tarjeta('chica_barata', 100, 12),
+            ['clave' => 'evelyn', 'tipo' => 'personal', 'nombre' => 'Evelyn', 'saldo' => 300, 'tasa' => 0],
+        ], 1000, 800); // sobran $200 al mes
+        $cero = fn (array $esc) => collect($this->simular($base, $esc)['deudas'])->pluck('cero', 'clave')->all();
+
+        // La más cara primero: la chica espera; la más pequeña primero: la chica sale en el primer mes
+        $this->assertSame('2027-06', $cero([])['grande_cara']);
+        $this->assertSame('2027-01', $cero(['orden' => 'mas_pequena'])['chica_barata']);
+        // Personalizado: Evelyn antes que cualquier tarjeta
+        $this->assertSame('2027-02', $cero(['orden' => 'personalizado', 'prioridad' => ['evelyn']])['evelyn']);
+    }
+
+    public function test_pasar_una_tarjeta_a_cuotas_y_meta_de_cuanto_necesito_al_mes(): void
+    {
+        $base = $this->base([$this->tarjeta('t', 2400, 48)], 1000, 900); // sobran $100 al mes
+        $s = app(ProyeccionService::class);
+
+        // A cuotas: 12 meses al 0 % → $200 de cuota; la tarjeta queda en cero y ya no paga su 48 %
+        $holgado = $this->base([$this->tarjeta('t', 2400, 48)], 1000, 750); // sobran $250
+        $r = $s->simular($holgado, ['palancas' => [['tipo' => 'cuotas', 'mes' => '2027-01', 'deuda' => 't', 'tasa' => 0, 'plazo' => 12, 'comision' => 24]]]);
+        $this->assertSame('2027-01', collect($r['deudas'])->firstWhere('clave', 't')['cero']);
+        $this->assertSame([0.0, 0.0, 24.0], [$r['totales']['intereses_tarjetas'], $r['totales']['faltante'], $r['totales']['comisiones']]);
+        $this->assertSame(202.0, $r['meses'][1]['cuotas']); // (2400 + 24) / 12
+
+        // Si la cuota no cabe en lo que sobra, lo que falta vuelve a la tarjeta (y paga su tasa)
+        $apretado = $s->simular($base, ['palancas' => [['tipo' => 'cuotas', 'mes' => '2027-01', 'deuda' => 't', 'tasa' => 0, 'plazo' => 12]]]);
+        $this->assertSame(100.0, $apretado['meses'][1]['faltante']);
+
+        // Meta: tarjetas en $0 en diciembre 2027 (12 meses): hace falta poco más de $2,400 + intereses / 12 − 100
+        $meta = $s->meta($base, [], ['que' => 'tarjetas', 'mes' => '2027-12']);
+        $this->assertSame(['que' => 'tarjetas', 'mes' => '2027-12'], array_intersect_key($meta, ['que' => 1, 'mes' => 1]));
+        $this->assertGreaterThan(100, $meta['extra']);
+        $this->assertLessThanOrEqual('2027-12', $meta['logrado_en']);
+        $sinUnDolar = $s->simular($base, ['palancas' => [['tipo' => 'ingreso', 'desde' => '2027-01', 'monto' => $meta['extra'] - 1]]]);
+        $this->assertGreaterThan('2027-12', $sinUnDolar['hitos']['tarjetas'] ?? '9999-99'); // con un dólar menos ya no llega
+
+        // Si ya se logra, no hace falta nada; si es imposible, null
+        $this->assertSame(0.0, $s->meta($base, [], ['que' => 'tarjetas', 'mes' => '2050-01'])['extra']);
+        $this->assertNull($s->meta($this->base([$this->tarjeta('t', 10_000_000, 48)]), [], ['que' => 'tarjetas', 'mes' => '2027-02'])['extra']);
+    }
 }

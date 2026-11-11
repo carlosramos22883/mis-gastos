@@ -23,7 +23,8 @@ class ProyeccionController extends Controller
 
         $comparar = collect([['id' => null, 'nombre' => 'Si sigo igual', 'datos' => ['modo_tarjetas' => 'intereses', 'sobrante' => 'abonar', 'palancas' => []]]])
             ->concat($escenarios->whereIn('id', $ver)->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'datos' => $e->datos]))
-            ->values()->map(fn ($e) => $e + ['resultado' => $this->proyecciones->simular($base, $e['datos'])]);
+            ->values()->map(fn ($e) => $e + ['resultado' => $this->proyecciones->simular($base, $e['datos']),
+                'meta' => ! empty($e['datos']['meta']) ? $this->proyecciones->meta($base, $e['datos'], $e['datos']['meta']) : null]);
 
         return view('proyecciones.index', compact('base', 'escenarios', 'ver', 'comparar'));
     }

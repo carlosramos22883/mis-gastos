@@ -1,6 +1,9 @@
 @php
     $simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$';
     $dinero = fn ($v) => $simbolo.' '.number_format((float) $v, 2);
+    $ordenes = ['mas_cara' => 'la más cara primero', 'mas_pequena' => 'la más pequeña primero', 'personalizado' => 'orden propio'];
+    $metas = ['tarjetas' => 'tarjetas en $0', 'personas' => 'personas pagadas', 'sin_deudas' => 'sin deudas'];
+    $nombreDeuda = collect($base['deudas'])->pluck('nombre', 'clave');
     $nombresMes = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     $mesTexto = fn (?string $m) => $m ? $nombresMes[(int) substr($m, 5, 2) - 1].' '.substr($m, 0, 4) : null;
     $deudas = collect($base['deudas']);
@@ -86,7 +89,7 @@
                         @foreach ($escenarios as $e)
                             <li class="flex flex-wrap items-center justify-between gap-2 py-2">
                                 <x-checkbox name="ver[]" :value="$e->id" :checked="in_array($e->id, $ver, true)" x-on:change="$el.form.requestSubmit()"
-                                    :ayuda="count($e->datos['palancas'] ?? []).' palanca(s) · tarjetas: '.(($e->datos['modo_tarjetas'] ?? '') === 'rotar' ? 'rotar con avances ('.($e->datos['perdida_rotar'] ?? 1).' %)' : 'pagan intereses')">{{ $e->nombre }}</x-checkbox>
+                                    :ayuda="count($e->datos['palancas'] ?? []).' palanca(s) · tarjetas: '.(($e->datos['modo_tarjetas'] ?? '') === 'rotar' ? 'rotar con avances ('.($e->datos['perdida_rotar'] ?? 1).' %)' : 'pagan intereses').' · '.$ordenes[$e->datos['orden'] ?? 'mas_cara'].(! empty($e->datos['meta']) ? ' · con meta' : '')">{{ $e->nombre }}</x-checkbox>
                                 <div class="flex gap-2">
                                     @can('proyecciones.edit')
                                         <x-secondary-button type="button" class="py-1.5 px-2" title="Editar" x-on:click="$dispatch('load-escenario-modal-form', '{{ route('proyecciones.edit', $e) }}?ver_actual={{ implode(',', $ver) }}'); $dispatch('open-modal', 'escenario-modal')">
@@ -143,6 +146,33 @@
                             @endforeach
                         </tr>
                     @endforeach
+                    <tr class="border-t border-gray-200 dark:border-gray-700">
+                        <th scope="row" class="px-6 py-3 text-left font-medium">Lo que sobra paga primero</th>
+                        @foreach ($comparar as $e)
+                            <td class="px-4 py-3 text-right text-xs">{{ ucfirst($ordenes[$e['datos']['orden'] ?? 'mas_cara']) }}@if (($e['datos']['orden'] ?? '') === 'personalizado')<span class="block text-gray-500 dark:text-gray-400">{{ collect($e['datos']['prioridad'] ?? [])->map(fn ($c) => $nombreDeuda[$c] ?? $c)->implode(' → ') }}</span>@endif</td>
+                        @endforeach
+                    </tr>
+                    @if ($comparar->contains(fn ($e) => $e['meta']))
+                        <tr class="border-t border-gray-200 bg-primary-50/40 dark:border-gray-700 dark:bg-gray-700/30">
+                            <th scope="row" class="px-6 py-3 text-left font-medium">Meta</th>
+                            @foreach ($comparar as $e)
+                                <td class="px-4 py-3 text-right text-xs">
+                                    @if ($m = $e['meta'])
+                                        <span class="block text-gray-500 dark:text-gray-400">{{ ucfirst($metas[$m['que']] ?? 'pagar '.($nombreDeuda[$m['que']] ?? $m['que'])) }} para {{ $mesTexto($m['mes']) }}</span>
+                                        @if ($m['extra'] === null)
+                                            <strong class="text-red-600 dark:text-red-400">No se logra ni con {{ $dinero(20000) }} más al mes</strong>
+                                        @elseif ($m['extra'] == 0)
+                                            <strong class="text-green-700 dark:text-green-400">Ya lo logras ({{ $mesTexto($m['logrado_en']) }})</strong>
+                                        @else
+                                            <strong class="text-gray-900 dark:text-gray-100">Necesitas {{ $dinero($m['extra']) }} más al mes</strong>
+                                        @endif
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endif
                 </tbody>
             </table>
         </section>

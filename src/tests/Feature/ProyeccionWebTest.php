@@ -45,7 +45,8 @@ class ProyeccionWebTest extends TestCase
         $this->actingAs($this->user)->postJson(route('proyecciones.store'), $this->datos())->assertOk()->assertJsonPath('success', true);
         $escenario = EscenarioProyeccion::firstOrFail();
         $this->assertSame($this->user->hogar_id, $escenario->hogar_id);
-        $this->assertSame(['modo_tarjetas' => 'rotar', 'perdida_rotar' => 1.5, 'sobrante' => 'abonar'], array_diff_key($escenario->datos, ['palancas' => 1]));
+        $this->assertSame(['modo_tarjetas' => 'rotar', 'perdida_rotar' => 1.5, 'sobrante' => 'abonar', 'orden' => 'mas_cara', 'prioridad' => [], 'meta' => null],
+            array_diff_key($escenario->datos, ['palancas' => 1]));
         $this->assertSame(7000, $escenario->datos['palancas'][0]['monto']);
 
         // La pantalla compara "Si sigo igual" con el escenario: con la venta, la tarjeta queda en cero en diciembre
@@ -66,5 +67,23 @@ class ProyeccionWebTest extends TestCase
         $ajeno = EscenarioProyeccion::create(['user_id' => $otro->id, 'nombre' => 'Ajeno', 'datos' => ['palancas' => []]]);
         $this->actingAs($this->user)->get(route('proyecciones.edit', $ajeno))->assertNotFound();
         $this->actingAs($this->user)->deleteJson(route('proyecciones.destroy', $ajeno))->assertNotFound();
+    }
+
+    public function test_orden_propio_y_meta_en_la_comparacion(): void
+    {
+        $tarjeta = 'tarjeta:'.$this->user->tarjetasCredito()->first()->id;
+        $this->actingAs($this->user)->postJson(route('proyecciones.store'), $this->datos(['orden' => 'personalizado']))
+            ->assertUnprocessable()->assertJsonValidationErrors('prioridad');
+
+        $this->actingAs($this->user)->postJson(route('proyecciones.store'), $this->datos([
+            'nombre' => 'Con meta', 'palancas' => '[]', 'orden' => 'personalizado', 'prioridad' => [$tarjeta],
+            'meta_que' => 'tarjetas', 'meta_mes' => '2026-12',
+        ]))->assertOk();
+        $datos = EscenarioProyeccion::firstOrFail()->datos;
+        $this->assertSame(['orden' => 'personalizado', 'prioridad' => [$tarjeta], 'meta' => ['que' => 'tarjetas', 'mes' => '2026-12']],
+            array_intersect_key($datos, ['orden' => 1, 'prioridad' => 1, 'meta' => 1]));
+
+        // Sin ingreso registrado no sobra nada: para pagar la tarjeta en diciembre hace falta ingreso extra
+        $this->actingAs($this->user)->get(route('proyecciones.index'))->assertOk()->assertSee('Tarjetas en $0 para Dic 2026')->assertSee('Necesitas');
     }
 }
