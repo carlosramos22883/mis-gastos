@@ -10,21 +10,14 @@ use Illuminate\Http\Request;
 /** Proyecciones: la foto de hoy, los escenarios guardados y su comparación (hasta 3 junto a "Si sigo igual"). */
 class ProyeccionController extends Controller
 {
-    public const MAX_COMPARAR = 3;
+    public const MAX_COMPARAR = ProyeccionService::MAX_COMPARAR;
 
     public function __construct(private readonly ProyeccionService $proyecciones) {}
 
     public function index(Request $request)
     {
         $user = $request->user();
-        $base = $this->proyecciones->base($user);
-        $escenarios = EscenarioProyeccion::delHogar($user)->latest('updated_at')->get();
-        $ver = collect($request->query('ver', $escenarios->take(self::MAX_COMPARAR)->pluck('id')->all()))->map(fn ($id) => (int) $id)->take(self::MAX_COMPARAR)->all();
-
-        $comparar = collect([['id' => null, 'nombre' => 'Si sigo igual', 'datos' => ['modo_tarjetas' => 'intereses', 'sobrante' => 'abonar', 'palancas' => []]]])
-            ->concat($escenarios->whereIn('id', $ver)->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'datos' => $e->datos]))
-            ->values()->map(fn ($e) => $e + ['resultado' => $this->proyecciones->simular($base, $e['datos']),
-                'meta' => ! empty($e['datos']['meta']) ? $this->proyecciones->meta($base, $e['datos'], $e['datos']['meta']) : null]);
+        ['base' => $base, 'escenarios' => $escenarios, 'ver' => $ver, 'comparar' => $comparar] = $this->proyecciones->comparacion($user, $request->query('ver'));
 
         return view('proyecciones.index', compact('base', 'escenarios', 'ver', 'comparar'));
     }

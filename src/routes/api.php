@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
 use App\Http\Controllers\Api\PrestamoController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ProyeccionController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\TarjetaController;
 use App\Http\Controllers\Api\TransferenciaController;
@@ -147,6 +148,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{movimiento}', 'eliminarMovimiento')->middleware('can:tarjetas.delete')->name('destroy');
         });
         Route::patch('tarjetas/{tarjeta}/estados-cuenta/{estado}/intereses', [TarjetaController::class, 'intereses'])->middleware('can:tarjetas.edit')->name('tarjetas.estados.intereses');
+        // Proyecciones: escenarios para salir de deudas
+        Route::apiResource('proyecciones', ProyeccionController::class)->except('show')->parameters(['proyecciones' => 'proyeccion'])
+            ->middlewareFor('index', 'can:proyecciones.view')
+            ->middlewareFor('store', 'can:proyecciones.create')
+            ->middlewareFor('update', 'can:proyecciones.edit')
+            ->middlewareFor('destroy', 'can:proyecciones.delete');
         // Eventos: dividir la cuenta (opciones antes del recurso para que no se tome como {evento})
         Route::get('eventos/opciones', [EventoController::class, 'opciones'])->middleware('can:eventos.view')->name('eventos.opciones');
         Route::apiResource('eventos', EventoController::class)

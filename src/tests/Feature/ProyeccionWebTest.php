@@ -6,6 +6,7 @@ use App\Models\EscenarioProyeccion;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -85,5 +86,29 @@ class ProyeccionWebTest extends TestCase
 
         // Sin ingreso registrado no sobra nada: para pagar la tarjeta en diciembre hace falta ingreso extra
         $this->actingAs($this->user)->get(route('proyecciones.index'))->assertOk()->assertSee('Tarjetas en $0 para Dic 2026')->assertSee('Necesitas');
+    }
+
+    public function test_api_de_proyecciones(): void
+    {
+        Sanctum::actingAs($this->user);
+        $tarjeta = 'tarjeta:'.$this->user->tarjetasCredito()->first()->id;
+        $this->user->hogar->update(['tope_gasto_ciclo' => null]); // sin tope ni ingresos: no entra ni sale nada cada mes
+
+        // Guardar con palancas como lista (las apps no mandan JSON en texto)
+        $id = $this->postJson(route('api.proyecciones.store'), ['nombre' => 'Vender', 'modo_tarjetas' => 'intereses', 'sobrante' => 'abonar',
+            'palancas' => [['tipo' => 'venta', 'mes' => '2026-12', 'monto' => 2000, 'destino' => [$tarjeta]]], 'meta_que' => 'tarjetas', 'meta_mes' => '2027-06'])
+            ->assertCreated()->json('data.id');
+
+        $r = $this->getJson(route('api.proyecciones.index', ['ver' => [$id]]))->assertOk();
+        $r->assertJsonPath('data.base.grupos.tarjetas', '1200.00')->assertJsonPath('data.comparacion.0.nombre', 'Si sigo igual')
+            ->assertJsonPath('data.comparacion.1.hitos.tarjetas', '2026-12')->assertJsonPath('data.comparacion.1.meta.extra', '0.00')
+            ->assertJsonPath('data.comparacion.1.deudas.0.cero', '2026-12')->assertJsonPath('data.comparacion.1.serie.0.mes', '2026-12');
+
+        $this->getJson(route('api.proyecciones.index').'?ver='.$id)->assertOk()->assertJsonPath('data.ver', [$id])->assertJsonCount(2, 'data.comparacion');
+        $this->getJson(route('api.proyecciones.index').'?ver=')->assertOk()->assertJsonCount(1, 'data.comparacion'); // solo "Si sigo igual"
+
+        $this->putJson(route('api.proyecciones.update', $id), ['nombre' => 'Vender el carro', 'modo_tarjetas' => 'rotar', 'sobrante' => 'ahorrar', 'palancas' => []])
+            ->assertOk()->assertJsonPath('data.datos.modo_tarjetas', 'rotar');
+        $this->deleteJson(route('api.proyecciones.destroy', $id))->assertNoContent();
     }
 }

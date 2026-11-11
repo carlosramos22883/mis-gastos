@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\EscenarioProyeccion;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,6 +30,9 @@ use Illuminate\Support\Facades\DB;
 class ProyeccionService
 {
     public const MAX_MESES = 180;
+
+    /** Escenarios que se comparan a la vez con "Si sigo igual". */
+    public const MAX_COMPARAR = 3;
 
     public const TIPOS_PALANCA = ['prestamo', 'venta', 'gasto', 'ingreso', 'unico', 'pagar', 'cuotas'];
 
@@ -122,6 +127,25 @@ class ProyeccionService
 
         return ['mes_inicio' => $hoy->copy()->startOfMonth()->addMonthNoOverflow()->format('Y-m'), 'ingreso' => round($ingreso, 2),
             'gasto' => round($gasto, 2), 'gasto_origen' => $origen, 'deudas' => $deudas];
+    }
+
+    /**
+     * Lo que muestran la web y las apps: la foto de hoy, los escenarios guardados y la comparación de "Si sigo igual"
+     * con los elegidos ($ver; sin elegir, los más recientes), cada uno con su resultado y su meta.
+     *
+     * @return array{base: array, escenarios: Collection, ver: array<int, int>, comparar: Collection}
+     */
+    public function comparacion(User $user, ?array $ver = null): array
+    {
+        $base = $this->base($user);
+        $escenarios = EscenarioProyeccion::delHogar($user)->latest('updated_at')->get();
+        $ver = collect($ver ?? $escenarios->take(self::MAX_COMPARAR)->pluck('id')->all())->map(fn ($id) => (int) $id)->take(self::MAX_COMPARAR)->all();
+        $comparar = collect([['id' => null, 'nombre' => 'Si sigo igual', 'datos' => ['modo_tarjetas' => 'intereses', 'sobrante' => 'abonar', 'palancas' => []]]])
+            ->concat($escenarios->whereIn('id', $ver)->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'datos' => $e->datos]))
+            ->values()->map(fn ($e) => $e + ['resultado' => $this->simular($base, $e['datos']),
+                'meta' => ! empty($e['datos']['meta']) ? $this->meta($base, $e['datos'], $e['datos']['meta']) : null]);
+
+        return compact('base', 'escenarios', 'ver', 'comparar');
     }
 
     /**

@@ -2766,6 +2766,105 @@
                 ]
             }
         },
+        "/api/proyecciones": {
+            "get": {
+                "tags": [
+                    "Proyecciones"
+                ],
+                "summary": "Foto de hoy, escenarios guardados y comparación",
+                "description": "Compara «Si sigo igual» con hasta 3 escenarios (?ver[]=id o ?ver=1,2; sin ver, los más recientes; ver vacío, solo «Si sigo igual»). Cada uno trae sus hitos (mes \"Y-m\" o null = más de 15 años), totales, meta (extra al mes para llegar a tiempo; null = imposible), cuándo queda en cero cada deuda (sin la hipoteca) y la serie de deuda total por mes.",
+                "operationId": "8e16519d2957b251700256ebf6f92847",
+                "parameters": [
+                    {
+                        "name": "ver[]",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyección"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Proyecciones"
+                ],
+                "summary": "Guardar un escenario",
+                "description": "nombre, modo_tarjetas (intereses|rotar), perdida_rotar, sobrante (abonar|ahorrar), orden (mas_cara|mas_pequena|personalizado), prioridad[] (claves \"tarjeta:ID\" o \"prestamo:ID\"), meta_que (tarjetas|personas|sin_deudas|clave) + meta_mes (Y-m) y palancas[] (ver EscenarioProyeccionRequest).",
+                "operationId": "e83c33c524d3c1b889c61985f2239fbf",
+                "responses": {
+                    "201": {
+                        "description": "Guardado"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/proyecciones/{id}": {
+            "put": {
+                "tags": [
+                    "Proyecciones"
+                ],
+                "summary": "Editar un escenario",
+                "operationId": "6efe7be925c2b50e3b66ca2e44ef781a",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    },
+                    "422": {
+                        "description": "Validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Proyecciones"
+                ],
+                "summary": "Eliminar un escenario",
+                "operationId": "bc063fde42d1a2d8ceae42596d4dae06",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/reportes/{reporte}": {
             "get": {
                 "tags": [
@@ -3227,6 +3326,10 @@
         {
             "name": "Perfil",
             "description": "Endpoints para la gestión del perfil de usuario"
+        },
+        {
+            "name": "Proyecciones",
+            "description": "¿Cuándo salgo de mis deudas? Escenarios simulados sobre los datos reales del hogar"
         },
         {
             "name": "Reportes",

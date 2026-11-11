@@ -459,7 +459,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
 | Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
 | Dashboard (inicio) e intereses de tarjeta | ✅ |
-| Proyecciones (parte 1: foto de hoy con datos reales, escenarios con palancas —préstamo, venta, gasto, ingreso, algo de una vez, pagar una deuda—, comparación de hasta 3 con «Si sigo igual», gráfica y fecha en cero de cada deuda) | ✅ web 11/11/2026 · ✅ parte 2: orden de pago (más cara, más pequeña o propio), metas (cuánto más al mes para llegar a tiempo) y pasar una deuda a cuotas · ⏳ parte 3 (API, Android e iOS) |
+| Proyecciones (parte 1: foto de hoy con datos reales, escenarios con palancas —préstamo, venta, gasto, ingreso, algo de una vez, pagar una deuda—, comparación de hasta 3 con «Si sigo igual», gráfica y fecha en cero de cada deuda) | ✅ web 11/11/2026 · ✅ parte 2: orden de pago (más cara, más pequeña o propio), metas (cuánto más al mes para llegar a tiempo) y pasar una deuda a cuotas · ✅ parte 3: API (`/api/proyecciones`: foto, escenarios, comparación con ?ver=; crear, editar y eliminar) y pantalla en Android e iOS para ver y comparar (los escenarios se arman en la web) |
 | Eventos: dividir la cuenta (consumos, propina, festejados), cobrar o marcar quién pagó, imagen para compartir | ✅ (30/10/2026) |
 | Reportes | ✅ |
 
