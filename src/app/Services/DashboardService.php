@@ -8,6 +8,7 @@ use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Models\TarjetaCredito;
 use App\Models\User;
+use App\Support\CobrosDeEventos;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -195,16 +196,19 @@ class DashboardService
         return array_reverse($resultado);
     }
 
-    /** Movimientos que cuentan como gasto (efectivo, cuentas y tarjetas), con su categoría. Ver la definición arriba. */
+    /**
+     * Movimientos que cuentan como gasto (efectivo, cuentas y tarjetas), con su categoría. Ver la definición arriba.
+     * El pago de un evento cuenta sin lo ya cobrado a los contactos (CobrosDeEventos).
+     */
     public function movimientosDeGasto(User $user, Carbon $inicio, Carbon $fin): Collection
     {
         $rango = fn ($q) => $q->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $fin->toDateString())
             ->whereNotNull('categoria_personal_id')->whereHas('categoria', fn ($c) => $c->whereNotIn('nombre', self::NO_SON_GASTO))->with('categoria');
 
-        return collect()
+        return CobrosDeEventos::descontar(collect()
             ->concat($rango(MovimientoEfectivo::delHogar($user)->where('tipo', 'egreso')->whereNull('transferencia_id'))->get())
             ->concat($rango(MovimientoCuenta::delHogar($user)->where('tipo', 'egreso')->whereNull('transferencia_id'))->with('cuenta')->get())
-            ->concat($rango(MovimientoTarjeta::delHogar($user)->whereIn('tipo', ['compra', 'cargo']))->with('tarjeta')->get());
+            ->concat($rango(MovimientoTarjeta::delHogar($user)->whereIn('tipo', ['compra', 'cargo']))->with('tarjeta')->get()));
     }
 
     /** Movimientos que cuentan como ingreso (efectivo y cuentas), con su categoría. */

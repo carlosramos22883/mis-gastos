@@ -20,7 +20,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * Eventos: dividir la cuenta de una comida o celebración.
  *
- *  - Como una tabla: cada participante pidió cierta cantidad de cada producto (cantidad × precio). La propina es un
+ *  - Como una tabla: cada participante pidió cierta cantidad de cada producto (cantidad × precio). Un producto
+ *    compartido (ej. una bandeja para todos) vale su precio completo, dividido según las porciones de cada uno. La propina es un
  *    porcentaje del consumo de cada uno o un monto fijo dividido entre todos. Lo de los festejados (consumo + propina)
  *    se reparte en partes iguales entre los que no lo son. Todo en centavos: la suma de las partes es exactamente el total.
  *  - Si pagó un miembro del hogar: el pago es un solo movimiento (efectivo, cuenta o tarjeta, o solo anotado) por el
@@ -44,7 +45,8 @@ class EventoService
     /**
      * Lo que le toca a cada participante.
      *
-     * @return array{subtotal: float, propina: float, total: float, participantes: array<int, array{consumo: float, propina: float, festejo: float, total: float, detalle: list<array{descripcion: string, cantidad: int, precio: float, monto: float}>}>}
+     * @return array{subtotal: float, propina: float, total: float, participantes: array<int, array{consumo: float, propina: float, festejo: float, total: float, detalle: list<array{descripcion: string, cantidad: int, precio: float, monto: float, compartido: bool}>}>, celdas: array<int, array<int, float>>}
+     *                                                                                                                                                                                                                                                                                                              celdas: [id del consumo => [id del participante => monto]]
      */
     public function calcular(Evento $evento): array
     {
@@ -54,14 +56,17 @@ class EventoService
         $detalle = array_fill_keys($ids, []);
         $ids_ = array_combine($ids, $ids);
 
+        // Cada celda: cantidad × precio; en un producto compartido, su precio dividido según las porciones de cada uno
+        $celdas = [];
         foreach ($evento->consumos as $item) {
             $precio = (int) round((float) $item->precio * 100);
-            foreach ($item->participantes as $p) {
-                $cantidad = (int) $p->pivot->cantidad;
-                if ($cantidad > 0 && isset($consumo[$p->id])) {
-                    $consumo[$p->id] += $cantidad * $precio;
-                    $detalle[$p->id][] = ['descripcion' => $item->descripcion, 'cantidad' => $cantidad, 'precio' => $precio / 100, 'monto' => $cantidad * $precio / 100];
-                }
+            $porId = $item->participantes->pluck('pivot.cantidad', 'id');
+            $cantidades = array_filter(array_map(fn ($id) => (int) ($porId[$id] ?? 0), $ids_), fn ($c) => $c > 0);
+            $montos = $item->compartido ? $this->repartir($precio, $cantidades) : array_map(fn ($c) => $c * $precio, $cantidades);
+            foreach ($montos as $id => $monto) {
+                $consumo[$id] += $monto;
+                $celdas[$item->id][$id] = $monto / 100;
+                $detalle[$id][] = ['descripcion' => $item->descripcion, 'cantidad' => $cantidades[$id], 'precio' => $precio / 100, 'monto' => $monto / 100, 'compartido' => (bool) $item->compartido];
             }
         }
 
@@ -96,7 +101,7 @@ class EventoService
             ];
         }
 
-        return ['subtotal' => $dolares($subtotal), 'propina' => $dolares($propina), 'total' => $dolares($subtotal + $propina), 'participantes' => $participantes];
+        return ['subtotal' => $dolares($subtotal), 'propina' => $dolares($propina), 'total' => $dolares($subtotal + $propina), 'participantes' => $participantes, 'celdas' => $celdas];
     }
 
     /**
@@ -132,10 +137,10 @@ class EventoService
      *
      * @param  array{nombre: string, fecha: string, lugar?: ?string, comentario?: ?string, propina_tipo: string, propina_valor?: numeric,
      *     participantes: list<array{quien: string, es_festejado?: bool}>, pagador: int,
-     *     consumos: list<array{descripcion: string, precio: numeric, cantidades: array<int, ?int>}>,
+     *     consumos: list<array{descripcion: string, precio: numeric, compartido?: bool, cantidades: array<int, ?int>}>,
      *     origen?: ?string, categoria_personal_id?: ?int, confirmar?: bool, foto?: ?UploadedFile, quitar_foto?: bool}  $data
      *     quien: "miembro:{id}" | id de un contacto | "nuevo:Nombre"; pagador: posición en participantes;
-     *     cantidades: cuántos pidió cada participante (por posición)
+     *     cantidades: cuántos pidió cada participante (por posición); si es compartido, sus porciones
      */
     public function guardar(User $user, array $data, ?Evento $evento = null): Evento
     {
@@ -154,7 +159,7 @@ class EventoService
             $participantes = $this->guardarParticipantes($user, $evento, $data['participantes'], (int) $data['pagador']);
             $evento->consumos()->delete();
             foreach (array_values($data['consumos']) as $i => $c) {
-                $item = $evento->consumos()->create(['descripcion' => $c['descripcion'], 'precio' => $c['precio'], 'orden' => $i]);
+                $item = $evento->consumos()->create(['descripcion' => $c['descripcion'], 'precio' => $c['precio'], 'compartido' => (bool) ($c['compartido'] ?? false), 'orden' => $i]);
                 $item->participantes()->sync(collect($c['cantidades'] ?? [])->filter(fn ($cantidad, $pos) => (int) $cantidad > 0 && isset($participantes[(int) $pos]))
                     ->mapWithKeys(fn ($cantidad, $pos) => [$participantes[(int) $pos]->id => ['cantidad' => (int) $cantidad]])->all());
             }

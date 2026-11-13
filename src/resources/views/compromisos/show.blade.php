@@ -59,7 +59,7 @@
             @php($movsP = app(\App\Services\PresupuestoService::class)->movimientos($compromiso))
             <div class="overflow-x-auto rounded-lg bg-white shadow dark:bg-gray-800">
                 <h2 class="px-6 pt-5 text-base font-semibold text-gray-900 dark:text-gray-100">Gastos que lo descuentan</h2>
-                <p class="px-6 text-xs text-gray-500 dark:text-gray-400">Egresos de «{{ $compromiso->categoria?->nombre }}» del ciclo, desde efectivo, cuentas o tarjetas.</p>
+                <p class="px-6 text-xs text-gray-500 dark:text-gray-400">Egresos de «{{ $compromiso->categoria?->nombre }}» del ciclo, desde efectivo, cuentas o tarjetas. De un evento que pagó el hogar solo cuenta lo que los demás aún no te pagan.</p>
                 <table class="mt-3 min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
                     <thead class="text-xs uppercase bg-cabecera text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                         <tr><th class="px-6 py-3">Fecha</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Desde</th><th class="px-6 py-3 text-right">Monto</th></tr>
@@ -70,7 +70,11 @@
                                 <td class="px-6 py-3 whitespace-nowrap">{{ $m->fecha->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3"><a href="{{ route('movimientos.ver', [$m->clase, $m->id, 'desde' => 'compromiso:'.$compromiso->id]) }}" class="hover:underline">{{ $m->descripcion }}</a></td>
                                 <td class="px-6 py-3">{{ $m->origen }}</td>
-                                <td class="px-6 py-3 text-right whitespace-nowrap">{{ $simbolo }} {{ number_format((float) $m->monto, 2) }}</td>
+                                <td class="px-6 py-3 text-right whitespace-nowrap">{{ $simbolo }} {{ number_format((float) $m->monto, 2) }}
+                                    @if ($m->cobrado)
+                                        <span class="block text-xs font-normal text-gray-500 dark:text-gray-400">de {{ $simbolo }} {{ number_format($m->monto_original, 2) }}: {{ $simbolo }} {{ number_format($m->cobrado, 2) }} ya te pagaron</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="4" class="px-6 py-10 text-center text-gray-500">Aún no hay gastos de esta categoría en el ciclo.</td></tr>

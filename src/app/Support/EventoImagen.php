@@ -38,11 +38,12 @@ class EventoImagen
         $columnas = [];
         foreach ($evento->consumos as $c) {
             $porId = $c->participantes->pluck('pivot.cantidad', 'id');
-            $columnas[] = ['titulo' => $c->descripcion.' ('.$dinero((float) $c->precio).')', 'vertical' => true, 'ancho' => 112,
-                'celda' => function ($p) use ($porId, $c) {
+            $columnas[] = ['titulo' => $c->descripcion.' ('.$dinero((float) $c->precio).($c->compartido ? ', compartido' : '').')', 'vertical' => true, 'ancho' => 112,
+                'celda' => function ($p) use ($porId, $c, $resumen) {
                     $n = (int) ($porId[$p->id] ?? 0);
+                    $monto = $resumen['celdas'][$c->id][$p->id] ?? 0;
 
-                    return $n ? [($n > 1 ? $n.'× ' : '').number_format($n * (float) $c->precio, 2), 'texto', false] : ['', 'texto', false];
+                    return $n ? [($n > 1 && ! $c->compartido ? $n.'× ' : '').number_format($monto, 2), 'texto', false] : ['', 'texto', false];
                 },
                 'pie' => number_format($c->total(), 2)];
         }

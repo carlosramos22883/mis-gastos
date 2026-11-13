@@ -56,7 +56,7 @@
                     <tr class="align-bottom">
                         <th class="sticky left-0 z-10 bg-cabecera px-4 py-3 text-left uppercase dark:bg-gray-700">Persona</th>
                         @foreach ($evento->consumos as $c)
-                            <th class="px-2 py-3 text-right font-medium"><span class="block max-w-[7rem] ml-auto">{{ $c->descripcion }}</span><span class="block text-gray-400">{{ $simbolo }} {{ number_format((float) $c->precio, 2) }}</span></th>
+                            <th class="px-2 py-3 text-right font-medium"><span class="block max-w-[7rem] ml-auto">{{ $c->descripcion }}</span><span class="block text-gray-400">{{ $simbolo }} {{ number_format((float) $c->precio, 2) }}</span>@if ($c->compartido)<span class="block text-xs font-normal text-primary-600 dark:text-primary-400">Compartido</span>@endif</th>
                         @endforeach
                         <th class="px-3 py-3 text-right uppercase">Total</th>
                         @if ($hayPropina)<th class="px-3 py-3 text-right uppercase">Propina</th><th class="px-3 py-3 text-right uppercase">Con propina</th>@endif
@@ -77,7 +77,7 @@
                             </td>
                             @foreach ($evento->consumos as $c)
                                 @php($n = (int) ($cantidades[$c->id][$p->id] ?? 0))
-                                <td class="px-2 py-3 text-right whitespace-nowrap">@if ($n)<span class="text-xs text-gray-400">{{ $n > 1 ? $n.'×' : '' }}</span> {{ number_format($n * (float) $c->precio, 2) }}@endif</td>
+                                <td class="px-2 py-3 text-right whitespace-nowrap">@if ($n)<span class="text-xs text-gray-400">{{ $n > 1 && ! $c->compartido ? $n.'×' : '' }}</span> {{ number_format($resumen['celdas'][$c->id][$p->id] ?? 0, 2) }}@endif</td>
                             @endforeach
                             <td class="px-3 py-3 text-right whitespace-nowrap">{{ $simbolo }} {{ number_format($r['consumo'], 2) }}</td>
                             @if ($hayPropina)

@@ -11,7 +11,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Evento como una tabla: participantes (filas) y consumos/productos (columnas); en cada producto, "cantidades" = cuántos
- * pidió cada participante, en el orden de "participantes" (como se envían al guardar). Estados: pagador, festejado, hogar (pagó el hogar y es un miembro), pendiente, parcial, pagado.
+ * pidió cada participante, en el orden de "participantes" (como se envían al guardar), y "montos" = lo que le toca a cada uno
+ * de ese producto. Si es "compartido" (ej. una bandeja para todos), el precio es el del producto completo y las cantidades
+ * son las porciones de cada uno: se divide entre ellos. Estados: pagador, festejado, hogar (pagó el hogar y es un miembro), pendiente, parcial, pagado.
  *
  * @mixin Evento
  */
@@ -71,14 +73,15 @@ class EventoResource extends JsonResource
                     'deuda_id' => $p->deuda_id,
                     'cobros' => $p->deuda ? $p->deuda->pagos()->orderBy('fecha')->get()->map(fn ($pago) => ['id' => $pago->id, 'fecha' => $pago->fecha->toDateString(),
                         'monto' => $dinero($pago->monto), 'destino' => $pago->destino])->values() : [],
-                    'detalle' => collect($r['detalle'])->map(fn ($d) => ['descripcion' => $d['descripcion'], 'cantidad' => $d['cantidad'], 'precio' => $dinero($d['precio']), 'monto' => $dinero($d['monto'])])->values(),
+                    'detalle' => collect($r['detalle'])->map(fn ($d) => ['descripcion' => $d['descripcion'], 'cantidad' => $d['cantidad'], 'precio' => $dinero($d['precio']), 'monto' => $dinero($d['monto']), 'compartido' => $d['compartido']])->values(),
                 ];
             })->values(),
-            'consumos' => $this->consumos->map(function ($c) use ($dinero) {
+            'consumos' => $this->consumos->map(function ($c) use ($dinero, $resumen) {
                 $porId = $c->participantes->pluck('pivot.cantidad', 'id');
 
-                return ['id' => $c->id, 'descripcion' => $c->descripcion, 'precio' => $dinero($c->precio), 'cantidad' => $c->cantidad(), 'total' => $dinero($c->total()),
-                    'cantidades' => $this->participantes->map(fn ($p) => (int) ($porId[$p->id] ?? 0))->values()];
+                return ['id' => $c->id, 'descripcion' => $c->descripcion, 'precio' => $dinero($c->precio), 'compartido' => (bool) $c->compartido, 'cantidad' => $c->cantidad(), 'total' => $dinero($c->total()),
+                    'cantidades' => $this->participantes->map(fn ($p) => (int) ($porId[$p->id] ?? 0))->values(),
+                    'montos' => $this->participantes->map(fn ($p) => $dinero($resumen['celdas'][$c->id][$p->id] ?? 0))->values()];
             })->values(),
             'foto_url' => $this->foto ? route('api.eventos.foto', [$this->id, 'v' => $this->versionFoto()]) : null, // foto de la cuenta (con el token)
         ];

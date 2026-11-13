@@ -956,10 +956,12 @@ document.addEventListener('alpine:init', () => {
             if (this.pagador === uid) this.pagador = this.participantes[0]?.uid ?? null;
         },
         agregarProducto() {
-            this.productos.push({ uid: this.siguiente++, descripcion: '', precio: '', cant: {} });
+            this.productos.push({ uid: this.siguiente++, descripcion: '', precio: '', compartido: false, cant: {} });
             this.$nextTick(() => document.querySelector('[data-producto-nuevo]:last-of-type')?.focus());
         },
         quitarProducto(uid) { this.productos = this.productos.filter((c) => c.uid !== uid); },
+        /** Producto compartido: todos comieron de él (una porción cada uno). */
+        compartirConTodos(c) { this.participantes.forEach((p) => { c.cant[p.uid] = '1'; }); },
         /** Valor que se envía: el del selector o "nuevo:Nombre". */
         quien(p) { return p.quien === '__nuevo' ? (p.nuevo.trim() ? `nuevo:${p.nuevo.trim()}` : '') : p.quien; },
         get pagaElHogar() {
@@ -970,13 +972,23 @@ document.addEventListener('alpine:init', () => {
         get hayPropina() { return this.propinaTipo !== 'ninguna'; },
         centavos(texto) { return Math.round((Number(String(texto ?? '').replace(/,/g, '')) || 0) * 100); },
         cantidad(c, uid) { return Math.max(0, parseInt(c.cant[uid], 10) || 0); },
-        totalProducto(c) { return this.participantes.reduce((s, p) => s + this.cantidad(c, p.uid), 0) * this.centavos(c.precio) / 100; },
+        totalProducto(c) {
+            const cantidad = this.participantes.reduce((s, p) => s + this.cantidad(c, p.uid), 0);
+            return c.compartido ? (cantidad > 0 ? this.centavos(c.precio) / 100 : 0) : cantidad * this.centavos(c.precio) / 100;
+        },
+        /** { uid: centavos } de un producto: cantidad × precio, o si es compartido su precio dividido según las porciones. */
+        montosProducto(c) {
+            const precio = this.centavos(c.precio);
+            const pesos = Object.fromEntries(this.participantes.map((p) => [p.uid, this.cantidad(c, p.uid)]).filter(([, n]) => n > 0));
+            if (c.compartido) return window.repartirCentavos(precio, pesos);
+            return Object.fromEntries(Object.entries(pesos).map(([u, n]) => [u, n * precio]));
+        },
 
         /** { subtotal, propina, total, por: { uid: { consumo, propina, festejo, total } } } en dólares (igual que EventoService::calcular). */
         get calculo() {
             const uids = this.participantes.map((p) => p.uid);
             const consumo = Object.fromEntries(uids.map((u) => [u, 0]));
-            this.productos.forEach((c) => { const precio = this.centavos(c.precio); uids.forEach((u) => { consumo[u] += this.cantidad(c, u) * precio; }); });
+            this.productos.forEach((c) => { Object.entries(this.montosProducto(c)).forEach(([u, m]) => { consumo[u] += m; }); });
             const subtotal = Object.values(consumo).reduce((s, v) => s + v, 0);
             const n = Math.max(1, uids.length);
             let propina = 0; let exactas = Object.fromEntries(uids.map((u) => [u, 0]));

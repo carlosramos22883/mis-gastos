@@ -8,8 +8,11 @@ use App\Models\Evento;
 use App\Models\MovimientoEfectivo;
 use App\Models\TarjetaCredito;
 use App\Models\User;
+use App\Services\CompromisoService;
+use App\Services\DashboardService;
 use App\Services\EventoService;
 use App\Services\MovimientoEfectivoService;
+use App\Services\PresupuestoService;
 use App\Services\TarjetaService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,7 +41,7 @@ class EventoTest extends TestCase
         parent::setUp();
         Carbon::setTestNow('2026-10-30 20:00:00');
         $this->user = User::factory()->create(['email_verified_at' => now(), 'fecha_corte_dia' => 22, 'zona_horaria' => 'America/El_Salvador', 'onboarding_completed' => true]);
-        foreach (['eventos', 'efectivo', 'cuentas', 'tarjetas', 'deudores', 'contactos'] as $modulo) {
+        foreach (['eventos', 'efectivo', 'cuentas', 'tarjetas', 'deudores', 'contactos', 'compromisos'] as $modulo) {
             foreach (['view', 'create', 'edit', 'delete'] as $accion) {
                 $this->user->givePermissionTo(Permission::firstOrCreate(['name' => "{$modulo}.{$accion}", 'guard_name' => 'web']));
             }
@@ -137,6 +140,37 @@ class EventoTest extends TestCase
         $this->deleteJson(route('deudas.destroy', $ana->deuda_id))->assertUnprocessable();
     }
 
+    public function test_lo_cobrado_a_los_contactos_deja_de_contar_en_la_categoria(): void
+    {
+        $compromisos = app(CompromisoService::class);
+        $compromisos->crearRecurrente($this->user, ['descripcion' => 'Salidas', 'monto' => 100, 'medio_pago' => 'efectivo', 'categoria_personal_id' => $this->comida->id,
+            'es_presupuesto' => true, 'frecuencia' => 'mensual', 'dia_pago' => 25, 'fecha_inicio' => '2026-10-23']);
+        $compromisos->sincronizar($this->user);
+        $presupuesto = $this->user->compromisos()->where('es_presupuesto', true)->firstOrFail();
+        $presupuestos = app(PresupuestoService::class);
+        $gastoDelCiclo = fn () => round((float) app(DashboardService::class)->movimientosDeGasto($this->user, Carbon::parse('2026-10-23'), Carbon::parse('2026-11-22'))->sum('monto'), 2);
+
+        // Mientras Ana y Beto no pagan, la cuenta completa ($26.40) descuenta el presupuesto
+        $evento = $this->crear();
+        $this->assertSame(26.4, $presupuestos->gastado($presupuesto->fresh()));
+        $this->assertSame('73.60', $presupuesto->fresh()->saldo_pendiente);
+
+        // Ana paga sus $7.70 al día siguiente: ya solo cuentan $18.70; la tarjeta sigue con la compra completa
+        Carbon::setTestNow('2026-10-31 09:00:00');
+        $ana = $evento->participantes->firstWhere(fn ($p) => $p->contacto?->nombre === 'Ana');
+        $this->postJson(route('eventos.cobro.store', [$evento, $ana]), ['monto' => '7.70', 'fecha' => '31/10/2026', 'destino' => 'efectivo'])->assertOk();
+        $this->assertSame(18.7, $presupuestos->gastado($presupuesto->fresh()));
+        $this->assertSame('81.30', $presupuesto->fresh()->saldo_pendiente);
+        $this->assertSame(18.7, $gastoDelCiclo());
+        $this->assertSame('26.40', $evento->fresh()->movimientoTarjeta->monto);
+        $this->get(route('compromisos.show', $presupuesto))->assertOk()->assertSee('7.70 ya te pagaron');
+
+        // Si se elimina el cobro, vuelve a contar completo
+        $this->deleteJson(route('deuda-pagos.destroy', $ana->deuda->pagos()->firstOrFail()))->assertOk();
+        $this->assertSame(26.4, $presupuestos->gastado($presupuesto->fresh()));
+        $this->assertSame('73.60', $presupuesto->fresh()->saldo_pendiente);
+    }
+
     public function test_si_pago_otra_persona_solo_se_marca_quien_ya_le_pago(): void
     {
         app(MovimientoEfectivoService::class)->registrar($this->user, ['tipo' => 'ingreso', 'descripcion' => 'Sueldo', 'monto' => 100, 'fecha' => '2026-10-30',
@@ -174,6 +208,36 @@ class EventoTest extends TestCase
         $evento = $this->crear(['propina_tipo' => 'monto', 'propina_valor' => '1.00', 'participantes' => [['quien' => 'miembro:'.$this->user->id], ['quien' => 'nuevo:Ana'], ['quien' => 'nuevo:Beto']],
             'consumos' => [['descripcion' => 'Refresco', 'precio' => '1.00', 'cantidades' => [1, 1, 1]], ['descripcion' => 'Nachos', 'precio' => '6.00', 'cantidades' => [1, 0, 0]]]]);
         $this->assertSame([7.34, 1.33, 1.33], array_values($this->totales($evento)));
+    }
+
+    /** Una bandeja de $55 de la que comimos todos: su precio se divide entre quienes comieron, según sus porciones. */
+    public function test_producto_compartido_se_divide_entre_quienes_comieron(): void
+    {
+        $tres = [['quien' => 'miembro:'.$this->user->id], ['quien' => 'nuevo:Ana'], ['quien' => 'nuevo:Beto']];
+        $evento = $this->crear(['propina_tipo' => 'ninguna', 'participantes' => $tres, 'consumos' => [
+            ['descripcion' => 'Bandeja', 'precio' => '55.00', 'compartido' => '1', 'cantidades' => [1, 1, 1]],
+            ['descripcion' => 'Refresco', 'precio' => '1.50', 'cantidades' => [1, 2, 0]],
+        ]]);
+        $this->assertSame([18.34 + 1.5, 18.33 + 3.0, 18.33], array_values($this->totales($evento)));
+        $bandeja = $evento->consumos()->with('participantes')->first();
+        $this->assertTrue($bandeja->compartido);
+        $this->assertSame(55.0, $bandeja->total()); // el precio completo, no 3 × $55
+        $resumen = app(EventoService::class)->resumen($evento);
+        $this->assertSame(59.5, $resumen['total']);
+        $this->assertSame(55.0, round(array_sum($resumen['celdas'][$bandeja->id]), 2));
+
+        // Porciones: Ana comió el doble; con propina del 10 % sobre el consumo de cada uno
+        $evento = $this->crear(['participantes' => $tres, 'consumos' => [['descripcion' => 'Bandeja', 'precio' => '55.00', 'compartido' => true, 'cantidades' => [1, 2, 1]]]]);
+        $this->assertSame([15.13, 30.25, 15.12], array_values($this->totales($evento)));
+        $this->assertSame(60.5, round(array_sum($this->totales($evento)), 2));
+
+        // Solo comieron dos: el tercero no paga nada de la bandeja
+        $evento = $this->crear(['propina_tipo' => 'ninguna', 'participantes' => $tres, 'consumos' => [['descripcion' => 'Bandeja', 'precio' => '55.00', 'compartido' => true, 'cantidades' => [1, 0, 1]]]]);
+        $this->assertSame([27.5, 0.0, 27.5], array_values($this->totales($evento)));
+        $this->get(route('eventos.show', $evento))->assertOk()->assertSee('Compartido')->assertSee('27.50');
+
+        $this->postJson(route('eventos.store'), $this->datos(['participantes' => $tres, 'consumos' => [['descripcion' => 'Bandeja', 'precio' => '55.00', 'compartido' => true, 'cantidades' => [0, 0, 0]]]]))
+            ->assertUnprocessable()->assertJsonValidationErrors('consumos.0.cantidades');
     }
 
     /** La cuenta de la hoja de cálculo del autor: 10 personas, Rocío cumpleañera, 10 % de propina; cuadra en $102.91. */
@@ -289,5 +353,11 @@ class EventoTest extends TestCase
             ->assertJsonPath('data.participantes.1.estado', 'pagado')->assertJsonPath('data.por_cobrar', '7.70');
         $this->get("/api/eventos/{$id}/imagen")->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->getJson('/api/eventos')->assertOk()->assertJsonCount(1, 'data');
+
+        // Producto compartido: el precio completo dividido entre quienes comieron
+        $this->postJson('/api/eventos', $this->datos(['propina_tipo' => 'ninguna', 'participantes' => [['quien' => 'miembro:'.$this->user->id], ['quien' => 'nuevo:Ana'], ['quien' => 'nuevo:Beto']],
+            'consumos' => [['descripcion' => 'Bandeja', 'precio' => '55.00', 'compartido' => true, 'cantidades' => [1, 1, 1]]]]))->assertCreated()
+            ->assertJsonPath('data.total', '55.00')->assertJsonPath('data.consumos.0.compartido', true)->assertJsonPath('data.consumos.0.total', '55.00')
+            ->assertJsonPath('data.consumos.0.montos', ['18.34', '18.33', '18.33'])->assertJsonPath('data.participantes.1.detalle.0.compartido', true);
     }
 }

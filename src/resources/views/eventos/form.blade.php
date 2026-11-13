@@ -6,13 +6,13 @@
         ? [
             'participantes' => $evento->participantes->map(fn ($p) => ['uid' => $p->id, 'quien' => $p->quien(), 'nuevo' => '', 'es_festejado' => $p->es_festejado])->values(),
             'pagador' => $evento->participantes->firstWhere('es_pagador', true)?->id,
-            'productos' => $evento->consumos->map(fn ($c) => ['uid' => -$c->id, 'descripcion' => $c->descripcion, 'precio' => number_format((float) $c->precio, 2, '.', ''),
+            'productos' => $evento->consumos->map(fn ($c) => ['uid' => -$c->id, 'descripcion' => $c->descripcion, 'precio' => number_format((float) $c->precio, 2, '.', ''), 'compartido' => (bool) $c->compartido,
                 'cant' => (object) $c->participantes->mapWithKeys(fn ($p) => [$p->id => (string) $p->pivot->cantidad])->all()])->values(),
             'propina_tipo' => $evento->propina_tipo, 'propina_valor' => $evento->propina_tipo === 'ninguna' ? '' : number_format((float) $evento->propina_valor, 2, '.', ''),
         ]
         : [
             'participantes' => [['uid' => 1, 'quien' => $yo, 'nuevo' => '', 'es_festejado' => false]], 'pagador' => 1,
-            'productos' => [['uid' => 2, 'descripcion' => '', 'precio' => '', 'cant' => (object) []]],
+            'productos' => [['uid' => 2, 'descripcion' => '', 'precio' => '', 'compartido' => false, 'cant' => (object) []]],
             'propina_tipo' => 'porcentaje', 'propina_valor' => '10',
         ];
     $inicial += ['opciones' => $opciones, 'simbolo' => $simbolo];
@@ -50,7 +50,7 @@
                         <x-secondary-button type="button" x-on:click="agregarProducto()">Agregar producto</x-secondary-button>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Agrega a las personas (filas) y los productos con su precio (columnas); en cada celda escribe cuántos pidió esa persona. Un festejado no paga: lo suyo se reparte entre los demás.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Agrega a las personas (filas) y los productos con su precio (columnas); en cada celda escribe cuántos pidió esa persona. Si comieron de un mismo plato (ej. una bandeja), márcalo como <strong>Compartido</strong>: pon su precio total y un 1 a cada quien comió (2 si alguien comió el doble); se divide entre ellos. Un festejado no paga: lo suyo se reparte entre los demás.</p>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm text-gray-700 dark:text-gray-300">
                         <thead>
@@ -67,8 +67,12 @@
                                             <input type="text" data-producto-nuevo :name="`consumos[${ci}][descripcion]`" x-model="c.descripcion" maxlength="150" placeholder="Producto" class="{{ $campo }} px-2 py-1 text-xs">
                                             <div class="relative">
                                                 <span class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">{{ $simbolo }}</span>
-                                                <input type="text" inputmode="decimal" data-money-input :name="`consumos[${ci}][precio]`" x-model="c.precio" placeholder="Precio" class="{{ $campo }} py-1 pl-6 pr-2 text-right text-xs">
+                                                <input type="text" inputmode="decimal" data-money-input :name="`consumos[${ci}][precio]`" x-model="c.precio" :placeholder="c.compartido ? 'Precio total' : 'Precio'" class="{{ $campo }} py-1 pl-6 pr-2 text-right text-xs">
                                             </div>
+                                            <label class="flex items-center gap-1 text-xs font-normal normal-case text-gray-600 dark:text-gray-400" title="Todos comieron de este producto: su precio se divide entre quienes lo compartieron">
+                                                <input type="checkbox" value="1" :name="`consumos[${ci}][compartido]`" x-model="c.compartido" x-on:change="c.compartido && !participantes.some((p) => cantidad(c, p.uid) > 0) && compartirConTodos(c)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">Compartido
+                                            </label>
+                                            <button type="button" x-show="c.compartido" x-on:click="compartirConTodos(c)" class="text-xs font-normal text-primary-600 hover:underline dark:text-primary-400">Todos comieron</button>
                                         </div>
                                     </th>
                                 </template>
@@ -104,7 +108,8 @@
                                     </td>
                                     <template x-for="(c, ci) in productos" :key="c.uid">
                                         <td class="px-1 py-2 text-center">
-                                            <input type="number" min="0" max="999" inputmode="numeric" :name="`consumos[${ci}][cantidades][${i}]`" x-model="c.cant[p.uid]" placeholder="0" class="{{ $celda }}" :aria-label="`Cantidad de ${c.descripcion || 'producto'}`">
+                                            <input type="number" min="0" max="999" inputmode="numeric" :name="`consumos[${ci}][cantidades][${i}]`" x-model="c.cant[p.uid]" placeholder="0" class="{{ $celda }}" :aria-label="`${c.compartido ? 'Porciones' : 'Cantidad'} de ${c.descripcion || 'producto'}`">
+                                            <span x-show="c.compartido && cantidad(c, p.uid) > 0" class="block text-xs text-gray-500 dark:text-gray-400" x-text="dinero((montosProducto(c)[p.uid] || 0) / 100)"></span>
                                         </td>
                                     </template>
                                     <td class="px-3 py-2 text-right whitespace-nowrap" x-text="dinero(calculo.por[p.uid]?.consumo ?? 0)"></td>

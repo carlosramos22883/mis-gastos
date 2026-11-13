@@ -77,7 +77,8 @@ class CompromisoResource extends JsonResource
         $resumen = array_map($dinero, $servicio->resumen($this->resource));
         if ($this->relationLoaded('movimientos')) { // detalle
             $resumen['movimientos'] = $servicio->movimientos($this->resource)->map(fn ($m) => ['clase' => $m->clase, 'id' => $m->id,
-                'fecha' => $m->fecha->toDateString(), 'descripcion' => $m->descripcion, 'origen' => $m->origen, 'monto' => $dinero($m->monto)])->all();
+                'fecha' => $m->fecha->toDateString(), 'descripcion' => $m->descripcion, 'origen' => $m->origen, 'monto' => $dinero($m->monto),
+                'cobrado' => $m->cobrado ? $dinero($m->cobrado) : null])->all(); // evento: lo que ya pagaron los contactos (no descuenta)
         }
 
         return $resumen;

@@ -222,7 +222,7 @@ class DeudorService
         DB::transaction(function () use ($pago) {
             $movimiento = $pago->movimientoEfectivo ?? $pago->movimientoCuenta;
             if ($movimiento) {
-                DeudaPago::where($pago->movimiento_efectivo_id ? 'movimiento_efectivo_id' : 'movimiento_cuenta_id', $movimiento->id)->delete();
+                DeudaPago::where($pago->movimiento_efectivo_id ? 'movimiento_efectivo_id' : 'movimiento_cuenta_id', $movimiento->id)->get()->each->delete(); // uno a uno: cada borrado avisa (AppServiceProvider)
             } else {
                 $pago->delete();
             }

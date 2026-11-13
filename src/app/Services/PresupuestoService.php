@@ -8,6 +8,7 @@ use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Models\User;
+use App\Support\CobrosDeEventos;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Presupuestos (súper, gasolina…): compromisos con es_presupuesto = true que no se pagan. Lo pendiente es lo que
  * queda del monto después de los egresos de su categoría en su ciclo (efectivo, cuentas y compras o cargos con
- * tarjeta) y de los compromisos normales pendientes de esa categoría en el ciclo (la cuota de Gaby ya reserva su
+ * tarjeta; el pago de un evento, sin lo ya cobrado a los contactos) y de los compromisos normales pendientes de esa categoría en el ciclo (la cuota de Gaby ya reserva su
  * parte: no se cuenta dos veces). Nunca vencen: al terminar el ciclo se cierran (estado pagado). Se recalculan al
  * guardar o borrar un movimiento o un compromiso (AppServiceProvider) y al sincronizar los compromisos.
  */
@@ -45,14 +46,14 @@ class PresupuestoService
         $filtro = fn ($q) => $q->where('hogar_id', $presupuesto->hogar_id)->where('categoria_personal_id', $presupuesto->categoria_personal_id)
             ->whereDate('fecha', '>=', $inicio->toDateString())->whereDate('fecha', '<=', $fin->toDateString());
 
-        return collect()
+        return CobrosDeEventos::descontar(collect()
             ->concat($filtro(MovimientoEfectivo::query())->where('tipo', 'egreso')->whereNull('transferencia_id')->get()
                 ->each(fn ($m) => $m->setAttribute('clase', 'efectivo')->setAttribute('origen', 'Efectivo')))
             ->concat($filtro(MovimientoCuenta::query())->with('cuenta')->where('tipo', 'egreso')->whereNull('transferencia_id')->get()
                 ->each(fn ($m) => $m->setAttribute('clase', 'cuenta')->setAttribute('origen', $m->cuenta?->nombre ?? 'Cuenta')))
             ->concat($filtro(MovimientoTarjeta::query())->with('tarjeta')->whereIn('tipo', ['compra', 'cargo'])->get()
                 ->each(fn ($m) => $m->setAttribute('clase', 'tarjeta')->setAttribute('origen', 'Tarjeta '.($m->tarjeta?->nombre ?? ''))))
-            ->sortByDesc(fn ($m) => $m->fecha->toDateString().'-'.str_pad((string) $m->id, 10, '0', STR_PAD_LEFT))->values();
+            ->sortByDesc(fn ($m) => $m->fecha->toDateString().'-'.str_pad((string) $m->id, 10, '0', STR_PAD_LEFT))->values());
     }
 
     /** Lo que aún se debe pagar este ciclo en compromisos normales de la misma categoría (ya está reservado). */

@@ -11,7 +11,8 @@ use Illuminate\Validation\Validator;
 
 /**
  * Evento (web y API), como una tabla: participantes ("miembro:{id}", id de un contacto o "nuevo:Nombre"), quién pagó
- * (su posición), productos con su precio y cuántos pidió cada participante ("cantidades" por posición), la foto de la
+ * (su posición), productos con su precio y cuántos pidió cada participante ("cantidades" por posición; si el producto
+ * es "compartido", su precio es el del producto completo y las cantidades son las porciones de cada uno), la foto de la
  * cuenta (opcional) y, si pagó el hogar, de dónde salió el dinero.
  */
 class EventoRequest extends FormRequest
@@ -27,7 +28,10 @@ class EventoRequest extends FormRequest
     {
         $this->normalizarFechas('fecha');
         // Los checkboxes del formulario web llegan como "1"; los que no se marcan no llegan
-        $this->merge(['participantes' => collect($this->input('participantes', []))->map(fn ($p) => is_array($p) ? $p + ['es_festejado' => false] : $p)->values()->all()]);
+        $this->merge([
+            'participantes' => collect($this->input('participantes', []))->map(fn ($p) => is_array($p) ? $p + ['es_festejado' => false] : $p)->values()->all(),
+            'consumos' => collect($this->input('consumos', []))->map(fn ($c) => is_array($c) ? $c + ['compartido' => false] : $c)->all(),
+        ]);
     }
 
     public function rules(): array
@@ -53,6 +57,7 @@ class EventoRequest extends FormRequest
             'consumos' => ['required', 'array', 'min:1', 'max:100'],
             'consumos.*.descripcion' => ['required', 'string', 'max:150'],
             'consumos.*.precio' => ['required', 'numeric', 'gt:0', 'max:9999999', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'consumos.*.compartido' => ['boolean'],
             'consumos.*.cantidades' => ['required', 'array'],
             'consumos.*.cantidades.*' => ['nullable', 'integer', 'min:0', 'max:999'],
             'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:10240'],
@@ -80,7 +85,9 @@ class EventoRequest extends FormRequest
                 if ($cantidades->keys()->contains(fn ($pos) => ! is_numeric($pos) || (int) $pos >= $n)) {
                     $v->errors()->add("consumos.{$i}.cantidades", 'Las cantidades no corresponden a los participantes.');
                 } elseif ($cantidades->sum(fn ($c) => (int) $c) <= 0) {
-                    $v->errors()->add("consumos.{$i}.cantidades", 'Nadie pidió «'.($c['descripcion'] ?? '').'»: anota cuántos pidió cada uno o quítalo.');
+                    $v->errors()->add("consumos.{$i}.cantidades", ! empty($c['compartido'])
+                        ? 'Nadie comió de «'.($c['descripcion'] ?? '').'»: marca a quienes lo compartieron o quítalo.'
+                        : 'Nadie pidió «'.($c['descripcion'] ?? '').'»: anota cuántos pidió cada uno o quítalo.');
                 }
             }
         }];
