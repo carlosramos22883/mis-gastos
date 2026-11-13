@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Exports\CompromisosExport;
 use App\Http\Requests\CompromisoRequest;
+use App\Http\Requests\CubrirPresupuestoRequest;
 use App\Http\Requests\SerieCompromisoRequest;
 use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
+use App\Models\PresupuestoTraspaso;
 use App\Services\CicloEfectivoService;
 use App\Services\CompromisoService;
+use App\Services\PresupuestoTraspasoService;
 use App\Services\TarjetaService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
@@ -161,6 +164,33 @@ class CompromisoController extends Controller
     private function fechas(Request $request): array
     {
         return $this->compromisos->fechas($request->user());
+    }
+
+    /** Cubrir con otras categorías lo que se pasó un presupuesto. */
+    public function cubrir(CubrirPresupuestoRequest $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+        $traspasos->cubrir($request->user(), $compromiso, $request->validated('traspasos'));
+
+        return response()->json(['success' => true, 'message' => 'Listo: el presupuesto quedó cubierto con lo que les sobraba a otras categorías.']);
+    }
+
+    /** Pasar lo que le queda a un presupuesto a otras categorías. */
+    public function repartir(CubrirPresupuestoRequest $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+        $traspasos->repartir($request->user(), $compromiso, $request->validated('traspasos'));
+
+        return response()->json(['success' => true, 'message' => 'Listo: el presupuesto pasó a las categorías que elegiste.']);
+    }
+
+    /** Deshacer un movimiento de presupuesto hecho a mano. */
+    public function deshacerTraspaso(Request $request, PresupuestoTraspaso $traspaso, PresupuestoTraspasoService $traspasos)
+    {
+        abort_unless($traspaso->esDelHogar($request->user()), 404);
+        $traspasos->deshacer($traspaso);
+
+        return response()->json(['success' => true, 'message' => 'El presupuesto regresó a su categoría.']);
     }
 
     private function own(Request $request, Compromiso $compromiso): void

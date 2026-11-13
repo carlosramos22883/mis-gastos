@@ -11,6 +11,7 @@ use App\Models\Cuenta;
 use App\Models\MovimientoCuenta;
 use App\Services\CicloEfectivoService;
 use App\Services\CuentaService;
+use App\Services\PresupuestoTraspasoService;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -98,7 +99,8 @@ class CuentaController extends Controller
     {
         $this->own($request, $cuenta);
         abort_unless($cuenta->activo, 403, 'La cuenta está inactiva.');
-        $movimiento = $this->cuentas->registrarMovimiento($cuenta, $request->validated());
+        $data = $request->validated();
+        $movimiento = app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] === 'egreso', null, fn ($d) => $this->cuentas->registrarMovimiento($cuenta, $d));
 
         return (new MovimientoCuentaResource($movimiento->load('categoria', 'contacto')))->response()->setStatusCode(201);
     }
@@ -108,7 +110,8 @@ class CuentaController extends Controller
     public function actualizarMovimiento(MovimientoCuentaRequest $request, Cuenta $cuenta, MovimientoCuenta $movimiento)
     {
         $this->own($request, $cuenta, $movimiento);
-        $this->cuentas->actualizarMovimiento($movimiento, $request->validated());
+        $data = $request->validated();
+        app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] === 'egreso', $movimiento, fn ($d) => $this->cuentas->actualizarMovimiento($movimiento, $d));
 
         return new MovimientoCuentaResource($movimiento->fresh(['categoria', 'contacto']));
     }

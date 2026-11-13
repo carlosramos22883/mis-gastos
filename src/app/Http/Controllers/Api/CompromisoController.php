@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompromisoRequest;
+use App\Http\Requests\CubrirPresupuestoRequest;
 use App\Http\Requests\PagoCompromisoRequest;
 use App\Http\Requests\SerieCompromisoRequest;
 use App\Http\Resources\CompromisoResource;
 use App\Models\Compromiso;
+use App\Models\PresupuestoTraspaso;
 use App\Services\CompromisoService;
 use App\Services\PagoCompromisoService;
+use App\Services\PresupuestoTraspasoService;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -128,6 +131,55 @@ class CompromisoController extends Controller
         abort_unless($compromiso->estado === Compromiso::PENDIENTE, 422, 'Este compromiso ya no está pendiente.');
 
         return new CompromisoResource(app(PagoCompromisoService::class)->pagar($request->user(), $compromiso, $request->validated()));
+    }
+
+    #[OA\Get(path: '/api/compromisos/{id}/cubrir', summary: 'Cuánto se pasó un presupuesto y de qué categorías se puede cubrir', description: 'Mismo formato que "presupuesto" en el error 422 de un gasto que se pasa (excedente, opciones con su disponible). null si no se ha pasado.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: '{data: detalle | null}')])]
+    public function excesoPresupuesto(Request $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+        $exceso = $compromiso->es_presupuesto && $compromiso->estado === Compromiso::PENDIENTE ? $traspasos->excesoActual($compromiso) : null;
+
+        return response()->json(['data' => $exceso ? $traspasos->detalle($exceso) : null]);
+    }
+
+    #[OA\Post(path: '/api/compromisos/{id}/cubrir', summary: 'Cubrir con otras categorías lo que se pasó un presupuesto', description: 'traspasos = [{presupuesto_id, monto}]: cuánto se quita a cada una (sin pasar su disponible); deben sumar justo lo que se pasó.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'El presupuesto actualizado'), new OA\Response(response: 422, description: 'No alcanza, sobra o una categoría no tiene tanto')])]
+    public function cubrir(CubrirPresupuestoRequest $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+        $traspasos->cubrir($request->user(), $compromiso, $request->validated('traspasos'));
+
+        return new CompromisoResource($compromiso->fresh()->load(['categoria', 'recurrente', 'tarjeta', 'movimientos' => fn ($q) => $q->where('tipo', 'egreso')->latest('fecha')]));
+    }
+
+    #[OA\Get(path: '/api/compromisos/{id}/repartir', summary: 'Lo que le queda a un presupuesto y a qué categorías se puede pasar', description: 'disponible = lo que le queda; opciones = las demás del ciclo con lo que les queda ahora (puede ser negativo). null si no le queda nada.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: '{data: detalle | null}')])]
+    public function detalleReparto(Request $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+
+        return response()->json(['data' => $compromiso->es_presupuesto ? $traspasos->detalleReparto($compromiso) : null]);
+    }
+
+    #[OA\Post(path: '/api/compromisos/{id}/repartir', summary: 'Pasar lo que le queda a un presupuesto a otras categorías', description: 'traspasos = [{presupuesto_id, monto}]: cuánto recibe cada una; la suma no puede pasar lo que le queda.', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'El presupuesto actualizado'), new OA\Response(response: 422, description: 'La suma pasa lo que le queda')])]
+    public function repartir(CubrirPresupuestoRequest $request, Compromiso $compromiso, PresupuestoTraspasoService $traspasos)
+    {
+        $this->own($request, $compromiso);
+        $traspasos->repartir($request->user(), $compromiso, $request->validated('traspasos'));
+
+        return new CompromisoResource($compromiso->fresh()->load(['categoria', 'recurrente', 'tarjeta', 'movimientos' => fn ($q) => $q->where('tipo', 'egreso')->latest('fecha')]));
+    }
+
+    #[OA\Delete(path: '/api/presupuesto-traspasos/{id}', summary: 'Deshacer un movimiento de presupuesto hecho a mano', description: 'Los que pidió un gasto regresan solos al borrar o cambiar ese gasto (422).', tags: ['Compromisos'], security: [['bearerAuth' => []]],
+        responses: [new OA\Response(response: 204, description: 'Deshecho'), new OA\Response(response: 422, description: 'Lo pidió un gasto')])]
+    public function deshacerTraspaso(Request $request, PresupuestoTraspaso $traspaso, PresupuestoTraspasoService $traspasos)
+    {
+        abort_unless($traspaso->esDelHogar($request->user()), 404);
+        $traspasos->deshacer($traspaso);
+
+        return response()->noContent();
     }
 
     private function own(Request $request, Compromiso $compromiso): void

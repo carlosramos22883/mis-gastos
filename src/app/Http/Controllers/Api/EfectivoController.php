@@ -8,6 +8,7 @@ use App\Http\Resources\MovimientoEfectivoResource;
 use App\Models\MovimientoEfectivo;
 use App\Services\CicloEfectivoService;
 use App\Services\MovimientoEfectivoService;
+use App\Services\PresupuestoTraspasoService;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -54,7 +55,8 @@ class EfectivoController extends Controller
         responses: [new OA\Response(response: 201, description: 'Registrado'), new OA\Response(response: 422, description: 'Validación (ej. el egreso supera el saldo)')])]
     public function store(MovimientoEfectivoRequest $request)
     {
-        $movimiento = $this->movimientos->registrar($request->user(), $request->validated());
+        $data = $request->validated();
+        $movimiento = app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] === 'egreso' && empty($data['compromiso_id']), null, fn ($d) => $this->movimientos->registrar($request->user(), $d));
 
         return (new MovimientoEfectivoResource($movimiento->load('categoria')))->response()->setStatusCode(201);
     }
@@ -64,7 +66,8 @@ class EfectivoController extends Controller
     public function update(MovimientoEfectivoRequest $request, MovimientoEfectivo $movimiento)
     {
         $this->own($request, $movimiento);
-        $this->movimientos->actualizar($movimiento, $request->validated());
+        $data = $request->validated();
+        app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] === 'egreso' && empty($data['compromiso_id']), $movimiento, fn ($d) => $this->movimientos->actualizar($movimiento, $d));
 
         return new MovimientoEfectivoResource($movimiento->load('categoria'));
     }

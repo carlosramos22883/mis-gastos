@@ -40,6 +40,7 @@ class EventoService
         private readonly TarjetaService $tarjetas,
         private readonly ContactoService $contactos,
         private readonly DeudorService $deudores,
+        private readonly PresupuestoTraspasoService $traspasos,
     ) {}
 
     /**
@@ -167,7 +168,15 @@ class EventoService
             $evento->unsetRelation('participantes')->unsetRelation('consumos');
             $calculo = $this->calcular($evento);
             $this->sincronizarDeudas($evento, $calculo);
+            // Si el hogar paga, el pago (sin lo ya cobrado a los contactos) se revisa contra el presupuesto de su categoría
+            $paga = $evento->pagoElHogar() && $calculo['total'] > 0 && ($data['origen'] ?? 'ninguno') !== 'ninguno';
+            $cobrado = (float) $evento->participantes()->with('deuda')->get()->sum(fn ($p) => $p->deuda?->pagado() ?? 0);
+            $plan = $paga ? $this->traspasos->revisar($data, $user->hogar_id, $data['categoria_personal_id'] ?? null, $evento->fecha->toDateString(),
+                round($calculo['total'] - $cobrado, 2), $evento->movimiento()) : null;
             $this->sincronizarPago($user, $evento, $data, $calculo['total']);
+            if ($plan !== null && ($movimiento = $evento->fresh()->movimiento())) {
+                $this->traspasos->aplicar($movimiento, $plan);
+            }
             if (! empty($data['quitar_foto'])) {
                 $this->quitarFoto($evento);
             }
@@ -256,12 +265,16 @@ class EventoService
         DB::transaction(function () use ($user, $participante, $data, $evento, $pagador) {
             $monto = $this->calcular($evento)['participantes'][$participante->id]['total'];
             $origen = $participante->user_id ? ($data['origen'] ?? 'ninguno') : 'ninguno';
+            $plan = $origen === 'ninguno' ? null : $this->traspasos->revisar($data, $user->hogar_id, $data['categoria_personal_id'] ?? null, $data['fecha'], $monto, null);
             $enlace = $origen === 'ninguno' ? [] : $this->crearMovimiento($user, $origen, [
                 'descripcion' => "{$evento->nombre}: mi parte a {$pagador->nombre()}", 'monto' => $monto, 'fecha' => $data['fecha'],
                 'categoria_personal_id' => $data['categoria_personal_id'] ?? null, 'user_id' => $participante->user_id,
                 'contacto_id' => $pagador->contacto_id, 'confirmar' => ! empty($data['confirmar']),
             ]);
             $participante->update(['fecha_pago' => $data['fecha']] + $enlace);
+            if ($plan !== null && ($movimiento = $participante->fresh()->movimiento())) {
+                $this->traspasos->aplicar($movimiento, $plan);
+            }
         });
     }
 

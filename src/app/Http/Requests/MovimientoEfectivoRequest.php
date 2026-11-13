@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
 use App\Http\Requests\Concerns\ResuelveContacto;
+use App\Http\Requests\Concerns\RevisaPresupuesto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Models\Compromiso;
 use App\Services\CicloEfectivoService;
@@ -14,7 +15,7 @@ use Illuminate\Validation\Rule;
 /** Validación de movimientos de efectivo para web y API. Acepta la fecha como d/m/Y o Y-m-d. */
 class MovimientoEfectivoRequest extends FormRequest
 {
-    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
+    use NormalizaFechas, ResuelveContacto, RevisaPresupuesto, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -46,7 +47,7 @@ class MovimientoEfectivoRequest extends FormRequest
                 ->where('tipo', $this->input('tipo')))],
             'compromiso_id' => ['nullable', 'integer', Rule::exists('compromisos', 'id')->where(fn ($q) => $q
                 ->where('hogar_id', $user->hogar_id)->where('estado', Compromiso::PENDIENTE))],
-        ];
+        ] + $this->reglasPresupuesto();
     }
 
     public function messages(): array

@@ -4,7 +4,7 @@
     $tipos = $tipo === 'compra' ? ['compra' => 'Compra'] : ['cargo' => 'Cargo (intereses, seguro, comisión)', 'credito' => 'Crédito (devolución o promoción)'];
 @endphp
 <form x-data="ajaxForm(async function(data) { $dispatch('close-modal', 'movimiento-modal'); await showAlert('success', '¡Éxito!', data.message); window.dispatchEvent(new CustomEvent('refresh-table', { detail: data })); })"
-    @submit.prevent="submit" method="POST" action="{{ $editing ? route('tarjetas.movimientos.update', [$tarjeta, $movimiento]) : route('tarjetas.movimientos.store', [$tarjeta, 'estado' => ($facturado ?? null)?->id]) }}" class="space-y-4" novalidate>
+    @submit.prevent="submit" data-revisar-presupuesto method="POST" action="{{ $editing ? route('tarjetas.movimientos.update', [$tarjeta, $movimiento]) : route('tarjetas.movimientos.store', [$tarjeta, 'estado' => ($facturado ?? null)?->id]) }}" class="space-y-4" novalidate>
     @csrf @if ($editing) @method('PUT') @endif
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $editing ? 'Editar movimiento' : ($tipo === 'compra' ? 'Registrar compra' : 'Cargo o crédito') }}{{ ! $editing && ($facturado ?? null) ? ' (corte pasado)' : '' }} · {{ $tarjeta->nombre }}</h2>

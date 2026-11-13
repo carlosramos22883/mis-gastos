@@ -216,6 +216,8 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
 
 **Al pagarse**, el compromiso se convierte en egreso de efectivo, de cuenta bancaria o de tarjeta.
 
+**Mover presupuesto entre categorías (13/11/2026, web + API + Android + iOS):** el tope del hogar ya está repartido en presupuestos por categoría. Al guardar un gasto que pasa el presupuesto de su categoría (efectivo, cuentas, tarjetas y el pago de un evento; el cliente manda `presupuesto=revisar`), antes de guardarlo sale un aviso (422 con `errors.presupuesto` y `presupuesto`: cuánto se pasa y lo que les queda a las demás categorías del ciclo). Se puede cubrir con una o varias (`presupuesto=cubrir` + `traspasos=[{presupuesto_id, monto}]`): al elegir se sugiere repartir en partes iguales (sin pasar lo que le queda a cada una) y los montos son editables, pero deben sumar justo lo que se pasa. O se guarda así (`pasarme`, como antes). Sin `presupuesto` no se revisa (apps anteriores, procesos internos). Lo movido es solo del ciclo (`presupuesto_traspasos`: origen, destino, monto y el gasto que lo pidió) y el monto de cada presupuesto = base + recibido − cedido. Si el gasto se borra, baja, cambia de categoría o se cobra parte de un evento, lo que ya no hace falta regresa solo (lo último primero). Un presupuesto que ya se pasó se puede cubrir a mano ("Cubrir con otras categorías"). Y a uno al que le queda algo que no se va a usar se le puede pasar a otras ("Pasar lo que le queda a otras categorías": se eligen a cuáles; se sugiere repartir todo en partes iguales, pero los montos son editables y se puede pasar solo una parte; las que reciben no tienen tope y la suma no puede pasar lo que le queda). Lo movido a mano se puede deshacer. Servicio: `PresupuestoTraspasoService`.
+
 ### 5.4 CUENTAS BANCARIAS Y BILLETERAS ✅ (web)
 
 **Tablas:** `cuentas` (nombre, banco opcional, tipo de cuenta, número **encriptado**, color, saldo inicial, fecha inicial, activo), `movimientos_cuenta` y `transferencias`.
@@ -452,7 +454,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie; presupuestos por categoría que se descuentan con los gastos (y con los compromisos pendientes de su categoría), con la lista de esos gastos; tope de gasto del ciclo en el inicio; orden por estado por defecto: web, API, Android e iOS 11/11/2026) |
+| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie; presupuestos por categoría que se descuentan con los gastos (y con los compromisos pendientes de su categoría), con la lista de esos gastos; tope de gasto del ciclo en el inicio; orden por estado por defecto: web, API, Android e iOS 11/11/2026; mover presupuesto entre categorías al pasarse: 13/11/2026) |
 | Tarjetas de crédito (cortes, cuotas, avances, mora, pagar de más con saldo a favor, intereses bonificables) | ✅ (pagar de más: web, API, Android e iOS 30/10/2026; intereses bonificables del último corte apartados del disponible hasta el corte siguiente, opción por tarjeta «los cargos del banco restan del disponible» (Davivienda solo resta el capital) y detalle del corte ordenable: web, API, Android e iOS 11/11/2026) |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |

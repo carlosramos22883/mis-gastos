@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
 use App\Http\Requests\Concerns\ResuelveContacto;
+use App\Http\Requests\Concerns\RevisaPresupuesto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rule;
 /** Ingreso o egreso propio de una cuenta (los de transferencias los crea TransferenciaService). */
 class MovimientoCuentaRequest extends FormRequest
 {
-    use ResuelveContacto, NormalizaFechas, ValidaMiembroHogar;
+    use NormalizaFechas, ResuelveContacto, RevisaPresupuesto, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -42,7 +43,7 @@ class MovimientoCuentaRequest extends FormRequest
                 ->where('hogar_id', $user->hogar_id)->where('activo', true)
                 ->where('nombre', '!=', CicloEfectivoService::CATEGORIA_SALDO_INICIAL)
                 ->where('tipo', $this->input('tipo')))],
-        ];
+        ] + $this->reglasPresupuesto();
     }
 
     public function messages(): array

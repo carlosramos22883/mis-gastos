@@ -591,11 +591,108 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    /**
+     * Aviso de un gasto que pasa su presupuesto (o de un presupuesto ya pasado): de qué otras categorías cubrir lo que
+     * se pasa. Al elegir, sugiere repartirlo en partes iguales (sin pasar lo que le queda a cada una); los montos se
+     * pueden cambiar mientras sumen justo lo que se pasa. window.cubrirPresupuesto(detalle, 'gasto' | 'manual')
+     * devuelve {modo: 'cubrir', traspasos} | {modo: 'pasarme'} | null (cancelar).
+     */
+    Alpine.data('cubrirPresupuesto', () => ({
+        abierto: false,
+        modo: 'gasto',
+        detalle: null,
+        filas: [],
+        resolver: null,
+
+        init() {
+            window.cubrirPresupuesto = (detalle, modo = 'gasto') => new Promise((resolve) => {
+                this.detalle = detalle;
+                this.modo = modo;
+                this.filas = (detalle.opciones || []).map((o) => ({ ...o, elegida: false, monto: '' }));
+                this.resolver = resolve;
+                this.abierto = true;
+            });
+        },
+
+        centavos(v) { return Math.round(Number(String(v ?? '').replace(/,/g, '')) * 100) || 0; },
+        dinero(c) { return `$ ${(c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; },
+        get repartir() { return this.modo === 'repartir'; },
+        // Repartir: se sugiere pasar todo lo que le queda, pero se puede pasar menos (la suma no puede pasar lo que le queda)
+        get excedente() { return this.repartir ? this.centavos(this.detalle?.disponible) : this.centavos(this.detalle?.excedente); },
+        get elegidas() { return this.filas.filter((f) => f.elegida); },
+        get suma() { return this.elegidas.reduce((t, f) => t + this.centavos(f.monto), 0); },
+        get falta() { return this.excedente - this.suma; },
+        excede(f) { return !this.repartir && f.elegida && this.centavos(f.monto) > this.centavos(f.disponible); },
+        get valido() {
+            if (this.repartir) return this.elegidas.length > 0 && this.falta >= 0 && this.elegidas.every((f) => this.centavos(f.monto) > 0);
+            return this.elegidas.length > 0 && this.falta === 0 && !this.elegidas.some((f) => this.excede(f) || this.centavos(f.monto) <= 0);
+        },
+        get aviso() {
+            if (!this.elegidas.length) return '';
+            if (this.repartir) {
+                if (this.falta < 0) return `Solo le quedan ${this.dinero(this.excedente)}: bájale ${this.dinero(-this.falta)} a los montos.`;
+                return this.elegidas.some((f) => this.centavos(f.monto) <= 0) ? 'Quita las categorías sin monto.' : '';
+            }
+            if (this.elegidas.some((f) => this.excede(f))) return 'Una categoría no tiene tanto disponible.';
+            if (this.falta > 0) {
+                const sinUsar = this.elegidas.reduce((t, f) => t + Math.max(0, this.centavos(f.disponible) - this.centavos(f.monto)), 0);
+                return sinUsar >= this.falta ? `Te faltan ${this.dinero(this.falta)}: súbele a los montos.` : `Te faltan ${this.dinero(this.falta)}: elige otra categoría para que alcance.`;
+            }
+            if (this.falta < 0) return `Te sobran ${this.dinero(-this.falta)}: bájale a los montos.`;
+            return '';
+        },
+
+        // Partes iguales entre las elegidas; si a una no le alcanza su parte, lo que falta pasa a las otras
+        sugerir() {
+            let resto = this.excedente;
+            const elegidas = this.repartir ? [...this.elegidas] : [...this.elegidas].sort((a, b) => this.centavos(a.disponible) - this.centavos(b.disponible));
+            elegidas.forEach((f, i) => {
+                const quedan = elegidas.length - i;
+                const parte = quedan === 1 ? resto : Math.floor(resto / quedan);
+                const toma = this.repartir ? parte : Math.min(parte, this.centavos(f.disponible));
+                f.monto = (toma / 100).toFixed(2);
+                resto -= toma;
+            });
+            this.filas.filter((f) => !f.elegida).forEach((f) => { f.monto = ''; });
+        },
+
+        cerrar(valor) {
+            this.abierto = false;
+            const resolver = this.resolver;
+            this.resolver = null;
+            resolver?.(valor);
+        },
+        cubrir() {
+            if (!this.valido) return;
+            this.cerrar({ modo: 'cubrir', traspasos: this.elegidas.map((f) => ({ presupuesto_id: f.presupuesto_id, monto: (this.centavos(f.monto) / 100).toFixed(2) })) });
+        },
+    }));
+
+    // Cubrir a mano un presupuesto que ya se pasó, o repartir lo que le queda a otras (detalle del presupuesto)
+    window.cubrirPresupuestoAMano = async (detalle, url, modo = 'manual') => {
+        const decision = await window.cubrirPresupuesto(detalle, modo);
+        if (!decision) return;
+        const datos = new FormData();
+        decision.traspasos.forEach((t, i) => {
+            datos.set(`traspasos[${i}][presupuesto_id]`, t.presupuesto_id);
+            datos.set(`traspasos[${i}][monto]`, t.monto);
+        });
+        const respuesta = await fetch(url, { method: 'POST', body: datos, headers: {
+            'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content } });
+        const data = await respuesta.json().catch(() => ({}));
+        if (respuesta.ok) {
+            await showAlert('success', '¡Listo!', data.message);
+            window.location.reload();
+        } else {
+            showAlert('error', modo === 'repartir' ? 'No se pudo pasar' : 'No se pudo cubrir', Object.values(data.errors || {})[0]?.[0] || data.message || 'Ocurrió un error.');
+        }
+    };
+
     Alpine.data('ajaxForm', (onSuccessCallback) => ({
         loading: false,
         errors: {},
 
-        async submit(e, confirmado = false) {
+        async submit(e, confirmado = false, presupuesto = null) {
             this.loading = true;
             this.errors = {};
             const form = e.target;
@@ -613,6 +710,16 @@ document.addEventListener('alpine:init', () => {
             applyClientFieldLimits(form);
             const formData = new FormData(form);
             if (confirmado) formData.set('confirmar', '1');
+            // Gasto que revisa su presupuesto: "revisar" o lo que se eligió en el aviso (cubrir con otras o pasarme)
+            if (presupuesto) {
+                formData.set('presupuesto', presupuesto.modo);
+                (presupuesto.traspasos || []).forEach((t, i) => {
+                    formData.set(`traspasos[${i}][presupuesto_id]`, t.presupuesto_id);
+                    formData.set(`traspasos[${i}][monto]`, t.monto);
+                });
+            } else if (form.hasAttribute('data-revisar-presupuesto')) {
+                formData.set('presupuesto', 'revisar');
+            }
             const tableForm = document.getElementById('data-table-form');
             if (tableForm) {
                 const tableFields = [
@@ -644,6 +751,16 @@ document.addEventListener('alpine:init', () => {
                     const data = await response.json();
 
                     // Error "confirmar": el servidor pide aceptar una advertencia (ej. sobregirar una tarjeta); si se acepta, se reenvía
+                    // El gasto pasa su presupuesto: se elige de qué categorías cubrirlo (o pasarse) y se reenvía
+                    if (data.presupuesto && data.errors?.presupuesto && Object.keys(data.errors).length === 1) {
+                        this.clearValidationErrors();
+                        const decision = await window.cubrirPresupuesto(data.presupuesto, 'gasto');
+                        if (decision) {
+                            this.loading = false;
+                            return await this.submit(e, confirmado, decision);
+                        }
+                        return;
+                    }
                     if (!confirmado && data.errors?.confirmar && Object.keys(data.errors).length === 1) {
                         this.clearValidationErrors();
                         const { isConfirmed } = await Swal.fire({
@@ -653,7 +770,7 @@ document.addEventListener('alpine:init', () => {
                         });
                         if (isConfirmed) {
                             this.loading = false;
-                            return await this.submit(e, true);
+                            return await this.submit(e, true, presupuesto);
                         }
                         return;
                     }

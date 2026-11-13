@@ -10,6 +10,7 @@ use App\Models\MovimientoEfectivo;
 use App\Models\User;
 use App\Services\CicloEfectivoService;
 use App\Services\MovimientoEfectivoService;
+use App\Services\PresupuestoTraspasoService;
 use App\Traits\Exportable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -77,7 +78,8 @@ class MovimientoEfectivoController extends Controller
 
     public function store(MovimientoEfectivoRequest $request)
     {
-        $movimiento = $this->movimientos()->registrar($request->user(), $request->validated());
+        $data = $request->validated();
+        $movimiento = app(PresupuestoTraspasoService::class)->guardar($data, $this->esGasto($data), null, fn ($d) => $this->movimientos()->registrar($request->user(), $d));
 
         return $this->success($request, 'Movimiento registrado correctamente.', $movimiento);
     }
@@ -94,9 +96,16 @@ class MovimientoEfectivoController extends Controller
     public function update(MovimientoEfectivoRequest $request, MovimientoEfectivo $movimiento)
     {
         $this->own($request, $movimiento);
-        $this->movimientos()->actualizar($movimiento, $request->validated());
+        $data = $request->validated();
+        app(PresupuestoTraspasoService::class)->guardar($data, $this->esGasto($data), $movimiento, fn ($d) => $this->movimientos()->actualizar($movimiento, $d));
 
         return $this->success($request, 'Movimiento actualizado correctamente.', $movimiento);
+    }
+
+    /** Un egreso que no paga un compromiso: se revisa su presupuesto (el pago de un compromiso ya estaba apartado). */
+    private function esGasto(array $data): bool
+    {
+        return $data['tipo'] === 'egreso' && empty($data['compromiso_id']);
     }
 
     public function destroy(Request $request, MovimientoEfectivo $movimiento)

@@ -28,7 +28,7 @@
     <x-slot name="header"><h1>{{ $evento ? 'Editar evento' : 'Nuevo evento' }}</h1></x-slot>
     <div class="max-w-7xl mx-auto" x-data="eventoForm({{ \Illuminate\Support\Js::from($inicial) }})">
         <form x-data="ajaxForm(async function(data) { await showAlert('success', '¡Éxito!', data.message); window.location = data.redirect; })"
-            @submit.prevent="submit" method="POST" action="{{ $evento ? route('eventos.update', $evento) : route('eventos.store') }}" enctype="multipart/form-data" class="space-y-6" novalidate>
+            @submit.prevent="submit" data-revisar-presupuesto method="POST" action="{{ $evento ? route('eventos.update', $evento) : route('eventos.store') }}" enctype="multipart/form-data" class="space-y-6" novalidate>
             @csrf
             @if ($evento) @method('PUT') @endif
 

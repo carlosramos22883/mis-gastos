@@ -12,6 +12,7 @@ use App\Models\Compromiso;
 use App\Models\EstadoCuentaTarjeta;
 use App\Models\MovimientoTarjeta;
 use App\Models\TarjetaCredito;
+use App\Services\PresupuestoTraspasoService;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -114,7 +115,8 @@ class TarjetaController extends Controller
         $this->own($request, $tarjeta);
         abort_unless($tarjeta->activo, 403, 'La tarjeta está inactiva.');
         $estado = $request->filled('estado') ? $tarjeta->estadosCuenta()->findOrFail((int) $request->query('estado')) : null;
-        $movimiento = $this->tarjetas->registrarMovimiento($tarjeta, $request->validated(), $estado);
+        $data = $request->validated();
+        $movimiento = app(PresupuestoTraspasoService::class)->guardar($data, empty($data['me_lo_debe']) && $data['tipo'] !== 'credito', null, fn ($d) => $this->tarjetas->registrarMovimiento($tarjeta, $d, $estado));
 
         return (new MovimientoTarjetaResource($movimiento->load('categoria', 'contacto')))->response()->setStatusCode(201);
     }
@@ -124,7 +126,8 @@ class TarjetaController extends Controller
     public function actualizarMovimiento(MovimientoTarjetaRequest $request, TarjetaCredito $tarjeta, MovimientoTarjeta $movimiento)
     {
         $this->own($request, $tarjeta, $movimiento);
-        $this->tarjetas->actualizarMovimiento($movimiento, $request->validated());
+        $data = $request->validated();
+        app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] !== 'credito', $movimiento, fn ($d) => $this->tarjetas->actualizarMovimiento($movimiento, $d));
 
         return new MovimientoTarjetaResource($movimiento->fresh(['categoria', 'contacto']));
     }

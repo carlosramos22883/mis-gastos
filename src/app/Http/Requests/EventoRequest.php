@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\RevisaPresupuesto;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -17,7 +18,7 @@ use Illuminate\Validation\Validator;
  */
 class EventoRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, RevisaPresupuesto;
 
     public function authorize(): bool
     {
@@ -66,7 +67,7 @@ class EventoRequest extends FormRequest
             'categoria_personal_id' => [$this->pagaElHogar() && ! in_array($this->input('origen'), [null, '', 'ninguno'], true) ? 'required' : 'nullable', 'integer',
                 Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('hogar_id', $user->hogar_id)->where('activo', true)->where('tipo', 'egreso'))],
             'confirmar' => ['nullable', 'boolean'],
-        ];
+        ] + $this->reglasPresupuesto();
     }
 
     public function after(): array

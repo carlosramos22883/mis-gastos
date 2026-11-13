@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
+use App\Http\Requests\Concerns\RevisaPresupuesto;
 use App\Services\CicloEfectivoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 /** Pagó otra persona: marcar que un participante ya le pagó (un miembro del hogar puede registrar su egreso). */
 class EventoPagadoRequest extends FormRequest
 {
-    use NormalizaFechas;
+    use NormalizaFechas, RevisaPresupuesto;
 
     public function authorize(): bool
     {
@@ -38,7 +39,7 @@ class EventoPagadoRequest extends FormRequest
             'categoria_personal_id' => [$conMovimiento ? 'required' : 'nullable', 'integer',
                 Rule::exists('categorias_personales', 'id')->where(fn ($q) => $q->where('hogar_id', $user->hogar_id)->where('activo', true)->where('tipo', 'egreso'))],
             'confirmar' => ['nullable', 'boolean'],
-        ];
+        ] + $this->reglasPresupuesto();
     }
 
     public function messages(): array

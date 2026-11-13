@@ -102,7 +102,7 @@ class DashboardTest extends TestCase
         // La cuota ya aparta sus $150: del presupuesto quedan $100 (no se reservan dos veces)
         $this->assertSame('100.00', $presupuesto->fresh()->saldo_pendiente);
         $this->user->movimientosEfectivo()->create(['categoria_personal_id' => $gaby->id, 'descripcion' => 'Útiles', 'monto' => 30, 'fecha' => '2026-10-19', 'tipo' => 'egreso']);
-        $this->assertSame(['monto' => 250.0, 'gastado' => 30.0, 'comprometido' => 150.0, 'queda' => 70.0], app(PresupuestoService::class)->resumen($presupuesto->fresh()));
+        $this->assertSame(['monto' => 250.0, 'monto_base' => 250.0, 'recibido' => 0.0, 'cedido' => 0.0, 'gastado' => 30.0, 'comprometido' => 150.0, 'queda' => 70.0], app(PresupuestoService::class)->resumen($presupuesto->fresh()));
 
         // La API trae el resumen y, en el detalle, los gastos que lo descuentan
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'compromisos.view', 'guard_name' => 'web']));

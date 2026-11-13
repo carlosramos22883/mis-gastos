@@ -56,6 +56,12 @@ Route::middleware('auth')->group(function () {
         ->middlewareFor(['edit', 'update'], 'can:compromisos.edit')
         ->middlewareFor('destroy', 'can:compromisos.delete');
     // La regla de la serie a la que pertenece un pago (se aplica a los pagos futuros sin tocar)
+    Route::post('compromisos/{compromiso}/cubrir', [CompromisoController::class, 'cubrir'])
+        ->middleware('can:compromisos.edit')->name('compromisos.cubrir');
+    Route::post('compromisos/{compromiso}/repartir', [CompromisoController::class, 'repartir'])
+        ->middleware('can:compromisos.edit')->name('compromisos.repartir');
+    Route::delete('presupuesto-traspasos/{traspaso}', [CompromisoController::class, 'deshacerTraspaso'])
+        ->middleware('can:compromisos.edit')->name('presupuesto-traspasos.destroy');
     Route::get('compromisos/{compromiso}/serie/edit', [CompromisoController::class, 'editSerie'])
         ->middleware('can:compromisos.edit')->name('compromisos.serie.edit');
     Route::put('compromisos/{compromiso}/serie', [CompromisoController::class, 'updateSerie'])

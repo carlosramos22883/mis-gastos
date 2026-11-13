@@ -1,7 +1,7 @@
 @php($simbolo = auth()->user()->monedaPreferida?->simbolo ?? '$')
 @php($pagador = $evento->pagador())
 <form x-data="ajaxForm(async function(data) { $dispatch('close-modal', 'cobro-modal'); await showAlert('success', '¡Éxito!', data.message); window.dispatchEvent(new CustomEvent('refresh-table', { detail: data })); })"
-    @submit.prevent="submit" method="POST" action="{{ route('eventos.pagado.store', [$evento, $participante]) }}" class="space-y-4" novalidate>
+    @submit.prevent="submit" data-revisar-presupuesto method="POST" action="{{ route('eventos.pagado.store', [$evento, $participante]) }}" class="space-y-4" novalidate>
     @csrf
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $participante->nombre() }} ya pagó</h2>

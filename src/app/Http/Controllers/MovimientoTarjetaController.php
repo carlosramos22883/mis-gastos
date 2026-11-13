@@ -8,6 +8,7 @@ use App\Models\EstadoCuentaTarjeta;
 use App\Models\MovimientoTarjeta;
 use App\Models\TarjetaCredito;
 use App\Services\DeudorService;
+use App\Services\PresupuestoTraspasoService;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,8 +31,10 @@ class MovimientoTarjetaController extends Controller
         abort_unless($tarjeta->activo, 403, 'La tarjeta está inactiva.');
         $estado = $this->estado($request, $tarjeta);
         $meLoDebe = (bool) $request->validated('me_lo_debe');
-        DB::transaction(function () use ($request, $tarjeta, $estado, $meLoDebe, $deudas) {
-            $movimiento = $this->tarjetas->registrarMovimiento($tarjeta, $request->safe()->except('me_lo_debe'), $estado);
+        $data = $request->safe()->except('me_lo_debe');
+        DB::transaction(function () use ($request, $tarjeta, $estado, $meLoDebe, $deudas, $data) {
+            $movimiento = app(PresupuestoTraspasoService::class)->guardar($data, ! $meLoDebe && $data['tipo'] !== 'credito', null,
+                fn ($d) => $this->tarjetas->registrarMovimiento($tarjeta, $d, $estado));
             if ($meLoDebe) { // la compra la hizo el contacto: queda como deuda suya
                 $contacto = $request->user()->contactos()->findOrFail($movimiento->contacto_id);
                 $deudas->vincularMovimiento($request->user(), $movimiento, $contacto, ['descripcion' => $movimiento->descripcion, 'monto' => $movimiento->monto]);
@@ -56,7 +59,8 @@ class MovimientoTarjetaController extends Controller
     public function update(MovimientoTarjetaRequest $request, TarjetaCredito $tarjeta, MovimientoTarjeta $movimiento)
     {
         $this->own($request, $tarjeta, $movimiento);
-        $this->tarjetas->actualizarMovimiento($movimiento, $request->safe()->except('me_lo_debe'));
+        $data = $request->safe()->except('me_lo_debe');
+        app(PresupuestoTraspasoService::class)->guardar($data, $data['tipo'] !== 'credito', $movimiento, fn ($d) => $this->tarjetas->actualizarMovimiento($movimiento, $d));
 
         return response()->json(['success' => true, 'message' => 'Movimiento actualizado correctamente.']);
     }

@@ -109,6 +109,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('destroy', 'can:efectivo.delete');
 
         Route::get('compromisos/{compromiso}/origenes-pago', [CompromisoController::class, 'origenesPago'])->middleware('can:compromisos.view')->name('compromisos.origenes-pago');
+        Route::get('compromisos/{compromiso}/cubrir', [CompromisoController::class, 'excesoPresupuesto'])->middleware('can:compromisos.view')->name('compromisos.cubrir.show');
+        Route::post('compromisos/{compromiso}/cubrir', [CompromisoController::class, 'cubrir'])->middleware('can:compromisos.edit')->name('compromisos.cubrir');
+        Route::get('compromisos/{compromiso}/repartir', [CompromisoController::class, 'detalleReparto'])->middleware('can:compromisos.view')->name('compromisos.repartir.show');
+        Route::post('compromisos/{compromiso}/repartir', [CompromisoController::class, 'repartir'])->middleware('can:compromisos.edit')->name('compromisos.repartir');
+        Route::delete('presupuesto-traspasos/{traspaso}', [CompromisoController::class, 'deshacerTraspaso'])->middleware('can:compromisos.edit')->name('presupuesto-traspasos.destroy');
         Route::put('compromisos/{compromiso}/serie', [CompromisoController::class, 'actualizarSerie'])->middleware('can:compromisos.edit')->name('compromisos.serie');
         Route::post('compromisos/{compromiso}/pagar', [CompromisoController::class, 'pagar'])->middleware('can:compromisos.view')->name('compromisos.pagar');
         Route::apiResource('compromisos', CompromisoController::class)

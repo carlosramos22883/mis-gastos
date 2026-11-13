@@ -10,6 +10,7 @@ use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Services\DashboardService;
 use App\Services\PresupuestoService;
+use App\Services\PresupuestoTraspasoService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
                 DashboardService::olvidarAlertas($m->hogar_id);
             });
         }
+        // Lo que un gasto le quitó a otras categorías para no pasarse: regresa si se borra y se ajusta si cambia
+        foreach ([MovimientoEfectivo::class, MovimientoCuenta::class, MovimientoTarjeta::class] as $modelo) {
+            $modelo::saved(fn ($m) => app(PresupuestoTraspasoService::class)->reconciliar($m));
+            $modelo::deleting(fn ($m) => app(PresupuestoTraspasoService::class)->quitarDe($m));
+        }
 
         // Cobrarle a un contacto su parte de un evento que pagó el hogar baja el gasto del evento en su categoría
         foreach (['saved', 'deleted'] as $evento) {
@@ -45,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
                 $movimiento = Evento::whereHas('participantes', fn ($q) => $q->where('deuda_id', $pago->deuda_id))->first()?->movimiento();
                 if ($movimiento) {
                     app(PresupuestoService::class)->alCambiarMovimiento($movimiento);
+                    app(PresupuestoTraspasoService::class)->reconciliar($movimiento);
                     DashboardService::olvidarAlertas($movimiento->hogar_id);
                 }
             });

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizaFechas;
 use App\Http\Requests\Concerns\ResuelveContacto;
+use App\Http\Requests\Concerns\RevisaPresupuesto;
 use App\Http\Requests\Concerns\ValidaMiembroHogar;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,7 +13,7 @@ use Illuminate\Validation\Rule;
 /** Compra (al contado o en cuotas a tasa cero), cargo o crédito de una tarjeta. */
 class MovimientoTarjetaRequest extends FormRequest
 {
-    use NormalizaFechas, ResuelveContacto, ValidaMiembroHogar;
+    use NormalizaFechas, ResuelveContacto, RevisaPresupuesto, ValidaMiembroHogar;
 
     public function authorize(): bool
     {
@@ -49,7 +50,7 @@ class MovimientoTarjetaRequest extends FormRequest
                 ->where('hogar_id', $user->hogar_id)->where('activo', true)->where('tipo', 'egreso'))],
             'comentario' => ['nullable', 'string', 'max:1000'],
             'confirmar' => ['boolean'], // true = acepta sobregirar la tarjeta
-        ];
+        ] + $this->reglasPresupuesto();
     }
 
     public function messages(): array

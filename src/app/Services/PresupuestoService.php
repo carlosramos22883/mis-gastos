@@ -7,6 +7,7 @@ use App\Models\Hogar;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
+use App\Models\PresupuestoTraspaso;
 use App\Models\User;
 use App\Support\CobrosDeEventos;
 use Carbon\Carbon;
@@ -68,14 +69,35 @@ class PresupuestoService
             ->sum('saldo_pendiente'), 2);
     }
 
-    /** @return array{monto: float, gastado: float, comprometido: float, queda: float} queda < 0 = se pasó */
-    public function resumen(Compromiso $presupuesto): array
+    /**
+     * monto = monto_base (el del presupuesto) + lo recibido de otras categorías − lo cedido (PresupuestoTraspaso).
+     * Con $sin, como si ese movimiento (y lo que movió) no existiera: sirve para revisar un gasto antes de guardarlo.
+     *
+     * @return array{monto: float, monto_base: float, recibido: float, cedido: float, gastado: float, comprometido: float, queda: float} queda < 0 = se pasó
+     */
+    public function resumen(Compromiso $presupuesto, ?Model $sin = null): array
     {
-        $gastado = $this->gastado($presupuesto);
+        $gastado = $sin ? round((float) $this->movimientos($presupuesto)->reject(fn ($m) => $m::class === $sin::class && $m->id === $sin->id)->sum('monto'), 2)
+            : $this->gastado($presupuesto);
         $comprometido = $this->comprometido($presupuesto);
+        $traspasos = fn (string $columna) => round((float) PresupuestoTraspaso::where($columna, $presupuesto->id)
+            ->when($sin, fn ($q) => $q->where(fn ($w) => $w->whereNull(self::columnaMovimiento($sin))->orWhere(self::columnaMovimiento($sin), '!=', $sin->id)))
+            ->sum('monto'), 2);
+        [$recibido, $cedido] = [$traspasos('destino_id'), $traspasos('origen_id')];
+        $monto = round((float) $presupuesto->monto + $recibido - $cedido, 2);
 
-        return ['monto' => (float) $presupuesto->monto, 'gastado' => $gastado, 'comprometido' => $comprometido,
-            'queda' => round((float) $presupuesto->monto - $gastado - $comprometido, 2)];
+        return ['monto' => $monto, 'monto_base' => (float) $presupuesto->monto, 'recibido' => $recibido, 'cedido' => $cedido,
+            'gastado' => $gastado, 'comprometido' => $comprometido, 'queda' => round($monto - $gastado - $comprometido, 2)];
+    }
+
+    /** movimiento_efectivo_id | movimiento_cuenta_id | movimiento_tarjeta_id */
+    public static function columnaMovimiento(Model $movimiento): string
+    {
+        return match (true) {
+            $movimiento instanceof MovimientoEfectivo => 'movimiento_efectivo_id',
+            $movimiento instanceof MovimientoCuenta => 'movimiento_cuenta_id',
+            $movimiento instanceof MovimientoTarjeta => 'movimiento_tarjeta_id',
+        };
     }
 
     /** Ajusta lo que queda del presupuesto; si su ciclo ya terminó, lo cierra. */

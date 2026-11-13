@@ -21,6 +21,7 @@ use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
 use App\Models\Prestamo;
 use App\Models\PrestamoPago;
+use App\Models\PresupuestoTraspaso;
 use App\Models\TarjetaCredito;
 use App\Models\Transferencia;
 use App\Models\User;
@@ -42,6 +43,7 @@ class HogarService
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
         Contacto::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
         FuenteIngreso::class, Ingreso::class, CargoFijoTarjeta::class, Evento::class, EscenarioProyeccion::class,
+        PresupuestoTraspaso::class,
     ];
 
     /** Modelos con categoría (para unificar categorías al fusionar hogares). */

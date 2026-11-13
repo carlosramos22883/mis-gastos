@@ -52,6 +52,53 @@
         @endif
 
         @if ($resumenP)
+            @php($servicioT = app(\App\Services\PresupuestoTraspasoService::class))
+            @php($excesoP = $pasado && $compromiso->estado === \App\Models\Compromiso::PENDIENTE ? $servicioT->excesoActual($compromiso) : null)
+            @if ($excesoP)
+                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-gray-800 dark:text-red-300">
+                    <span>Este presupuesto se pasó por {{ $simbolo }} {{ number_format($excesoP['excedente'], 2) }}. Puedes cubrirlo con lo que les queda a otras categorías del ciclo.</span>
+                    @can('compromisos.edit')
+                        <x-primary-button type="button" x-on:click="cubrirPresupuestoAMano({{ \Illuminate\Support\Js::from($servicioT->detalle($excesoP)) }}, '{{ route('compromisos.cubrir', $compromiso) }}')">Cubrir con otras categorías</x-primary-button>
+                    @endcan
+                </div>
+            @endif
+            @php($repartoP = ! $pasado ? $servicioT->detalleReparto($compromiso) : null)
+            @if ($repartoP)
+                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-gray-800 dark:text-green-300">
+                    <span>¿No vas a usar lo que le queda ({{ $simbolo }} {{ number_format((float) $repartoP['disponible'], 2) }})? Pásalo a otras categorías del ciclo.</span>
+                    @can('compromisos.edit')
+                        <x-secondary-button type="button" x-on:click="cubrirPresupuestoAMano({{ \Illuminate\Support\Js::from($repartoP) }}, '{{ route('compromisos.repartir', $compromiso) }}', 'repartir')">Pasar a otras categorías</x-secondary-button>
+                    @endcan
+                </div>
+            @endif
+            @php($traspasosP = $servicioT->delPresupuesto($compromiso))
+            @if ($traspasosP->isNotEmpty())
+                <div class="rounded-lg bg-white shadow dark:bg-gray-800">
+                    <h2 class="px-6 pt-5 text-base font-semibold text-gray-900 dark:text-gray-100">Presupuesto movido entre categorías</h2>
+                    <p class="px-6 text-xs text-gray-500 dark:text-gray-400">Base {{ $simbolo }} {{ number_format($resumenP['monto_base'], 2) }} · recibió {{ $simbolo }} {{ number_format($resumenP['recibido'], 2) }} · cedió {{ $simbolo }} {{ number_format($resumenP['cedido'], 2) }}. El total del hogar no cambia.</p>
+                    <ul class="mt-3 divide-y divide-gray-200 text-sm dark:divide-gray-700">
+                        @foreach ($traspasosP as $t)
+                            @php($recibe = $t->destino_id === $compromiso->id)
+                            @php($otra = $recibe ? $t->origen : $t->destino)
+                            @php($gasto = $t->movimiento())
+                            <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3">
+                                <span class="text-gray-700 dark:text-gray-300">
+                                    {{ $recibe ? 'Recibió de' : 'Le pasó a' }} «{{ $otra?->categoria?->nombre ?? $otra?->descripcion }}»
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">{{ $gasto ? 'Por el gasto «'.$gasto->descripcion.'» del '.$gasto->fecha->format('d/m/Y') : 'Movido a mano el '.$t->created_at->format('d/m/Y') }}</span>
+                                </span>
+                                <span class="flex items-center gap-3">
+                                    <strong class="{{ $recibe ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">{{ $recibe ? '+' : '−' }} {{ $simbolo }} {{ number_format((float) $t->monto, 2) }}</strong>
+                                    @if (! $gasto && $compromiso->estado === \App\Models\Compromiso::PENDIENTE)
+                                        @can('compromisos.edit')
+                                            <button type="button" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400" x-on:click="showConfirm('¿Deshacer?', 'El presupuesto regresa a «{{ $t->origen?->categoria?->nombre }}».', () => performDeleteUrl('{{ route('presupuesto-traspasos.destroy', $t) }}'))">Deshacer</button>
+                                        @endcan
+                                    @endif
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             @if ($resumenP['comprometido'] > 0)
                 <p class="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-gray-800 dark:text-amber-300">Además hay {{ $simbolo }} {{ number_format($resumenP['comprometido'], 2) }} por pagar este ciclo en compromisos de «{{ $compromiso->categoria?->nombre }}»: ya están apartados, por eso no cuentan dos veces.</p>
             @endif

@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Compromiso;
 use App\Services\CompromisoService;
 use App\Services\PresupuestoService;
+use App\Services\PresupuestoTraspasoService;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -79,6 +80,15 @@ class CompromisoResource extends JsonResource
             $resumen['movimientos'] = $servicio->movimientos($this->resource)->map(fn ($m) => ['clase' => $m->clase, 'id' => $m->id,
                 'fecha' => $m->fecha->toDateString(), 'descripcion' => $m->descripcion, 'origen' => $m->origen, 'monto' => $dinero($m->monto),
                 'cobrado' => $m->cobrado ? $dinero($m->cobrado) : null])->all(); // evento: lo que ya pagaron los contactos (no descuenta)
+            // Presupuesto movido entre categorías: recibe = true si llegó a este; manual = movido a mano (se puede deshacer)
+            $resumen['traspasos'] = app(PresupuestoTraspasoService::class)->delPresupuesto($this->resource)->map(function ($t) use ($dinero) {
+                $recibe = $t->destino_id === $this->id;
+                $otra = $recibe ? $t->origen : $t->destino;
+                $gasto = $t->movimiento();
+
+                return ['id' => $t->id, 'recibe' => $recibe, 'categoria' => $otra?->categoria?->nombre ?? $otra?->descripcion, 'monto' => $dinero($t->monto),
+                    'manual' => ! $gasto, 'gasto' => $gasto?->descripcion, 'fecha' => ($gasto?->fecha ?? $t->created_at)->toDateString()];
+            })->all();
         }
 
         return $resumen;

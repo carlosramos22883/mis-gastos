@@ -17,6 +17,7 @@
 
     <!-- Sidebar: menú "off-canvas", oculto por defecto en TODOS los tamaños de pantalla -->
     @include('layouts.navigation')
+    @auth @include('presupuestos._cubrir_modal') @endauth
 
     <!-- Overlay: aparece detrás del sidebar cuando está abierto, en cualquier tamaño de pantalla -->
     <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300"
