@@ -9,7 +9,7 @@ use App\Models\TarjetaCredito;
 use Illuminate\Http\Request;
 
 /**
- * Navegación de regreso entre pantallas: un enlace lleva "?desde=contacto:12" y la pantalla de destino
+ * Navegación de regreso entre pantallas: un enlace lleva "?desde=contacto:12" (o "?desde=inicio") y la pantalla de destino
  * muestra "← Volver a Karen". Solo se aceptan pantallas conocidas y registros del propio hogar
  * (nunca una URL libre: así no se puede redirigir fuera del sistema).
  */
@@ -24,6 +24,9 @@ class Volver
     /** @return array{texto: string, url: string}|null */
     public static function destino(Request $request): ?array
     {
+        if ($request->query('desde') === 'inicio' && $request->user()) {
+            return ['texto' => 'Volver al inicio', 'url' => route('dashboard')];
+        }
         if (! preg_match('/^(contacto|prestamo|tarjeta|compromiso):(\d+)$/', (string) $request->query('desde'), $m) || ! ($user = $request->user())) {
             return null;
         }

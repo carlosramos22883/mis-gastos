@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Catalogos\TipoPrestamo;
 use App\Models\TipoCuenta;
 use App\Models\User;
 use App\Services\CompromisoService;
 use App\Services\DashboardService;
 use App\Services\PagoCompromisoService;
+use App\Services\PrestamoService;
 use App\Services\PresupuestoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,11 +145,76 @@ class DashboardTest extends TestCase
 
         // Gastos del ciclo: $80 + $950 (el movimiento entre cuentas no es gasto); quedan $170 para hoy y 3 días más
         $tope = app(DashboardService::class)->resumen($this->user)['tope'];
-        $this->assertSame(['tope' => 1200.0, 'gastado' => 1030.0, 'queda' => 170.0, 'por_dia' => 42.5, 'porcentaje' => 86, 'dias_restantes' => 3], $tope);
+        $this->assertSame(['tope' => 1200.0, 'gastado' => 1030.0, 'comprometido' => 0.0, 'queda' => 170.0, 'por_dia' => 42.5, 'porcentaje' => 86, 'dias_restantes' => 3],
+            collect($tope)->only(['tope', 'gastado', 'comprometido', 'queda', 'por_dia', 'porcentaje', 'dias_restantes'])->all());
         $this->assertStringContainsString('Llevas el 86 % del tope', collect(app(DashboardService::class)->resumen($this->user)['alertas'])->pluck('texto')->implode(' | '));
 
         Sanctum::actingAs($this->user);
         $this->patchJson(route('api.hogar.tope'), ['tope_gasto_ciclo' => null])->assertOk()->assertJsonPath('data.tope_gasto_ciclo', null);
+    }
+
+    public function test_prestamos_del_ciclo_con_la_cuota_lo_pagado_y_lo_de_mas(): void
+    {
+        $prestamos = app(PrestamoService::class);
+        $p = $prestamos->crear($this->user, ['nombre' => 'Consumo', 'tipo_prestamo_id' => TipoPrestamo::value('id'), 'monto_original' => 1200, 'tasa_anual' => 12,
+            'plazo_meses' => 12, 'dia_pago' => 8, 'cuota' => 106.62, 'saldo_inicial' => 1200, 'fecha_saldo' => '2026-09-08', 'medio_pago' => 'efectivo']);
+        // Pagó la cuota y abonó $50 de más en el ciclo (23/09 al 22/10)
+        $prestamos->registrarPago($this->user, $p, ['fecha' => '2026-10-08', 'capital' => 144.62, 'interes' => 12, 'cargos' => 0, 'mora' => 0, 'origen' => 'ninguno']);
+
+        $c = app(DashboardService::class)->resumen($this->user)['prestamos_ciclo'];
+
+        $this->assertSame(['id' => $p->id, 'nombre' => 'Consumo', 'cuota' => 106.62, 'pagado' => 156.62, 'mora' => 0.0, 'extra' => 50.0, 'falta' => 0.0,
+            'pagada' => true, 'fecha' => '2026-10-08'], $c['lista'][0]);
+        $this->assertSame([1, 1, 106.62, 156.62, 50.0], [$c['cuotas'], $c['pagadas'], $c['cuota'], $c['pagado'], $c['extra']]);
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'prestamos.view', 'guard_name' => 'web']));
+        $this->actingAs($this->user)->get(route('dashboard'))->assertOk()->assertSee('Préstamos del ciclo')->assertSee(route('prestamos.show', $p->id))
+            ->assertSee('1 de 1 cuota pagada')->assertSee('Pagada')->assertSee('pagaste $ 50.00 de más', false);
+    }
+
+    public function test_la_parte_de_planilla_va_dentro_del_pago_y_no_cuenta_como_de_mas(): void
+    {
+        $prestamos = app(PrestamoService::class);
+        $tipo = TipoPrestamo::value('id');
+        $p = $prestamos->crear($this->user, ['nombre' => 'Vivienda', 'tipo_prestamo_id' => $tipo, 'monto_original' => 1200, 'tasa_anual' => 12,
+            'plazo_meses' => 12, 'dia_pago' => 8, 'cuota' => 106.62, 'saldo_inicial' => 1200, 'fecha_saldo' => '2026-09-08', 'medio_pago' => 'efectivo']);
+        $sinPagar = $prestamos->crear($this->user, ['nombre' => 'Moto', 'tipo_prestamo_id' => $tipo, 'monto_original' => 600, 'tasa_anual' => 12,
+            'plazo_meses' => 12, 'dia_pago' => 20, 'cuota' => 53.31, 'saldo_inicial' => 600, 'fecha_saldo' => '2026-09-20', 'medio_pago' => 'efectivo']);
+        // La cuota exacta: $60 descontados de planilla y el resto pagado aparte
+        $prestamos->registrarPago($this->user, $p, ['fecha' => '2026-10-08', 'capital' => 94.62, 'interes' => 12, 'cargos' => 0, 'mora' => 0, 'planilla' => 60, 'origen' => 'ninguno']);
+
+        $c = collect(app(DashboardService::class)->resumen($this->user)['prestamos_ciclo']['lista'])->keyBy('nombre');
+
+        $this->assertSame([106.62, 0.0, true], [$c['Vivienda']['pagado'], $c['Vivienda']['extra'], $c['Vivienda']['pagada']]);
+        $this->assertSame([0.0, 53.31, false], [$c['Moto']['pagado'], $c['Moto']['falta'], $c['Moto']['pagada']]);
+        $this->actingAs($this->user)->get(route('dashboard'))->assertSee('1 de 2 cuotas pagadas')->assertSee('Sin pagar');
+    }
+
+    public function test_avances_y_pagos_entre_tarjetas_del_ciclo(): void
+    {
+        $walmart = $this->user->tarjetasCredito()->where('nombre', 'Walmart')->first();
+        $walmart->movimientos()->create(['tipo' => 'avance', 'descripcion' => 'Avance a efectivo', 'monto' => 300, 'fecha' => '2026-10-10']);
+        $walmart->movimientos()->create(['tipo' => 'avance', 'descripcion' => 'Fuera del ciclo', 'monto' => 999, 'fecha' => '2026-09-01']);
+
+        $a = app(DashboardService::class)->resumen($this->user)['avances_ciclo'];
+
+        $this->assertSame(['nombre' => 'Walmart', 'avances' => 300.0, 'pagos_a_otras' => 0.0, 'sacado' => 300.0],
+            collect($a['lista'])->firstWhere('nombre', 'Walmart') ? collect(collect($a['lista'])->firstWhere('nombre', 'Walmart'))->only(['nombre', 'avances', 'pagos_a_otras', 'sacado'])->all() : null);
+        $this->assertSame([['de' => 'Walmart', 'a' => 'Efectivo', 'monto' => 300.0, 'tipo' => 'avance']], $a['flujos']);
+        $this->assertSame(300.0, $a['total']);
+        $this->actingAs($this->user)->get(route('dashboard'))->assertOk()->assertSee('Avances y pagos entre tarjetas')->assertSee('A dónde fue lo sacado')
+            ->assertSee('Total sacado de las tarjetas');
+    }
+
+    public function test_sin_avances_en_el_ciclo_no_se_ve_la_seccion_de_tarjetas(): void
+    {
+        $this->assertSame(0.0, app(DashboardService::class)->resumen($this->user)['avances_ciclo']['total']);
+        $this->actingAs($this->user)->get(route('dashboard'))->assertOk()->assertDontSee('Avances y pagos entre tarjetas');
+    }
+
+    public function test_el_resumen_va_primero_y_el_cuadro_de_tarjetas_al_final(): void
+    {
+        $this->actingAs($this->user)->get(route('dashboard'))->assertOk()
+            ->assertSeeInOrder(['Al pagar mis compromisos tendré', 'Gasto del ciclo', 'Próximos compromisos', 'Límite']);
     }
 
     public function test_resumen_de_inicio(): void

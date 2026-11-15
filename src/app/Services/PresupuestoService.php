@@ -139,21 +139,27 @@ class PresupuestoService
     }
 
     /**
-     * Gasto del ciclo frente al tope del hogar: gastado, lo que queda, cuánto se puede gastar por día los días que
-     * faltan y en qué porcentaje va. null si el hogar no tiene tope.
+     * Gasto del ciclo frente al tope del hogar. Cuenta lo gastado y lo que falta pagar (lo que los presupuestos ya
+     * apartan), así lo que queda del tope es lo que de verdad se puede gastar. presupuestado = la suma de los
+     * presupuestos; sin_asignar = la parte del tope que no está en ninguno; fuera = lo gastado o por pagar en
+     * categorías sin presupuesto. Siempre cuadra: queda = sin_asignar + lo que queda en los presupuestos − fuera.
+     * null si el hogar no tiene tope.
      *
-     * @return array{tope: float, gastado: float, queda: float, por_dia: float, porcentaje: int, dias_restantes: int}|null
+     * @param  array<int, array{nombre: string, gastado: float, comprometido: float}>  $fuera
+     * @return array{tope: float, gastado: float, comprometido: float, queda: float, por_dia: float, porcentaje: int, dias_restantes: int, presupuestado: float, sin_asignar: float, fuera: array, fuera_total: float}|null
      */
-    public function tope(Hogar $hogar, float $gastado, int $diasRestantes): ?array
+    public function tope(Hogar $hogar, float $gastado, int $diasRestantes, float $comprometido = 0.0, float $presupuestado = 0.0, array $fuera = []): ?array
     {
         $tope = (float) $hogar->tope_gasto_ciclo;
         if ($tope <= 0) {
             return null;
         }
-        $queda = round($tope - $gastado, 2);
+        $queda = round($tope - $gastado - $comprometido, 2);
 
-        return ['tope' => $tope, 'gastado' => round($gastado, 2), 'queda' => $queda,
+        return ['tope' => $tope, 'gastado' => round($gastado, 2), 'comprometido' => round($comprometido, 2), 'queda' => $queda,
             'por_dia' => $queda > 0 ? round($queda / max(1, $diasRestantes + 1), 2) : 0.0,
-            'porcentaje' => (int) round($gastado / $tope * 100), 'dias_restantes' => $diasRestantes];
+            'porcentaje' => (int) round(($gastado + $comprometido) / $tope * 100), 'dias_restantes' => $diasRestantes,
+            'presupuestado' => round($presupuestado, 2), 'sin_asignar' => round($tope - $presupuestado, 2) + 0.0,
+            'fuera' => $fuera, 'fuera_total' => round(collect($fuera)->sum(fn ($f) => $f['gastado'] + $f['comprometido']), 2)];
     }
 }

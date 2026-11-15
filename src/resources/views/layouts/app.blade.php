@@ -58,6 +58,11 @@
                 @php($vistos = Auth::user()->avisos_vistos ?? [])
                 @php($nuevos = collect($avisos)->reject(fn ($a) => in_array($a['clave'], $vistos, true))->count() + Auth::user()->unreadNotifications()->count())
                 @php($puntos = ['critico' => 'bg-red-600', 'serio' => 'bg-amber-500', 'aviso' => 'bg-yellow-400', 'info' => 'bg-sky-500'])
+                {{-- Los avisos sin ver salen como toasts en la esquina, una vez por sesión (app.js: mostrarAvisos). --}}
+                @php($sinVer = collect($avisos)->reject(fn ($a) => in_array($a['clave'], $vistos, true))->map(fn ($a) => ['clave' => $a['clave'], 'nivel' => $a['nivel'], 'etiqueta' => $a['etiqueta'], 'texto' => $a['texto'], 'url' => route('avisos.abrir', $a['clave'])])->values())
+                @if ($sinVer->isNotEmpty())
+                    <script>document.addEventListener('DOMContentLoaded', () => window.mostrarAvisos({{ \Illuminate\Support\Js::from($sinVer) }}));</script>
+                @endif
                 <x-dropdown align="top-end" width="w-80 sm:w-96" contentClasses="bg-white dark:bg-gray-800">
                     <x-slot name="trigger">
                         <button class="relative text-gray-500 dark:text-gray-300" aria-label="Avisos y notificaciones: {{ $nuevos }} sin ver">

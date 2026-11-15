@@ -1247,3 +1247,37 @@ if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.match
 }
 
 import './avatar-crop';
+
+// Avisos sin ver: toasts en la esquina, uno tras otro, unos segundos cada uno. Cada aviso sale una vez por sesión
+// del navegador (no se repite al cambiar de pantalla); si sigue sin abrirse, vuelve a salir en la próxima sesión.
+// Tocar uno lo abre (y queda visto). Lo demás sigue en la campana.
+window.mostrarAvisos = function (avisos, urlCampana = null) {
+    const CLAVE = 'avisos-mostrados';
+    let mostrados = [];
+    try { mostrados = JSON.parse(sessionStorage.getItem(CLAVE) || '[]'); } catch (e) { /* sin almacenamiento: se muestran */ }
+    const nuevos = (avisos || []).filter((a) => !mostrados.includes(a.clave));
+    if (!nuevos.length) return;
+    try { sessionStorage.setItem(CLAVE, JSON.stringify([...mostrados, ...nuevos.map((a) => a.clave)])); } catch (e) { /* solo esta vez */ }
+    const iconos = { critico: 'error', serio: 'warning', aviso: 'warning', info: 'info' };
+    const MAXIMO = 3;
+    const cola = nuevos.slice(0, MAXIMO);
+    if (nuevos.length > MAXIMO) {
+        cola.push({ nivel: 'info', etiqueta: 'Avisos', texto: `Y ${nuevos.length - MAXIMO} más en la campana.`, url: urlCampana });
+    }
+    const toast = Swal.mixin({
+        toast: true, position: 'top-end', timer: 4500, timerProgressBar: true, showConfirmButton: false, showCloseButton: true,
+        backdrop: false, customClass: { popup: 'swal2-custom-popup' },
+        didOpen: (el) => {
+            if (document.documentElement.classList.contains('dark')) el.classList.add('dark');
+            el.addEventListener('mouseenter', Swal.stopTimer);
+            el.addEventListener('mouseleave', Swal.resumeTimer);
+        },
+    });
+    (async () => {
+        for (const a of cola) {
+            const resultado = await toast.fire({ icon: iconos[a.nivel] || 'info', title: a.etiqueta, text: a.texto,
+                didRender: (el) => { if (a.url) { el.style.cursor = 'pointer'; el.addEventListener('click', (e) => { if (!e.target.closest('.swal2-close')) window.location = a.url; }); } } });
+            if (resultado.dismiss === Swal.DismissReason.close) break;
+        }
+    })();
+};

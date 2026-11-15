@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\ExcedePresupuesto;
+use App\Models\CategoriaPersonal;
 use App\Models\Compromiso;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
@@ -47,6 +48,37 @@ class PresupuestoTraspasoService
     }
 
     /**
+     * Una categoría de gasto sin presupuesto en un ciclo que sí tiene presupuestos: se trata como un presupuesto de $0,
+     * así el gasto avisa y se puede cubrir con otras categorías para no pasarse del tope. No se guarda hasta que se
+     * cubre (revisar); con «pasarme» el gasto queda fuera de presupuesto. Null si la categoría no cuenta como gasto
+     * (préstamos, pagos de tarjeta, movimientos entre cuentas…) o si el ciclo no tiene presupuestos.
+     */
+    public function presupuestoEnCero(?int $hogarId, ?int $categoriaId, string $fecha): ?Compromiso
+    {
+        $categoria = $hogarId && $categoriaId ? CategoriaPersonal::find($categoriaId) : null;
+        $fuera = array_merge(DashboardService::FUERA_DEL_TOPE, DashboardService::NO_SON_GASTO);
+        if (! $categoria || $categoria->tipo !== 'egreso' || in_array($categoria->nombre, $fuera, true)) {
+            return null;
+        }
+        $otro = Compromiso::with('user')->where('hogar_id', $hogarId)->where('es_presupuesto', true)->where('estado', Compromiso::PENDIENTE)
+            ->whereNotNull('ciclo_inicio')->get()
+            ->first(function (Compromiso $p) use ($fecha) {
+                [$inicio, $fin] = $this->ciclos->cycleFor($p->user, $p->ciclo_inicio);
+
+                return $fecha >= $inicio->toDateString() && $fecha <= $fin->toDateString();
+            });
+        if (! $otro) {
+            return null;
+        }
+        $presupuesto = new Compromiso(['user_id' => $otro->user_id, 'categoria_personal_id' => $categoria->id, 'descripcion' => $categoria->nombre,
+            'monto' => 0, 'saldo_pendiente' => 0, 'ciclo_inicio' => $otro->ciclo_inicio, 'medio_pago' => $otro->medio_pago,
+            'es_presupuesto' => true, 'estado' => Compromiso::PENDIENTE]);
+        $presupuesto->hogar_id = $hogarId;
+
+        return $presupuesto->setRelation('user', $otro->user)->setRelation('categoria', $categoria);
+    }
+
+    /**
      * Si un gasto de $monto en la categoría pasa su presupuesto ($sin = el movimiento que se edita, como si no
      * existiera): el presupuesto, cuánto le quedaba, cuánto se pasa y lo que les queda a las demás del ciclo. Null si no se pasa.
      *
@@ -54,7 +86,7 @@ class PresupuestoTraspasoService
      */
     public function exceso(?int $hogarId, ?int $categoriaId, string $fecha, float $monto, ?Model $sin = null): ?array
     {
-        $presupuesto = $this->presupuestoPara($hogarId, $categoriaId, $fecha);
+        $presupuesto = $this->presupuestoPara($hogarId, $categoriaId, $fecha) ?? $this->presupuestoEnCero($hogarId, $categoriaId, $fecha);
         if (! $presupuesto) {
             return null;
         }
@@ -85,8 +117,13 @@ class PresupuestoTraspasoService
         $nombre = $p->categoria?->nombre ?? $p->descripcion;
         $disponible = round((float) $exceso['opciones']->sum('disponible'), 2);
 
+        $sinPresupuesto = ! $p->exists;
+
         return [
-            'mensaje' => "Con este gasto te pasas del presupuesto de «{$nombre}» por \$ ".number_format($exceso['excedente'], 2).'.',
+            'mensaje' => $sinPresupuesto
+                ? "«{$nombre}» no tenía presupuesto en este ciclo: con este gasto te pasas del tope por \$ ".number_format($exceso['excedente'], 2).'.'
+                : "Con este gasto te pasas del presupuesto de «{$nombre}» por \$ ".number_format($exceso['excedente'], 2).'.',
+            'sin_presupuesto' => $sinPresupuesto,
             'presupuesto_id' => $p->id, 'descripcion' => $p->descripcion, 'categoria' => $nombre, 'color' => $p->categoria?->color,
             'queda' => $dinero($exceso['queda']), 'gasto' => $dinero($exceso['gasto']), 'excedente' => $dinero($exceso['excedente']),
             'disponible' => $dinero($disponible), 'alcanza' => $disponible >= $exceso['excedente'],
@@ -143,8 +180,13 @@ class PresupuestoTraspasoService
             }
             throw new ExcedePresupuesto($this->detalle($exceso));
         }
+        $lista = $this->validar($exceso, $data['traspasos'] ?? []);
+        if (! $exceso['presupuesto']->exists) {
+            // Se cubrió un gasto de una categoría sin presupuesto: desde ahora tiene uno en este ciclo, con lo que recibe.
+            $exceso['presupuesto']->save();
+        }
 
-        return $this->validar($exceso, $data['traspasos'] ?? []);
+        return $lista;
     }
 
     /**

@@ -9,9 +9,10 @@
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
                     </span>
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100" x-text="modo === 'gasto' ? 'Este gasto pasa tu presupuesto' : (repartir ? 'Pasar presupuesto a otras categorías' : 'Este presupuesto se pasó')"></h2>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100" x-text="modo === 'gasto' ? (detalle.sin_presupuesto ? 'Esta categoría no tenía presupuesto' : 'Este gasto pasa tu presupuesto') : (repartir ? 'Pasar presupuesto a otras categorías' : 'Este presupuesto se pasó')"></h2>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            <template x-if="modo === 'gasto'"><span>A «<span class="font-medium" x-text="detalle.categoria"></span>» le quedan <span x-text="dinero(centavos(detalle.queda))"></span> y el gasto es de <span x-text="dinero(centavos(detalle.gasto))"></span>: te pasarías por <span class="font-semibold text-red-600 dark:text-red-400" x-text="dinero(excedente)"></span>.</span></template>
+                            <template x-if="modo === 'gasto' && detalle.sin_presupuesto"><span>«<span class="font-medium" x-text="detalle.categoria"></span>» no tiene presupuesto en este ciclo<span x-show="centavos(detalle.queda) < 0"> y ya lleva <span x-text="dinero(-centavos(detalle.queda))"></span> gastados</span>. Si lo guardas, te pasas del tope por <span class="font-semibold text-red-600 dark:text-red-400" x-text="dinero(excedente)"></span>. ¿Aun así deseas guardarlo?</span></template>
+                            <template x-if="modo === 'gasto' && !detalle.sin_presupuesto"><span>A «<span class="font-medium" x-text="detalle.categoria"></span>» le quedan <span x-text="dinero(centavos(detalle.queda))"></span> y el gasto es de <span x-text="dinero(centavos(detalle.gasto))"></span>: te pasarías por <span class="font-semibold text-red-600 dark:text-red-400" x-text="dinero(excedente)"></span>.</span></template>
                             <template x-if="repartir"><span>A «<span class="font-medium" x-text="detalle.categoria"></span>» le quedan <span class="font-semibold text-green-600 dark:text-green-400" x-text="dinero(centavos(detalle.disponible))"></span>. Pásalo a las categorías que sí lo van a usar.</span></template>
                             <template x-if="modo === 'manual'"><span>«<span class="font-medium" x-text="detalle.categoria"></span>» se pasó por <span class="font-semibold text-red-600 dark:text-red-400" x-text="dinero(excedente)"></span>.</span></template>
                         </p>
@@ -54,7 +55,7 @@
 
                 <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-700">
                     <button type="button" class="rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700" @click="cerrar(null)">Cancelar</button>
-                    <button type="button" x-show="modo === 'gasto'" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" @click="cerrar({ modo: 'pasarme' })">Guardar y pasarme</button>
+                    <button type="button" x-show="modo === 'gasto'" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" @click="cerrar({ modo: 'pasarme' })" x-text="detalle.sin_presupuesto ? 'Guardarlo sin presupuesto' : 'Guardar y pasarme'"></button>
                     <button type="button" x-show="filas.length" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!valido" @click="cubrir()" x-text="modo === 'gasto' ? 'Cubrir y guardar' : (repartir ? 'Pasar' : 'Cubrir')"></button>
                 </div>
             </div>
