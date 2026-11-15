@@ -454,14 +454,14 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Categorías personales | ✅ (faltan categorías del sistema e iconos) |
 | Efectivo | ✅ |
 | Wizard | 🔄 |
-| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie; presupuestos por categoría que se descuentan con los gastos (y con los compromisos pendientes de su categoría), con la lista de esos gastos; tope de gasto del ciclo en el inicio; orden por estado por defecto: web, API, Android e iOS 11/11/2026; mover presupuesto entre categorías al pasarse: 13/11/2026) |
+| Compromisos | ✅ web (pagar desde efectivo, cuenta u otra tarjeta; editar la regla de una serie; presupuestos por categoría que se descuentan con los gastos (y con los compromisos pendientes de su categoría), con la lista de esos gastos; tope de gasto del ciclo en el inicio; orden por estado por defecto: web, API, Android e iOS 11/11/2026; mover presupuesto entre categorías al pasarse: 13/11/2026; un gasto en una categoría sin presupuesto pregunta antes de guardarse —cubrirlo con otras categorías o guardarlo sin presupuesto—: web, API, Android e iOS 15/11/2026) |
 | Tarjetas de crédito (cortes, cuotas, avances, mora, pagar de más con saldo a favor, intereses bonificables) | ✅ (pagar de más: web, API, Android e iOS 30/10/2026; intereses bonificables del último corte apartados del disponible hasta el corte siguiente, opción por tarjeta «los cargos del banco restan del disponible» (Davivienda solo resta el capital) y detalle del corte ordenable: web, API, Android e iOS 11/11/2026) |
 | Cuentas bancarias y billeteras, transferencias, pagar compromisos desde cuenta | ✅ |
 | Hogar: miembros, invitaciones, quién lo hizo, titulares | ✅ |
 | Contactos (foto privada, "¿con quién?") y "Nos deben"; "me lo debe" sobre un gasto ya registrado | ✅ (me lo debe: 04/11/2026) |
 | Préstamos: pagos con desglose, proyecciones y simulador | ✅ |
 | Ingresos con desglose (sueldos, servicios profesionales) | ✅ |
-| Dashboard (inicio) e intereses de tarjeta | ✅ |
+| Dashboard (inicio) e intereses de tarjeta | ✅ (15/11/2026: el tope cuadra con los presupuestos —tope − gastado − por pagar = sin asignar + lo que queda en los presupuestos − lo fuera de presupuesto—; categorías sin presupuesto en rojo con sus gastos y lo por pagar; avisos al entrar; préstamos del ciclo —cuota, si ya se pagó y lo pagado de más; la parte de planilla va dentro del pago—; avances y pagos entre tarjetas con el total sacado, solo si hubo; el cuadro de tarjetas al final. Web, API, Android e iOS) |
 | Proyecciones (parte 1: foto de hoy con datos reales, escenarios con palancas —préstamo, venta, gasto, ingreso, algo de una vez, pagar una deuda—, comparación de hasta 3 con «Si sigo igual», gráfica y fecha en cero de cada deuda) | ✅ web 11/11/2026 · ✅ parte 2: orden de pago (más cara, más pequeña o propio), metas (cuánto más al mes para llegar a tiempo) y pasar una deuda a cuotas · ✅ parte 3: API (`/api/proyecciones`: foto, escenarios, comparación con ?ver=; crear, editar y eliminar) y pantalla en Android e iOS para ver y comparar (los escenarios se arman en la web) |
 | Eventos: dividir la cuenta (consumos, propina, festejados), cobrar o marcar quién pagó, imagen para compartir | ✅ (30/10/2026) |
 | Reportes | ✅ |
@@ -481,7 +481,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | `/api/contactos` (CRUD, `?filtro=deben`, detalle con deudas y pagos, `GET /api/contactos/{id}/foto`), `POST /api/contactos/{id}/deudas`, `POST /api/contactos/{id}/pagos`, `DELETE /api/deudas/{id}`, `DELETE /api/deuda-pagos/{id}`; `contacto` en efectivo y compromisos | ✅ |
 | `/api/prestamos` (CRUD, detalle con pagos y desglose sugerido, `datos` con lo guardado para editar), `GET /api/prestamos/{id}/proyeccion`, `POST /api/prestamos/{id}/pagos`, `DELETE /api/prestamo-pagos/{id}` | ✅ |
 | `/api/ingresos` (fuentes CRUD, detalle con pagos), `GET /api/ingresos/{id}/propuesta`, `POST /api/ingresos/{id}/recibos`, `DELETE /api/recibos/{id}` | ✅ |
-| `GET /api/dashboard` (resumen de inicio) | ✅ |
+| `GET /api/dashboard` (resumen de inicio; `tope` con `comprometido`, `presupuestado`, `sin_asignar`, `fuera` —con `movimientos` y `pendientes`— y `fuera_total`; `prestamos_ciclo`; `avances_ciclo` con `total`) | ✅ (15/11/2026) |
 | `/api/cuentas` (lista con saldo, detalle por ciclo con resumen y movimientos, CRUD), `POST/PUT/DELETE /api/cuentas/{id}/movimientos/{mov}` | ✅ |
 | `GET /api/transferencias/opciones`, `POST /api/transferencias` (origen tarjeta = avance), `DELETE /api/transferencias/{id}` | ✅ |
 | `/api/tarjetas` (lista con deuda, disponible, próximo corte y pago; detalle con lo que entra al corte, cuotas, estados de cuenta y costo de no pagar; CRUD), `POST/PUT/DELETE /api/tarjetas/{id}/movimientos/{mov}` | ✅ |
@@ -493,7 +493,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 |---|---|
 | Login, registro, Google, olvido/reset de contraseña; la sesión se restaura sola y un 401 regresa al login | ✅ |
 | Navegación inferior: Inicio · Efectivo · Tarjetas · Compromisos · Más | ✅ |
-| Inicio (`/api/dashboard`): disponible real, avisos, próximos pagos, tarjetas, cuentas con logo, deudas, gastos por categoría, historial | ✅ |
+| Inicio (`/api/dashboard`): disponible real, gasto del ciclo (tope con lo por pagar, presupuestos, categorías sin presupuesto que se abren con sus gastos), préstamos del ciclo, avances entre tarjetas, avisos, próximos pagos, cuentas, deudas, gastos por categoría, historial y tarjetas al final | ✅ (15/11/2026) |
 | Efectivo: ciclos anterior/siguiente, resumen, filtro, registrar/editar/eliminar con categoría, "¿quién?" y "¿con quién?" | ✅ |
 | Compromisos: filtros por período y estado, detalle, pagar desde efectivo/cuenta/otra tarjeta, cancelar pago o serie | ✅ |
 | Cuentas: lista con logo y saldo, detalle por ciclo, registrar/editar/eliminar movimientos, eliminar transferencias | ✅ |
@@ -517,7 +517,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 | Pantalla | Estado |
 |---|---|
 | Login, registro, Google, olvido/reset de contraseña | ✅ |
-| Inicio (disponible real, próximos pagos, tarjetas, cuentas, deudas, gastos del ciclo) con acceso a cada cuenta, tarjeta y "nos deben" | ✅ (21/10/2026) |
+| Inicio (disponible real, próximos pagos, tarjetas, cuentas, deudas, gastos del ciclo) con acceso a cada cuenta, tarjeta y "nos deben" | ✅ (21/10/2026; 15/11/2026: igual que Android —tope con lo por pagar, categorías sin presupuesto con sus gastos, préstamos del ciclo, avances entre tarjetas con total, tarjetas al final—) |
 | Efectivo por ciclo: registrar, editar, eliminar; movimientos ligados con candado | ✅ |
 | Compromisos: lista por período y estado, pagar (efectivo, cuenta u otra tarjeta), crear (único o recurrente), editar un pago, editar la serie, cancelar | ✅ |
 | Cuentas: saldo, ciclo, resumen, movimientos (registrar/editar/eliminar), transferir y eliminar transferencias | ✅ |
@@ -531,7 +531,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 | Eventos: lista, formulario con cálculo en vivo, detalle con cobrar / ya pagó, compartir la imagen (Vista previa) | ✅ (30/10/2026) |
 
 ### Calidad
-- 189 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
+- 238 tests automáticos (web y API: auth, perfil, categorías, efectivo, ciclos, compromisos, pago con tarjeta, cuentas, transferencias, tarjetas, hogar, contactos y deudas, préstamos, ingresos, dashboard, permisos, catálogos de tipos)
 - Ojo: los tests usan SQLite; PostgreSQL no admite `ORDER BY` en consultas con agregados → las relaciones que se suman (`pagos()`, `cargos()`, `deudas()`) no llevan orden
 - Los tests usan SQLite en memoria; `tests/TestCase.php` impide que borren la base de desarrollo
 
@@ -553,6 +553,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 11. **Móviles al día:** Android ✅ base + inicio, efectivo y compromisos (20/10/2026); ✅ API y pantallas de cuentas, transferencias y tarjetas (21/10/2026). ✅ contactos, préstamos, ingresos, crear compromisos, formularios de alta, perfil, categorías y fotos (21/10/2026). iOS ✅ a la par de Android (21/10/2026). ✅ API de cargos fijos (`/api/tarjetas/{id}/cargos-fijos`) y plantilla de una fuente en ambas apps: los 3 a la par
 12. ~~Reportes~~ ✅ (22/10/2026: ejecución financiera, gastos por categoría, estado de cuenta y préstamos, en web, API y apps; PDF, Excel y CSV)
 12a. **"Me lo debe" en la API y las apps:** endpoint para ligar un gasto ya registrado a una deuda y casilla en la compra con tarjeta (web ✅ 04/11/2026)
+12a2. ~~Inicio: tope que cuadra con los presupuestos, gastos fuera de presupuesto, préstamos y avances del ciclo~~ ✅ (15/11/2026, web, API, Android e iOS)
 12b. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · ~~Eventos~~ ✅ (30/10/2026) · Notificaciones push
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
@@ -571,7 +572,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 
 ### Navegación entre pantallas (web)
 - `GET /movimientos/{efectivo|cuenta|tarjeta}/{id}` (`IrAMovimientoController`): lleva al movimiento en su pantalla, ciclo y página del listado y lo resalta (`?resaltar=ID`; filas con `data-record-id` en tablas AJAX o `data-movimiento` en listas fijas y estados de cuenta). Si ya se facturó, abre el estado de cuenta donde quedó.
-- `?desde=contacto:ID | prestamo:ID | tarjeta:ID` muestra "← Volver a …" (`<x-volver />`, `App\Support\Volver`). Solo pantallas conocidas y registros del hogar: nunca una URL libre.
+- `?desde=contacto:ID | prestamo:ID | tarjeta:ID | compromiso:ID | inicio` muestra "← Volver a …" (`<x-volver />`, `App\Support\Volver`). Solo pantallas conocidas y registros del hogar: nunca una URL libre.
 - La ficha del contacto enlaza cada movimiento, compromiso, préstamo, deuda y pago con su detalle.
 - Las tarjetas muestran la foto del titular (web y Android) en hogares de varios miembros.
 
