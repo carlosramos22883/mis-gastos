@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CargoFijoController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\CategoriaController;
+use App\Http\Controllers\Api\CompraController;
 use App\Http\Controllers\Api\CompromisoController;
 use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\CuentaController;
@@ -15,10 +16,12 @@ use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\HogarController;
 use App\Http\Controllers\Api\IngresoController;
 use App\Http\Controllers\Api\PrestamoController;
+use App\Http\Controllers\Api\ProductoController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProyeccionController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\TarjetaController;
+use App\Http\Controllers\Api\TiendaController;
 use App\Http\Controllers\Api\TransferenciaController;
 use App\Http\Requests\ReporteRequest;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +50,47 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::name('api.')->group(function () {
         Route::get('/catalogos', CatalogoController::class)->name('catalogos');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+        // Despensa y compras
+        Route::get('productos/codigo/{codigo}', [ProductoController::class, 'porCodigo'])->middleware('can:despensa.view')->name('productos.codigo');
+        Route::apiResource('productos', ProductoController::class)
+            ->middlewareFor(['index', 'show'], 'can:despensa.view')
+            ->middlewareFor('store', 'can:despensa.create')
+            ->middlewareFor('update', 'can:despensa.edit')
+            ->middlewareFor('destroy', 'can:despensa.delete');
+        Route::controller(ProductoController::class)->prefix('productos/{producto}')->name('productos.')->group(function () {
+            Route::get('foto', 'foto')->middleware('can:despensa.view')->name('foto');
+            Route::patch('despensa', 'despensa')->middleware('can:despensa.edit')->name('despensa');
+            Route::post('precios', 'anotarPrecio')->middleware('can:despensa.edit')->name('precios.store');
+            Route::delete('precios/{precio}', 'eliminarPrecio')->middleware('can:despensa.edit')->name('precios.destroy');
+            Route::get('en-linea/{fuente}', 'buscarEnLinea')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('en-linea.buscar');
+            Route::post('en-linea/{fuente}', 'enlazar')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('en-linea.store');
+            Route::delete('en-linea/{fuente}', 'desenlazar')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('en-linea.destroy');
+        });
+        Route::post('tiendas/comunes', [TiendaController::class, 'comunes'])->middleware('can:despensa.create')->name('tiendas.comunes');
+        Route::apiResource('tiendas', TiendaController::class)->except('show')
+            ->middlewareFor('index', 'can:despensa.view')
+            ->middlewareFor('store', 'can:despensa.create')
+            ->middlewareFor('update', 'can:despensa.edit')
+            ->middlewareFor('destroy', 'can:despensa.delete');
+        Route::controller(CompraController::class)->prefix('compras')->name('compras.')->group(function () {
+            Route::get('/', 'index')->middleware('can:despensa.view')->name('index');
+            Route::post('/', 'store')->middleware('can:despensa.create')->name('store');
+            Route::get('{lista}', 'show')->middleware('can:despensa.view')->name('show');
+            Route::delete('{lista}', 'destroy')->middleware('can:despensa.delete')->name('destroy');
+            Route::post('{lista}/faltantes', 'faltantes')->middleware('can:despensa.edit')->name('faltantes');
+            Route::post('{lista}/terminar', 'terminar')->middleware('can:despensa.edit')->name('terminar');
+            Route::patch('{lista}/tienda', 'tienda')->middleware('can:despensa.edit')->name('tienda');
+            Route::post('{lista}/items', 'agregarItem')->middleware('can:despensa.edit')->name('items.store');
+            Route::patch('{lista}/items/{item}', 'actualizarItem')->middleware('can:despensa.edit')->name('items.update');
+            Route::delete('{lista}/items/{item}', 'quitarItem')->middleware('can:despensa.edit')->name('items.destroy');
+            Route::get('{lista}/pagar', 'datosPago')->middleware('can:despensa.edit')->name('pagar');
+            Route::post('{lista}/pagar', 'pagar')->middleware('can:despensa.edit')->name('pagar.store');
+            Route::delete('{lista}/pagos/{pago}', 'deshacerPago')->middleware('can:despensa.edit')->name('pagos.destroy');
+            Route::post('{lista}/consultas', 'iniciarConsulta')->middleware('can:despensa.edit')->name('consultas.store');
+            Route::post('{lista}/consultas/{consulta}/siguiente', 'siguiente')->middleware('can:despensa.edit')->name('consultas.siguiente');
+            Route::get('{lista}/ruta', 'ruta')->middleware('can:despensa.view')->name('ruta');
+        });
 
         Route::apiResource('contactos', ContactoController::class)
             ->middlewareFor(['index', 'show'], 'can:contactos.view')

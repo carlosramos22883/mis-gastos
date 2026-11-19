@@ -365,8 +365,12 @@ Ejemplo: disponible $1,000, compra TV $600 en 6 cuotas → disponible $400 y 6 c
    - Prueba todas las combinaciones de tiendas (máx. 2⁷ − 1 = 127): cada cosa va a la más barata de la combinación; gana la que deja **menos cosas sin precio** y, entre esas, la de menor **total + costo de ir × (tiendas − 1)** (empate: menos tiendas). Una tienda que no aporta nada no entra.
    - «Ir a otra tienda me cuesta» (gasolina, tiempo, parqueo; $2.00 por defecto, se recuerda en el navegador). Compara con la mejor de una sola tienda: «Todo en Walmart saldría en $9.60: te ahorras $1.60»; si ninguna tiene todo, lo dice.
    - Por tienda: cosas, precio c/u con su antigüedad (más de 7 días en amarillo) y subtotal; «Estoy aquí →» elige esa tienda en la lista. Lo anotado o sin ningún precio queda en «Sin precio».
-6. ⏳ API, Android (escanear código de barras con la cámara) e iOS.
-7. ⏳ **Quitar el fondo de las fotos** (propuesto 18/11/2026): contenedor propio con `rembg` (MIT) para fotos de productos, contactos y perfiles, y borrado del color de fondo (sin IA) para logos de bancos y marcas de red. Resultado transparente (PNG/WebP) mostrado sobre blanco; vista previa en el recortador con «Quitar fondo: sí/no»; guardar siempre la original. Antes: prueba de calidad con 5–6 fotos reales y revisar el espacio en disco.
+6. ✅ **API, Android e iOS** (18/11/2026):
+   - API (`Api\ProductoController`, `Api\TiendaController`, `Api\CompraController`; recursos `ProductoResource`, `TiendaResource`, `ListaCompraResource`): productos (filtros, `productos/codigo/{codigo}` al escanear, foto privada, despensa, precios, ligas en línea), tiendas (y «las de siempre»), compras (lista, cosas, tienda, faltantes, terminar, «Pagar aquí» con su aviso de presupuesto por clave, deshacer, consulta de uno en uno, ruta). `/api/catalogos` trae `categorias_despensa` y los valores fijos (`despensa`). Pruebas `Api/DespensaApiTest`.
+   - Android: Despensa (escáner de Google Play Services, sin permiso de cámara), producto (foto, precios, en línea), tiendas, listas, lista (carrito, «No había», precio c/u, pagar con extras y categoría nueva, aviso de presupuesto por categoría, deshacer, consultar precios, ruta). Probado en el emulador.
+   - iOS: las mismas pantallas (escáner con VisionKit; permiso de cámara en el Info). Probado en el simulador con `ArranqueDebug` (`mas:despensa`, `mas:producto:ID`, `mas:lista:ID`, hoja `pagar` o `ruta`).
+   - Seguridad (Android e iOS): el token solo se manda a la API; antes también iba a las imágenes de otros sitios (ahora hay fotos de Walmart).
+7. ⏸️ **Quitar el fondo de las fotos** (propuesto 18/11/2026; pospuesto para mucho más adelante por falta de espacio en disco): contenedor propio con `rembg` (MIT) para fotos de productos, contactos y perfiles, y borrado del color de fondo (sin IA) para logos de bancos y marcas de red. Resultado transparente (PNG/WebP) mostrado sobre blanco; vista previa en el recortador con «Quitar fondo: sí/no»; guardar siempre la original. Antes: prueba de calidad con 5–6 fotos reales y revisar el espacio en disco.
 
 ### Logos y colores
 - **Bancos y emisores** (catálogo `bancos` con `tipo`: banco, tienda, financiera, cooperativa; ej. Credisiman = tienda) y marcas de red tienen logo en su catálogo (Configuración).
@@ -505,7 +509,7 @@ Registro de cada corte: fecha, efectivo, monto de cada cuenta, disponible de cad
 | Proyecciones (parte 1: foto de hoy con datos reales, escenarios con palancas —préstamo, venta, gasto, ingreso, algo de una vez, pagar una deuda—, comparación de hasta 3 con «Si sigo igual», gráfica y fecha en cero de cada deuda) | ✅ web 11/11/2026 · ✅ parte 2: orden de pago (más cara, más pequeña o propio), metas (cuánto más al mes para llegar a tiempo) y pasar una deuda a cuotas · ✅ parte 3: API (`/api/proyecciones`: foto, escenarios, comparación con ?ver=; crear, editar y eliminar) y pantalla en Android e iOS para ver y comparar (los escenarios se arman en la web) |
 | Eventos: dividir la cuenta (consumos, propina, festejados), cobrar o marcar quién pagó, imagen para compartir | ✅ (30/10/2026) |
 | Reportes | ✅ |
-| Despensa: productos (foto, marca, presentación, código de barras, categoría, importancia, duración, cantidad ideal y aviso) y lo que hay en casa (sumar/restar, se está acabando, se acabó, vencimiento, pestaña Faltan) | ✅ partes 1 a 3 con la lista de compras, tiendas, precios, «No había», «Pagar aquí», precios en línea y ruta de compra (18/11/2026); API y apps ⏳ |
+| Despensa: productos (foto, marca, presentación, código de barras, categoría, importancia, duración, cantidad ideal y aviso) y lo que hay en casa (sumar/restar, se está acabando, se acabó, vencimiento, pestaña Faltan) | ✅ partes 1 a 3 con la lista de compras, tiendas, precios, «No había», «Pagar aquí», precios en línea, ruta de compra, API, Android e iOS (18/11/2026) |
 
 ### API (para móviles)
 | Endpoint | Estado |
@@ -596,7 +600,7 @@ SwiftUI + `@Observable`; cliente propio `API` (snake_case ↔ camelCase, token d
 12a. **"Me lo debe" en la API y las apps:** endpoint para ligar un gasto ya registrado a una deuda y casilla en la compra con tarjeta (web ✅ 04/11/2026)
 12a2. ~~Inicio: tope que cuadra con los presupuestos, gastos fuera de presupuesto, préstamos y avances del ciclo~~ ✅ (15/11/2026, web, API, Android e iOS)
 12b. Categorías del sistema con iconos · Wizard (cuentas y tarjetas) · ~~Eventos~~ ✅ (30/10/2026) · Notificaciones push
-12c. **Despensa y compras** (5.9): ~~productos~~ ✅ y ~~despensa~~ ✅ y ~~lista de compras~~ ✅ y ~~tiendas y precios~~ ✅ y ~~«Pagar aquí»~~ ✅ y ~~precios en línea~~ ✅ y ~~ruta de compra~~ ✅ web 18/11/2026 → API y apps
+12c. **Despensa y compras** (5.9): ~~productos~~ ✅ y ~~despensa~~ ✅ y ~~lista de compras~~ ✅ y ~~tiendas y precios~~ ✅ y ~~«Pagar aquí»~~ ✅ y ~~precios en línea~~ ✅ y ~~ruta de compra~~ ✅ web, ~~API y apps~~ ✅ 18/11/2026 (quitar el fondo de las fotos: pospuesto)
 13. **Asesor con IA:** el sistema calcula los escenarios y una IA (proveedor intercambiable) da el consejo; se le manda un resumen sin datos identificables
 
 ---

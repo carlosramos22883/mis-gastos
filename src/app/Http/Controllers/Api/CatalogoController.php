@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Catalogos\Catalogo;
+use App\Models\Catalogos\CategoriaDespensa;
 use App\Models\Catalogos\ConceptoPlanilla;
 use App\Models\Catalogos\TipoContacto;
 use App\Models\Catalogos\TipoEmisor;
@@ -12,13 +13,15 @@ use App\Models\Catalogos\TipoIngreso;
 use App\Models\Catalogos\TipoPrestamo;
 use App\Models\MarcaRed;
 use App\Models\Moneda;
+use App\Models\Producto;
+use App\Models\Tienda;
 use App\Models\TipoCuenta;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Catálogos', description: 'Catálogos activos para llenar selectores en las apps')]
 class CatalogoController extends Controller
 {
-    #[OA\Get(path: '/api/catalogos', summary: 'Monedas, bancos y emisores, tipos (cuenta, contacto, emisor, préstamo, ingreso), marcas de red y conceptos de planilla activos', tags: ['Catálogos'], security: [['bearerAuth' => []]],
+    #[OA\Get(path: '/api/catalogos', summary: 'Monedas, bancos y emisores, tipos (cuenta, contacto, emisor, préstamo, ingreso), marcas de red, conceptos de planilla y categorías de despensa activos; valores fijos de la despensa', tags: ['Catálogos'], security: [['bearerAuth' => []]],
         responses: [new OA\Response(response: 200, description: 'Catálogos'), new OA\Response(response: 401, description: 'No autenticado')])]
     public function __invoke()
     {
@@ -33,6 +36,10 @@ class CatalogoController extends Controller
             'tipos_prestamo' => $this->simple(TipoPrestamo::class),
             'tipos_ingreso' => $this->simple(TipoIngreso::class),
             'conceptos_planilla' => ConceptoPlanilla::where('activo', true)->ordenados()->get(['id', 'nombre', 'tipo', 'porcentaje', 'tope', 'monto', 'descripcion']),
+            'categorias_despensa' => $this->simple(CategoriaDespensa::class),
+            // Valores fijos de la despensa (clave => texto)
+            'despensa' => ['importancias' => Producto::IMPORTANCIAS, 'duraciones' => Producto::DURACIONES, 'unidades' => Producto::UNIDADES,
+                'fuentes' => Tienda::FUENTES, 'tiendas_comunes' => Tienda::COMUNES],
             'marcas_red' => MarcaRed::where('activo', true)->orderBy('nombre')->get()->map(fn ($m) => ['id' => $m->id, 'nombre' => $m->nombre, 'color' => $m->color, 'logo_url' => $logo($m->logo)]),
         ]);
     }

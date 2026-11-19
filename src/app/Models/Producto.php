@@ -71,9 +71,9 @@ class Producto extends Model
     }
 
     /** URL de la foto (servida solo a miembros del hogar), o null. */
-    public function urlFoto(): ?string
+    public function urlFoto(bool $api = false): ?string
     {
-        return $this->foto ? route('productos.foto', ['producto' => $this->id, 'v' => substr(md5($this->foto), 0, 8)]) : null;
+        return $this->foto ? route($api ? 'api.productos.foto' : 'productos.foto', ['producto' => $this->id, 'v' => substr(md5($this->foto), 0, 8)]) : null;
     }
 
     /** Ligas con su producto en las tiendas en línea (una por fuente). */

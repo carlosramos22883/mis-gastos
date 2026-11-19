@@ -699,7 +699,7 @@
                 "tags": [
                     "Catálogos"
                 ],
-                "summary": "Monedas, bancos y emisores, tipos (cuenta, contacto, emisor, préstamo, ingreso), marcas de red y conceptos de planilla activos",
+                "summary": "Monedas, bancos y emisores, tipos (cuenta, contacto, emisor, préstamo, ingreso), marcas de red, conceptos de planilla y categorías de despensa activos; valores fijos de la despensa",
                 "operationId": "f450d26c5031a51a64bc7dfdf8ccfd09",
                 "responses": {
                     "200": {
@@ -808,6 +808,330 @@
                     },
                     "422": {
                         "description": "En uso: desactivarla"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras": {
+            "get": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "La lista abierta (o null) y el historial (últimas 30)",
+                "operationId": "aec9e7fb057675eed94ae46fbd5141d2",
+                "responses": {
+                    "200": {
+                        "description": "abierta, historial, faltan (en la despensa)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Nueva lista con lo que falta en la despensa (o la abierta, si ya hay)",
+                "operationId": "7d7b7f238f2bb0700c471ad967038783",
+                "responses": {
+                    "201": {
+                        "description": "La lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}": {
+            "get": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Lista con pendientes, en el carrito, pagos, resumen y comparación de precios",
+                "operationId": "eb792743dd58e05d18b39a2a74baab1a",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No existe o es de otro hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Eliminar lista (sus gastos quedan como movimientos normales)",
+                "operationId": "636a698916c48c3e311b0cbc074367c0",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/faltantes": {
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Agregar lo que falta en la despensa",
+                "operationId": "680fc16b457ab0dc67ee38847f4d07ef",
+                "responses": {
+                    "200": {
+                        "description": "Lista (agregados = cuántos)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/terminar": {
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Terminar: lo comprado sube en la despensa",
+                "operationId": "06be25126e7914fee88154675e167ddb",
+                "responses": {
+                    "200": {
+                        "description": "Lista terminada (subieron = cuántos productos)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/tienda": {
+            "patch": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Elegir en qué tienda se está (tienda_id o null)",
+                "operationId": "094e68a027250d5d076180d07d025cb6",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/items": {
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Agregar un producto (producto_id) o algo anotado (descripcion), con cantidad",
+                "operationId": "ff98e61c5ced324f254bb7560381eab2",
+                "responses": {
+                    "201": {
+                        "description": "Lista"
+                    },
+                    "422": {
+                        "description": "Ya está o no es del hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/items/{item}": {
+            "delete": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Quitar de la lista",
+                "operationId": "4fd15227cdc5adae0e99e8abcc1a8bcc",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Cambiar cantidad, precio (c/u), comprado (al carrito) o no_habia",
+                "description": "Al echarlo al carrito toma la tienda elegida y su último precio por unidad. no_habia requiere tienda. Lo ya pagado no se cambia (422).",
+                "operationId": "7fc5dc4a626746585388e24b3c0d4ad4",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/pagar": {
+            "get": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Datos para «Pagar aquí» en la tienda elegida",
+                "operationId": "d4d9a23db4639e86e96f6223b4b50026",
+                "responses": {
+                    "200": {
+                        "description": "items por pagar, total sugerido, sin_precio, origenes, categorias, categoria sugerida, ciclo"
+                    },
+                    "404": {
+                        "description": "Lista terminada o sin tienda"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "«Pagar aquí»: un gasto por categoría",
+                "description": "origen (\"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\"), fecha, user_id, categoria (id o \"nueva:Nombre\"), monto_lista, extras_modo (ninguno | total | detalle), extras_total + extras_categoria, o extras[] {descripcion, precio, categoria}, confirmar (sobregirar tarjeta). Si una categoría pasa su presupuesto responde 422 con \"presupuesto\" (incluye \"clave\"): reenviar con presupuestos[clave] = {modo: cubrir | pasarme, traspasos[]}.",
+                "operationId": "31ce154b42b0aa9362630921c40afbea",
+                "responses": {
+                    "201": {
+                        "description": "Lista con el pago"
+                    },
+                    "422": {
+                        "description": "Validación, saldo, presupuesto o confirmar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/pagos/{pago}": {
+            "delete": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Deshacer un pago (borra sus gastos; lo comprado vuelve al carrito sin pagar)",
+                "operationId": "1a60678c380e9491c86c773b026a5349",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/consultas": {
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Empezar (o continuar) la consulta de precios en línea",
+                "description": "Devuelve consulta_id y estado; luego llamar a /siguiente hasta terminada = true, esperando \"espera\" ms si viene (pausa de 2 s). al_dia = true si todo ya era de hoy. 3 consultas por hogar al día.",
+                "operationId": "5519b8ce21b91aebc1b1cde6bb500daa",
+                "responses": {
+                    "200": {
+                        "description": "Consulta"
+                    },
+                    "422": {
+                        "description": "Sin tiendas en línea, nada ligado o límite del día"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/consultas/{consulta}/siguiente": {
+            "post": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Consultar el siguiente producto",
+                "operationId": "e54862c475a752b75ffeffc11043fcf0",
+                "responses": {
+                    "200": {
+                        "description": "hechos, total, nuevos, reusados, fallas, terminada, espera (ms, si fue muy pronto), producto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compras/{id}/ruta": {
+            "get": {
+                "tags": [
+                    "Compras"
+                ],
+                "summary": "Ruta de compra: en qué tiendas comprar lo que falta",
+                "operationId": "a0cf0bb93d9f495c9d9d96c7847fd9fe",
+                "parameters": [
+                    {
+                        "name": "costo",
+                        "in": "query",
+                        "description": "Lo que cuesta ir a una tienda más (por defecto 2.00)",
+                        "schema": {
+                            "type": "number"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "paradas[] {tienda, subtotal, items[]}, total, costo_ir, una_tienda, ahorro, sin_precio[], viejos"
                     }
                 },
                 "security": [
@@ -1059,6 +1383,111 @@
                     },
                     "422": {
                         "description": "Supera el saldo (salvo en una tarjeta) o el disponible"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compromisos/{id}/cubrir": {
+            "get": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Cuánto se pasó un presupuesto y de qué categorías se puede cubrir",
+                "description": "Mismo formato que \"presupuesto\" en el error 422 de un gasto que se pasa (excedente, opciones con su disponible). null si no se ha pasado.",
+                "operationId": "dd2750e9ee7dd929f7cc87b1074090b9",
+                "responses": {
+                    "200": {
+                        "description": "{data: detalle | null}"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Cubrir con otras categorías lo que se pasó un presupuesto",
+                "description": "traspasos = [{presupuesto_id, monto}]: cuánto se quita a cada una (sin pasar su disponible); deben sumar justo lo que se pasó.",
+                "operationId": "5d7e52f9c1f02b02b5cf0c84848ba4a6",
+                "responses": {
+                    "200": {
+                        "description": "El presupuesto actualizado"
+                    },
+                    "422": {
+                        "description": "No alcanza, sobra o una categoría no tiene tanto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compromisos/{id}/repartir": {
+            "get": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Lo que le queda a un presupuesto y a qué categorías se puede pasar",
+                "description": "disponible = lo que le queda; opciones = las demás del ciclo con lo que les queda ahora (puede ser negativo). null si no le queda nada.",
+                "operationId": "7c01b731d4419b660b88bfde325eb80d",
+                "responses": {
+                    "200": {
+                        "description": "{data: detalle | null}"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Pasar lo que le queda a un presupuesto a otras categorías",
+                "description": "traspasos = [{presupuesto_id, monto}]: cuánto recibe cada una; la suma no puede pasar lo que le queda.",
+                "operationId": "620598024ecaacf5cc3da715fc3eb53f",
+                "responses": {
+                    "200": {
+                        "description": "El presupuesto actualizado"
+                    },
+                    "422": {
+                        "description": "La suma pasa lo que le queda"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/presupuesto-traspasos/{id}": {
+            "delete": {
+                "tags": [
+                    "Compromisos"
+                ],
+                "summary": "Deshacer un movimiento de presupuesto hecho a mano",
+                "description": "Los que pidió un gasto regresan solos al borrar o cambiar ese gasto (422).",
+                "operationId": "f40cb47c637788bedb3e30c86e5e5c88",
+                "responses": {
+                    "204": {
+                        "description": "Deshecho"
+                    },
+                    "422": {
+                        "description": "Lo pidió un gasto"
                     }
                 },
                 "security": [
@@ -1494,6 +1923,7 @@
                     "Dashboard"
                 ],
                 "summary": "Página de inicio: ciclo, efectivo, cuentas, tarjetas, liquidez, deudas, gastos por categoría, historial y alertas",
+                "description": "tope: gastado + comprometido (por pagar) frente al tope; presupuestado, sin_asignar y fuera (por categoría sin presupuesto: categoria_id, gastado, comprometido, movimientos [clase, id, lugar_id = cuenta o tarjeta, fecha, descripcion, origen, monto] y pendientes [compromisos por pagar: id, descripcion, fecha, monto]). Siempre cuadra: queda = sin_asignar + suma de lo que queda en los presupuestos − fuera_total. prestamos_ciclo: cuotas y pagadas (cuántas), y por préstamo: cuota del mes, pagado (capital + interés + cargos + mora; la planilla va dentro), mora, pagada, fecha del último pago, extra (de más) y falta. avances_ciclo: por tarjeta, lo sacado (avances y pagos a otras tarjetas) y lo pagado a ella; flujos de dónde a dónde; total sacado (0 = no se muestra).",
                 "operationId": "de6c688e05d760f6cc5ea6518dbec04f",
                 "responses": {
                     "200": {
@@ -1659,7 +2089,7 @@
                     "Eventos"
                 ],
                 "summary": "Crear un evento",
-                "description": "Como una tabla. participantes: [{quien: \"miembro:{id}\" | id de contacto | \"nuevo:Nombre\", es_festejado}]; pagador: posición de quien pagó; consumos (productos): [{descripcion, precio (unitario), cantidades: [cuántos pidió cada participante, en su orden]}]; propina_tipo: ninguna | porcentaje (del consumo de cada uno) | monto (dividido entre todos) con propina_valor. La foto de la cuenta se sube aparte (POST /api/eventos/{id}/foto). Si pagó un miembro del hogar: origen (\"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" | \"ninguno\") y categoria_personal_id (si no es \"ninguno\"). Una tarjeta sin disponible responde 422 \"confirmar\": reenviar con confirmar = true.",
+                "description": "Como una tabla. participantes: [{quien: \"miembro:{id}\" | id de contacto | \"nuevo:Nombre\", es_festejado}]; pagador: posición de quien pagó; consumos (productos): [{descripcion, precio (unitario), compartido (opcional), cantidades: [cuántos pidió cada participante, en su orden]}]; un producto compartido (ej. una bandeja para todos) lleva el precio del producto completo y en cantidades las porciones de cada uno (1 = partes iguales); propina_tipo: ninguna | porcentaje (del consumo de cada uno) | monto (dividido entre todos) con propina_valor. La foto de la cuenta se sube aparte (POST /api/eventos/{id}/foto). Si pagó un miembro del hogar: origen (\"efectivo\" | \"cuenta:{id}\" | \"tarjeta:{id}\" | \"ninguno\") y categoria_personal_id (si no es \"ninguno\"). Una tarjeta sin disponible responde 422 \"confirmar\": reenviar con confirmar = true.",
                 "operationId": "8c4bb04a4eb4bfb2aeb768c5d1ce3778",
                 "requestBody": {
                     "content": {
@@ -2541,6 +2971,271 @@
                 ]
             }
         },
+        "/api/productos": {
+            "get": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Productos con lo que hay en casa (básicos primero)",
+                "description": "Filtros: buscar (nombre, marca o código), categoria (id), importancia (basico|ocasional), faltan=1, archivados=1. meta.resumen = {faltan, por_vencer}.",
+                "operationId": "70a301af8ea04ce2f2596a58758632cd",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Crear producto (multipart si lleva foto)",
+                "operationId": "4ff8851cb6bfe92aa226cdc804917ff0",
+                "responses": {
+                    "201": {
+                        "description": "Creado"
+                    },
+                    "422": {
+                        "description": "Error de validación (ej. ya existe)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/codigo/{codigo}": {
+            "get": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Buscar por código de barras (al escanear)",
+                "operationId": "b00320714102d79b7efe4f66b2c43712",
+                "responses": {
+                    "200": {
+                        "description": "El producto del hogar con ese código"
+                    },
+                    "404": {
+                        "description": "No está en la despensa: crearlo con ese código"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}": {
+            "get": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Producto con sus precios por tienda, historial y ligas en línea",
+                "operationId": "1884f1fc784a80f4976ac9c8d4ce887b",
+                "responses": {
+                    "200": {
+                        "description": "Detalle"
+                    },
+                    "404": {
+                        "description": "No existe o es de otro hogar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Actualizar producto (para cambiar la foto: POST con _method=PUT y multipart; quitar_foto=1 la quita)",
+                "operationId": "20275afdbab1759ad2d46f3dcfbeaeeb",
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Eliminar producto (y su foto)",
+                "operationId": "ea733033fbff1681e04f8c4d0e11e0bc",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}/foto": {
+            "get": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Foto del producto (privada)",
+                "operationId": "b435204b6c191751da92d907f93a5d22",
+                "responses": {
+                    "200": {
+                        "description": "Imagen"
+                    },
+                    "404": {
+                        "description": "Sin foto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}/despensa": {
+            "patch": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Cambio rápido de lo que hay en casa",
+                "description": "accion: sumar | restar | cantidad (valor = cuántos) | se_acabo | por_acabarse (valor 1/0) | no_llevar_cuenta | vence (valor = Y-m-d o vacío). Devuelve el estado.",
+                "operationId": "6448c99a3ec064202ca413bc1077bf8e",
+                "responses": {
+                    "200": {
+                        "description": "Estado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}/precios": {
+            "post": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Anotar un precio visto (tienda_id, precio, unidades = paquete de N, fecha)",
+                "operationId": "639f6a162f50915d2766d84a1ccb011f",
+                "responses": {
+                    "201": {
+                        "description": "Producto con sus precios"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}/precios/{precio}": {
+            "delete": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Eliminar un precio anotado",
+                "operationId": "caa80683e3bdc2df43108e8aca1824ac",
+                "responses": {
+                    "204": {
+                        "description": "Eliminado"
+                    },
+                    "404": {
+                        "description": "No es un precio anotado de este producto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/productos/{id}/en-linea/{fuente}": {
+            "get": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Buscar el producto en una tienda en línea para ligarlo",
+                "description": "fuente: walmart | donjuan | selectos. Sin q busca por código de barras y, si no sale, por nombre. 30 búsquedas por hogar por hora.",
+                "operationId": "1351b716e0b91b2d479cd301b619b9ac",
+                "responses": {
+                    "200": {
+                        "description": "resultados[]: codigo, nombre, marca, precio, ean, url, imagen, mismo_codigo"
+                    },
+                    "422": {
+                        "description": "Sin esa tienda, límite o tienda pausada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Ligar con un resultado (codigo, nombre, url, imagen, precio, unidades)",
+                "description": "Ligar Walmart liga también Don Juan (y al revés) si el hogar tiene esa tienda.",
+                "operationId": "b7ea832b382505b8af39a7e0c9a710fc",
+                "responses": {
+                    "201": {
+                        "description": "Producto con sus ligas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Despensa"
+                ],
+                "summary": "Quitar la liga (los precios leídos se quedan)",
+                "operationId": "b6440c911a213a0a38e91be424362f32",
+                "responses": {
+                    "204": {
+                        "description": "Quitada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/profile/avatar": {
             "patch": {
                 "tags": [
@@ -3200,6 +3895,103 @@
                 ]
             }
         },
+        "/api/tiendas": {
+            "get": {
+                "tags": [
+                    "Tiendas"
+                ],
+                "summary": "Tiendas del hogar (activas primero)",
+                "operationId": "61f2968f9170470f6148970cfce64ee8",
+                "responses": {
+                    "200": {
+                        "description": "Lista"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tiendas"
+                ],
+                "summary": "Crear tienda (nombre, fuente: walmart|donjuan|selectos|null, notas, activo)",
+                "operationId": "d411c2bba9f9cca89805f178e9afa0ec",
+                "responses": {
+                    "201": {
+                        "description": "Creada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tiendas/{id}": {
+            "put": {
+                "tags": [
+                    "Tiendas"
+                ],
+                "summary": "Actualizar tienda",
+                "operationId": "5fc19e89777b2908f3d600b0b1a094ff",
+                "responses": {
+                    "200": {
+                        "description": "Actualizada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tiendas"
+                ],
+                "summary": "Eliminar tienda (con precios o compras: desactivarla)",
+                "operationId": "5297f7c92e8973f1a47b73f29927adc3",
+                "responses": {
+                    "204": {
+                        "description": "Eliminada"
+                    },
+                    "422": {
+                        "description": "Tiene historial"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tiendas/comunes": {
+            "post": {
+                "tags": [
+                    "Tiendas"
+                ],
+                "summary": "Agregar las tiendas de siempre que faltan",
+                "operationId": "c9256831d28d099fa160d8c882a884e6",
+                "responses": {
+                    "200": {
+                        "description": "agregadas = cuántas; data = todas las tiendas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/transferencias/opciones": {
             "get": {
                 "tags": [
@@ -3292,6 +4084,10 @@
             "description": "Categorías personales de ingresos y egresos"
         },
         {
+            "name": "Compras",
+            "description": "Lista de compras (una abierta por hogar), pagar en cada tienda, precios en línea y ruta de compra"
+        },
+        {
             "name": "Compromisos",
             "description": "Pagos programados: de una sola vez o recurrentes"
         },
@@ -3324,6 +4120,10 @@
             "description": "Lo que debe el hogar: saldo, pagos con desglose y proyecciones"
         },
         {
+            "name": "Despensa",
+            "description": "Productos del hogar, lo que hay en casa, sus precios y su liga con las tiendas en línea"
+        },
+        {
             "name": "Perfil",
             "description": "Endpoints para la gestión del perfil de usuario"
         },
@@ -3338,6 +4138,10 @@
         {
             "name": "Tarjetas",
             "description": "Tarjetas de crédito: deuda, disponible, cortes, cuotas y movimientos"
+        },
+        {
+            "name": "Tiendas",
+            "description": "Tiendas donde compra el hogar (con precios en línea o anotados)"
         },
         {
             "name": "Transferencias",
