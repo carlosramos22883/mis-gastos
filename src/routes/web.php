@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CargoFijoController;
 use App\Http\Controllers\CategoriaPersonalController;
+use App\Http\Controllers\CompraPagoController;
 use App\Http\Controllers\CompromisoController;
 use App\Http\Controllers\ContactoController;
 use App\Http\Controllers\CuentaController;
@@ -19,17 +20,21 @@ use App\Http\Controllers\EventoController;
 use App\Http\Controllers\HogarController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\IrAMovimientoController;
+use App\Http\Controllers\ListaCompraController;
 use App\Http\Controllers\MovimientoCuentaController;
 use App\Http\Controllers\MovimientoEfectivoController;
 use App\Http\Controllers\MovimientoTarjetaController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PagoCompromisoController;
+use App\Http\Controllers\PreciosEnLineaController;
 use App\Http\Controllers\PrestamoController;
+use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProyeccionController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TarjetaCreditoController;
+use App\Http\Controllers\TiendaController;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Requests\ReporteRequest;
 use App\Services\DashboardService;
@@ -125,6 +130,50 @@ Route::middleware('auth')->group(function () {
         Route::patch('intereses', 'intereses')->middleware('can:tarjetas.edit')->name('intereses');
         Route::get('mora', 'moraForm')->middleware('can:tarjetas.create')->name('mora.create');
         Route::post('mora', 'mora')->middleware('can:tarjetas.create')->name('mora.store');
+    });
+    // Despensa: productos que el hogar compra siempre
+    Route::resource('productos', ProductoController::class)->except('show')
+        ->middlewareFor('index', 'can:despensa.view')
+        ->middlewareFor(['create', 'store'], 'can:despensa.create')
+        ->middlewareFor(['edit', 'update'], 'can:despensa.edit')
+        ->middlewareFor('destroy', 'can:despensa.delete');
+    Route::get('productos/{producto}/foto', [ProductoController::class, 'foto'])->middleware('can:despensa.view')->name('productos.foto');
+    Route::patch('productos/{producto}/despensa', [ProductoController::class, 'despensa'])->middleware('can:despensa.edit')->name('productos.despensa');
+    Route::get('productos/{producto}/precios', [ProductoController::class, 'precios'])->middleware('can:despensa.view')->name('productos.precios');
+    Route::post('productos/{producto}/precios', [ProductoController::class, 'anotarPrecio'])->middleware('can:despensa.edit')->name('productos.precios.store');
+    Route::delete('productos/{producto}/precios/{precio}', [ProductoController::class, 'eliminarPrecio'])->middleware('can:despensa.edit')->name('productos.precios.destroy');
+    Route::controller(PreciosEnLineaController::class)->group(function () {
+        Route::get('productos/{producto}/en-linea/{fuente}', 'buscar')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('productos.en-linea.buscar');
+        Route::post('productos/{producto}/en-linea/{fuente}', 'enlazar')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('productos.en-linea.store');
+        Route::delete('productos/{producto}/en-linea/{fuente}', 'desenlazar')->whereIn('fuente', ['walmart', 'donjuan', 'selectos'])->middleware('can:despensa.edit')->name('productos.en-linea.destroy');
+        Route::post('compras/{lista}/consultas', 'iniciar')->middleware('can:despensa.edit')->name('compras.consultas.store');
+        Route::post('compras/{lista}/consultas/{consulta}/siguiente', 'siguiente')->middleware('can:despensa.edit')->name('compras.consultas.siguiente');
+    });
+    // Tiendas donde compra el hogar
+    Route::resource('tiendas', TiendaController::class)->except('show')
+        ->middlewareFor('index', 'can:despensa.view')
+        ->middlewareFor(['create', 'store'], 'can:despensa.create')
+        ->middlewareFor(['edit', 'update'], 'can:despensa.edit')
+        ->middlewareFor('destroy', 'can:despensa.delete');
+    Route::post('tiendas/comunes', [TiendaController::class, 'comunes'])->middleware('can:despensa.create')->name('tiendas.comunes');
+    // Listas de compras (una abierta por hogar) e historial
+    Route::controller(ListaCompraController::class)->prefix('compras')->name('compras.')->group(function () {
+        Route::get('/', 'index')->middleware('can:despensa.view')->name('index');
+        Route::post('/', 'store')->middleware('can:despensa.create')->name('store');
+        Route::get('{lista}', 'show')->middleware('can:despensa.view')->name('show');
+        Route::get('{lista}/ruta', 'ruta')->middleware('can:despensa.view')->name('ruta');
+        Route::delete('{lista}', 'destroy')->middleware('can:despensa.delete')->name('destroy');
+        Route::post('{lista}/faltantes', 'agregarFaltantes')->middleware('can:despensa.edit')->name('faltantes');
+        Route::post('{lista}/terminar', 'terminar')->middleware('can:despensa.edit')->name('terminar');
+        Route::patch('{lista}/tienda', 'elegirTienda')->middleware('can:despensa.edit')->name('tienda');
+        Route::post('{lista}/items', 'agregarItem')->middleware('can:despensa.edit')->name('items.store');
+        Route::patch('{lista}/items/{item}', 'actualizarItem')->middleware('can:despensa.edit')->name('items.update');
+        Route::delete('{lista}/items/{item}', 'quitarItem')->middleware('can:despensa.edit')->name('items.destroy');
+    });
+    Route::controller(CompraPagoController::class)->prefix('compras/{lista}')->name('compras.')->group(function () {
+        Route::get('pagar', 'create')->middleware('can:despensa.edit')->name('pagar');
+        Route::post('pagar', 'store')->middleware('can:despensa.edit')->name('pagar.store');
+        Route::delete('pagos/{pago}', 'destroy')->middleware('can:despensa.edit')->name('pagos.destroy');
     });
     // Contactos (personas, tiendas, empresas…) y lo que nos deben
     Route::resource('contactos', ContactoController::class)

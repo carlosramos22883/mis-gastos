@@ -116,6 +116,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Contacto::class, 'hogar_id', 'hogar_id');
     }
 
+    public function productos(): HasMany
+    {
+        return $this->hasMany(Producto::class, 'hogar_id', 'hogar_id');
+    }
+
+    public function tiendas(): HasMany
+    {
+        return $this->hasMany(Tienda::class, 'hogar_id', 'hogar_id');
+    }
+
     public function fuentesIngreso(): HasMany
     {
         return $this->hasMany(FuenteIngreso::class, 'hogar_id', 'hogar_id');

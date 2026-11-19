@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\CompraPagoMovimiento;
 use App\Models\Deuda;
 use App\Models\DeudaPago;
 use App\Models\Evento;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Movimientos de efectivo, cuenta o tarjeta que nacieron en otro módulo (un préstamo a un deudor, el pago
- * de un deudor, el pago de un préstamo, el pago de un evento o lo pagado de más en un compromiso). Se modifican desde ese módulo, no desde su pantalla.
+ * de un deudor, el pago de un préstamo, el pago de un evento, el pago de una lista de compras o lo pagado de más en un compromiso). Se modifican desde ese módulo, no desde su pantalla.
  */
 class MovimientoVinculado
 {
@@ -33,6 +34,9 @@ class MovimientoVinculado
         }
         if (Evento::where($columna, $movimiento->id)->exists() || EventoParticipante::where($columna, $movimiento->id)->exists()) {
             return 'Eventos';
+        }
+        if (CompraPagoMovimiento::where($columna, $movimiento->id)->exists()) {
+            return 'Lista de compras';
         }
         if ($columna === 'movimiento_tarjeta_id') {
             return $movimiento->excedente_compromiso_id ? 'Compromisos' : null; // lo pagado de más sigue a su pago

@@ -32,7 +32,7 @@
             {{ __('Inicio') }}
         </a>
 
-        @canany(['categorias.view', 'efectivo.view', 'cuentas.view', 'compromisos.view', 'tarjetas.view', 'deudores.view', 'prestamos.view', 'ingresos.view', 'contactos.view', 'eventos.view'])
+        @canany(['categorias.view', 'efectivo.view', 'cuentas.view', 'compromisos.view', 'tarjetas.view', 'deudores.view', 'prestamos.view', 'ingresos.view', 'contactos.view', 'eventos.view', 'despensa.view'])
             <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
                 @canany(['categorias.view'])
                     <a href="{{ route('categorias.index') }}" @click="sidebarOpen = false"
@@ -92,6 +92,20 @@
                     <a href="{{ route('eventos.index') }}" @click="sidebarOpen = false"
                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('eventos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                         {{ __('Eventos') }}
+                    </a>
+                @endcan
+                @can('despensa.view')
+                    <a href="{{ route('productos.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('productos.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Despensa') }}
+                    </a>
+                    <a href="{{ route('compras.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('compras.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Lista de compras') }}
+                    </a>
+                    <a href="{{ route('tiendas.index') }}" @click="sidebarOpen = false"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('tiendas.*') ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ __('Tiendas') }}
                     </a>
                 @endcan
             </div>
@@ -169,7 +183,7 @@
             </div>
         @endcanany
 
-        @canany(['monedas.view', 'bancos.view', 'tipos_cuenta.view', 'marcas-red.view', 'tipos_contacto.view', 'tipos_emisor.view', 'tipos_prestamo.view', 'tipos_ingreso.view', 'conceptos_planilla.view'])
+        @canany(['monedas.view', 'bancos.view', 'tipos_cuenta.view', 'marcas-red.view', 'tipos_contacto.view', 'tipos_emisor.view', 'tipos_prestamo.view', 'tipos_ingreso.view', 'conceptos_planilla.view', 'categorias_despensa.view'])
             <div x-data="{ openCatalogos: {{ request()->routeIs('admin.catalogos.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="openCatalogos = !openCatalogos"
                     class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">

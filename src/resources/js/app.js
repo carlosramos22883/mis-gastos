@@ -691,6 +691,9 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('ajaxForm', (onSuccessCallback) => ({
         loading: false,
         errors: {},
+        // Un formulario que registra varios gastos (uno por categoría, ej. «Pagar aquí»): lo decidido en el aviso de
+        // presupuesto de cada categoría, por su clave (el servidor la manda en presupuesto.clave)
+        decisiones: {},
 
         async submit(e, confirmado = false, presupuesto = null) {
             this.loading = true;
@@ -720,6 +723,13 @@ document.addEventListener('alpine:init', () => {
             } else if (form.hasAttribute('data-revisar-presupuesto')) {
                 formData.set('presupuesto', 'revisar');
             }
+            Object.entries(this.decisiones).forEach(([clave, d]) => {
+                formData.set(`presupuestos[${clave}][modo]`, d.modo);
+                (d.traspasos || []).forEach((t, i) => {
+                    formData.set(`presupuestos[${clave}][traspasos][${i}][presupuesto_id]`, t.presupuesto_id);
+                    formData.set(`presupuestos[${clave}][traspasos][${i}][monto]`, t.monto);
+                });
+            });
             const tableForm = document.getElementById('data-table-form');
             if (tableForm) {
                 const tableFields = [
@@ -757,8 +767,13 @@ document.addEventListener('alpine:init', () => {
                         const decision = await window.cubrirPresupuesto(data.presupuesto, 'gasto');
                         if (decision) {
                             this.loading = false;
+                            if (data.presupuesto.clave !== undefined) {
+                                this.decisiones = { ...this.decisiones, [data.presupuesto.clave]: decision };
+                                return await this.submit(e, confirmado, presupuesto);
+                            }
                             return await this.submit(e, confirmado, decision);
                         }
+                        this.decisiones = {};
                         return;
                     }
                     if (!confirmado && data.errors?.confirmar && Object.keys(data.errors).length === 1) {
@@ -1130,6 +1145,214 @@ document.addEventListener('alpine:init', () => {
             return { subtotal: subtotal / 100, propina: propina / 100, total: (subtotal + propina) / 100, festejo: festejo / 100, por };
         },
         dinero(v) { return `${inicial.simbolo} ${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; },
+    }));
+});
+
+// ==========================================
+// DESPENSA: lo que hay en casa de un producto (sumar, restar, «se está acabando», «se acabó», vencimiento)
+// x-data="despensaProducto({ url, estado })" — estado = DespensaService::estado()
+// ==========================================
+document.addEventListener('alpine:init', () => {
+    Alpine.data('despensaProducto', ({ url, estado }) => ({
+        estado,
+        enviando: false,
+
+        async cambiar(accion, valor = null) {
+            if (this.enviando) return;
+            this.enviando = true;
+            const datos = new FormData();
+            datos.set('_method', 'PATCH');
+            datos.set('accion', accion);
+            if (valor !== null) datos.set('valor', valor);
+            try {
+                const respuesta = await fetch(url, { method: 'POST', body: datos, headers: {
+                    'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content } });
+                const data = await respuesta.json().catch(() => ({}));
+                if (!respuesta.ok) {
+                    showAlert('error', 'No se pudo guardar', Object.values(data.errors || {})[0]?.[0] || data.message || 'Ocurrió un error.');
+                    return;
+                }
+                this.estado = data.estado;
+                window.dispatchEvent(new CustomEvent('despensa-cambio'));
+            } catch {
+                showAlert('error', 'Sin conexión', 'No se pudo guardar el cambio. Revisa tu conexión.');
+            } finally {
+                this.enviando = false;
+            }
+        },
+
+        async escribirCantidad() {
+            const { value, isConfirmed } = await Swal.fire({
+                title: '¿Cuántos hay en casa?', input: 'number', inputValue: this.estado.en_casa ?? '',
+                inputAttributes: { min: 0, max: 999, inputmode: 'numeric' }, showCancelButton: true,
+                confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar', timer: 0,
+                inputValidator: (v) => (v === '' || Number(v) < 0 || Number(v) > 999 || !Number.isInteger(Number(v))) ? 'Escribe un número de 0 a 999.' : null,
+                customClass: { confirmButton: 'swal-btn-primary', cancelButton: 'swal-btn-secondary', actions: 'swal-actions' },
+            });
+            if (isConfirmed) await this.cambiar('cantidad', value);
+        },
+
+        async escribirVence() {
+            const { value, isConfirmed } = await Swal.fire({
+                title: '¿Cuándo vence?', input: 'date', inputValue: this.estado.vence_el ?? '', showCancelButton: true,
+                showDenyButton: !!this.estado.vence_el, denyButtonText: 'Quitar fecha',
+                confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar', timer: 0,
+                customClass: { confirmButton: 'swal-btn-primary', denyButton: 'swal-btn-secondary', cancelButton: 'swal-btn-secondary', actions: 'swal-actions' },
+            }).then((r) => (r.isDenied ? { value: '', isConfirmed: true } : r));
+            if (isConfirmed) await this.cambiar('vence', value || null);
+        },
+    }));
+});
+
+// ==========================================
+// LISTA DE COMPRAS
+// enviarDatos(url, método, campos): petición con CSRF que devuelve { ok, data }.
+// accionLista(url, { confirmar, titulo }): acción de la lista (agregar lo que falta, terminar) con aviso y recarga.
+// x-data="itemCompra({ url, item })": cantidad y «en el carrito» de una cosa de la lista, sin recargar.
+// ==========================================
+window.enviarDatos = async function (url, metodo, campos = {}) {
+    const datos = new FormData();
+    if (metodo !== 'POST') datos.set('_method', metodo);
+    Object.entries(campos).forEach(([k, v]) => datos.set(k, v));
+    try {
+        const respuesta = await fetch(url, { method: 'POST', body: datos, headers: {
+            'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content } });
+        const data = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok) showAlert('error', 'No se pudo guardar', Object.values(data.errors || {})[0]?.[0] || data.message || 'Ocurrió un error.');
+        return { ok: respuesta.ok, data };
+    } catch {
+        showAlert('error', 'Sin conexión', 'No se pudo guardar el cambio. Revisa tu conexión.');
+        return { ok: false, data: {} };
+    }
+};
+
+window.accionLista = async function (url, { confirmar = null, titulo = '¿Continuar?', metodo = 'POST' } = {}) {
+    if (confirmar) {
+        const r = await Swal.fire({ icon: 'question', title: titulo, text: confirmar, showCancelButton: true, confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar', timer: 0, customClass: { confirmButton: 'swal-btn-primary', cancelButton: 'swal-btn-secondary', actions: 'swal-actions' } });
+        if (!r.isConfirmed) return;
+    }
+    const { ok, data } = await window.enviarDatos(url, metodo);
+    if (!ok) return;
+    await showAlert('success', '¡Listo!', data.message);
+    if (data.redirect) window.location = data.redirect; else window.location.reload();
+};
+
+document.addEventListener('alpine:init', () => {
+    /**
+     * Ligar un producto con el suyo en una tienda en línea (ventana Precios): buscar (por código de barras o nombre),
+     * elegir «Es este» (con «paquete de» si allá se vende así) o quitar la liga. Al terminar recarga la ventana.
+     */
+    Alpine.data('enlaceEnLinea', ({ buscarUrl, guardarUrl, recargar, texto }) => ({
+        abierto: false,
+        buscando: false,
+        texto,
+        resultados: null,
+        unidades: 1,
+        error: '',
+
+        async buscar(conTexto = false) {
+            this.abierto = true;
+            this.buscando = true;
+            this.error = '';
+            try {
+                const url = new URL(buscarUrl, window.location.origin);
+                if (conTexto && this.texto.trim()) url.searchParams.set('q', this.texto.trim());
+                const respuesta = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                const data = await respuesta.json().catch(() => ({}));
+                if (!respuesta.ok) {
+                    this.error = Object.values(data.errors || {})[0]?.[0] || data.message || 'No se pudo buscar.';
+                    this.resultados = null;
+                } else {
+                    this.resultados = data.resultados;
+                }
+            } catch {
+                this.error = 'Sin conexión. Intenta de nuevo.';
+            } finally {
+                this.buscando = false;
+            }
+        },
+        dinero(v) { return v === null ? 'sin precio' : '$ ' + Number(v).toFixed(2); },
+        async elegir(r) {
+            const { ok, data } = await window.enviarDatos(guardarUrl, 'POST', {
+                codigo: r.codigo, nombre: r.nombre, url: r.url || '', imagen: r.imagen || '', precio: r.precio ?? '', unidades: this.unidades || 1,
+            });
+            if (!ok) return;
+            await showAlert('success', '¡Listo!', data.message);
+            this.$dispatch('load-producto-modal-form', recargar);
+        },
+    }));
+
+    /**
+     * «Consultar precios» de la lista: pide al servidor un producto a la vez (el servidor exige la pausa entre cada
+     * uno y dice cuánto esperar) y muestra el avance. Al terminar, resume y recarga.
+     */
+    Alpine.data('consultaPrecios', ({ url }) => ({
+        corriendo: false,
+        avance: '',
+
+        async iniciar() {
+            if (this.corriendo) return;
+            this.corriendo = true;
+            this.avance = 'Empezando…';
+            const { ok, data } = await window.enviarDatos(url, 'POST');
+            if (!ok) { this.corriendo = false; this.avance = ''; return; }
+            if (data.al_dia) {
+                this.corriendo = false;
+                this.avance = '';
+                await showAlert('info', 'Precios al día', data.message);
+                return;
+            }
+            let estado = data.estado;
+            const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+            while (!estado.terminada) {
+                this.avance = `Consultando ${Math.min(estado.hechos + 1, estado.total)} de ${estado.total}…`;
+                const paso = await window.enviarDatos(data.siguiente, 'POST');
+                if (!paso.ok) { this.corriendo = false; return; }
+                estado = paso.data;
+                await espera(paso.data.espera ?? 2100);
+            }
+            this.avance = '';
+            const partes = [];
+            if (estado.nuevos) partes.push(estado.nuevos === 1 ? 'Se leyó 1 precio.' : `Se leyeron ${estado.nuevos} precios.`);
+            if (estado.reusados) partes.push(estado.reusados === 1 ? '1 ya era de hoy.' : `${estado.reusados} ya eran de hoy.`);
+            if (estado.fallas) partes.push(estado.fallas === 1 ? '1 no se pudo leer (se muestra el último conocido).' : `${estado.fallas} no se pudieron leer (se muestra el último conocido).`);
+            await showAlert('success', 'Precios consultados', partes.join(' ') || 'Listo.');
+            window.location.reload();
+        },
+    }));
+
+    Alpine.data('itemCompra', ({ url, item }) => ({
+        item,
+        enviando: false,
+
+        async guardar(campos) {
+            if (this.enviando) return;
+            this.enviando = true;
+            const { ok, data } = await window.enviarDatos(url, 'PATCH', campos);
+            this.enviando = false;
+            if (!ok) return;
+            this.item = data.item;
+            window.dispatchEvent(new CustomEvent('compra-resumen', { detail: data.resumen }));
+        },
+        alCarrito() { return this.guardar({ comprado: this.item.comprado ? 0 : 1 }); },
+        noHabia() { return this.guardar({ no_habia: this.item.no_habia ? 0 : 1 }); },
+        guardarPrecio(valor) {
+            const limpio = String(valor ?? '').replace('$', '').replace(',', '.').trim();
+            if (limpio === (this.item.precio ?? '')) return null;
+            return this.guardar({ precio: limpio });
+        },
+        subtotal() {
+            return this.item.precio === null ? null : (Number(this.item.precio) * this.item.cantidad).toFixed(2);
+        },
+        mas() { return this.guardar({ cantidad: Math.min(999, this.item.cantidad + 1) }); },
+        menos() { return this.item.cantidad > 1 ? this.guardar({ cantidad: this.item.cantidad - 1 }) : null; },
+        async quitar(quitarUrl, nombre) {
+            showConfirm('¿Quitar de la lista?', `Se quitará "${nombre}".`, async () => {
+                const { ok } = await window.enviarDatos(quitarUrl, 'DELETE');
+                if (ok) window.location.reload();
+            });
+        },
     }));
 });
 

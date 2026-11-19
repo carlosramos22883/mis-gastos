@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Banco;
+use App\Models\Catalogos\CategoriaDespensa;
 use App\Models\Catalogos\ConceptoPlanilla;
 use App\Models\Catalogos\TipoContacto;
 use App\Models\Catalogos\TipoEmisor;
@@ -11,6 +12,7 @@ use App\Models\Catalogos\TipoPrestamo;
 use App\Models\Contacto;
 use App\Models\FuenteIngreso;
 use App\Models\Prestamo;
+use App\Models\Producto;
 
 /**
  * Catálogos simples que el administrador mantiene con un solo CRUD genérico (Admin\CatalogoGenericoController).
@@ -34,6 +36,10 @@ class CatalogosAdmin
         'tipos-ingreso' => [
             'modelo' => TipoIngreso::class, 'permiso' => 'tipos_ingreso', 'titulo' => 'Tipos de ingreso', 'singular' => 'tipo de ingreso',
             'ejemplo' => 'Ej: Alquiler', 'usos' => [FuenteIngreso::class => 'tipo_ingreso_id'], 'campos' => [],
+        ],
+        'categorias-despensa' => [
+            'modelo' => CategoriaDespensa::class, 'permiso' => 'categorias_despensa', 'titulo' => 'Categorías de despensa', 'singular' => 'categoría de despensa',
+            'ejemplo' => 'Ej: Cereales', 'usos' => [Producto::class => 'categoria_despensa_id'], 'campos' => [],
         ],
         'conceptos-planilla' => [
             'modelo' => ConceptoPlanilla::class, 'permiso' => 'conceptos_planilla', 'titulo' => 'Conceptos de planilla', 'singular' => 'concepto de planilla',

@@ -24,6 +24,7 @@ class Permisos
         'tipos_prestamo' => 'Tipos de préstamo',
         'tipos_ingreso' => 'Tipos de ingreso',
         'conceptos_planilla' => 'Conceptos de planilla',
+        'categorias_despensa' => 'Categorías de despensa',
         'marcas-red' => 'Marcas de red',
         'categorias' => 'Categorías',
         'efectivo' => 'Efectivo',
@@ -38,6 +39,7 @@ class Permisos
         'reportes' => 'Reportes',
         'eventos' => 'Eventos (dividir la cuenta)',
         'proyecciones' => 'Proyecciones (escenarios para salir de deudas)',
+        'despensa' => 'Despensa (productos)',
     ];
 
     public const ACCIONES = [

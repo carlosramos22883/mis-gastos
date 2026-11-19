@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Models\CargoFijoTarjeta;
 use App\Models\CategoriaPersonal;
+use App\Models\CompraPago;
+use App\Models\CompraPagoMovimiento;
 use App\Models\Compromiso;
 use App\Models\CompromisoRecurrente;
+use App\Models\ConsultaPrecios;
 use App\Models\Contacto;
 use App\Models\Cuenta;
 use App\Models\Deuda;
@@ -16,13 +19,17 @@ use App\Models\FuenteIngreso;
 use App\Models\Hogar;
 use App\Models\HogarInvitacion;
 use App\Models\Ingreso;
+use App\Models\ListaCompra;
 use App\Models\MovimientoCuenta;
 use App\Models\MovimientoEfectivo;
 use App\Models\MovimientoTarjeta;
+use App\Models\Precio;
 use App\Models\Prestamo;
 use App\Models\PrestamoPago;
 use App\Models\PresupuestoTraspaso;
+use App\Models\Producto;
 use App\Models\TarjetaCredito;
+use App\Models\Tienda;
 use App\Models\Transferencia;
 use App\Models\User;
 use App\Notifications\InvitacionHogarNotification;
@@ -43,12 +50,13 @@ class HogarService
         Cuenta::class, Transferencia::class, MovimientoCuenta::class, TarjetaCredito::class, MovimientoTarjeta::class,
         Contacto::class, Deuda::class, DeudaPago::class, Prestamo::class, PrestamoPago::class,
         FuenteIngreso::class, Ingreso::class, CargoFijoTarjeta::class, Evento::class, EscenarioProyeccion::class,
-        PresupuestoTraspaso::class,
+        PresupuestoTraspaso::class, Producto::class, ListaCompra::class, Tienda::class, Precio::class, CompraPago::class, ConsultaPrecios::class,
     ];
 
     /** Modelos con categoría (para unificar categorías al fusionar hogares). */
     private const CON_CATEGORIA = [
         MovimientoEfectivo::class, MovimientoCuenta::class, MovimientoTarjeta::class, Compromiso::class, CompromisoRecurrente::class, CargoFijoTarjeta::class,
+        CompraPagoMovimiento::class,
     ];
 
     public function crearPara(User $user): Hogar
